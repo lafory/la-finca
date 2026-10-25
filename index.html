@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>La Finca · Campo adentro</title>
+    <meta name="description" content="La Finca: una finca cubana un poco gastada. Recoge huevos, siembra tomates, caña y tabaco, y carga el camión." />
+    <meta name="theme-color" content="#241c14" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="La Finca" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="apple-touch-icon" href="./icon-180.png" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="La finca"></canvas>
+    <div id="ui"></div>
+    <div id="title">
+      <div class="title-card">
+        <div class="title-head"><span id="flag" class="tflag"></span><div><p class="eyebrow">Campo adentro</p><h1>La Finca</h1></div></div>
+        <p class="lead">Una finca cubana, un poco gastada, que crece con lo que vendes.</p>
+        <ol class="steps">
+          <li><b>1</b><span>Recoge los huevos del corral y entrégalos al camión.</span></li>
+          <li><b>2</b><span>Con los pesos compra semillas: tomate, caña y tabaco.</span></li>
+          <li><b>3</b><span>Siembra, riega, cosecha, haz kétchup y contrata ayuda.</span></li>
+        </ol>
+        <button id="start" class="btn primary wide">Entrar a la finca</button>
+        <p class="small">Toca para caminar y usar · arrastra para mover la vista · pellizca para acercar</p>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,167 @@
+{
+  "desktop": {
+    "errors": [],
+    "title": {
+      "btnBottom": 545.640625,
+      "vh": 800
+    },
+    "viewport": {
+      "canvas": [
+        1280,
+        800
+      ],
+      "win": [
+        1280,
+        800
+      ],
+      "scrollH": 800
+    },
+    "fullscreen": {
+      "button": true,
+      "manifestDisplay": "fullscreen",
+      "appleCapable": true,
+      "viewportFit": true
+    },
+    "zoom": {
+      "before": 24.02,
+      "after": 9,
+      "zoomedIn": true
+    },
+    "pan": {
+      "moved": true
+    },
+    "eggs": {
+      "collected": 5,
+      "tut": 1
+    },
+    "truck": {
+      "money": 35,
+      "sold": 1,
+      "tut": 2
+    },
+    "plant": {
+      "plots": [
+        null,
+        null,
+        null,
+        "tomato",
+        null,
+        null,
+        null,
+        null
+      ],
+      "seeds": 1,
+      "tut": 3
+    },
+    "ripeTut": "¡Tomates listos! Toca la mata (o camina encima) para cosecharlos.",
+    "harvest": {
+      "harvests": 1,
+      "tomatoes": 1,
+      "xp": 15,
+      "level": 1
+    },
+    "reload": {
+      "btn": "Continuar la finca",
+      "money": 35,
+      "harvests": 1
+    },
+    "fps": 13.527877089569003
+  },
+  "mobile": {
+    "errors": [],
+    "title": {
+      "btnBottom": 567.640625,
+      "vh": 844
+    },
+    "viewport": {
+      "canvas": [
+        390,
+        844
+      ],
+      "win": [
+        390,
+        844
+      ],
+      "scrollH": 844
+    },
+    "fullscreen": {
+      "button": true,
+      "manifestDisplay": "fullscreen",
+      "appleCapable": true,
+      "viewportFit": true
+    },
+    "zoom": {
+      "before": 41.6,
+      "after": 11.89,
+      "zoomedIn": true
+    },
+    "pan": {
+      "moved": true
+    },
+    "eggs": {
+      "collected": 4,
+      "tut": 1
+    },
+    "truck": {
+      "money": 35,
+      "sold": 1,
+      "tut": 2
+    },
+    "plant": {
+      "plots": [
+        null,
+        null,
+        null,
+        "tomato",
+        null,
+        null,
+        null,
+        null
+      ],
+      "seeds": 1,
+      "tut": 3
+    },
+    "ripeTut": "¡Tomates listos! Toca la mata (o camina encima) para cosecharlos.",
+    "harvest": {
+      "harvests": 1,
+      "tomatoes": 1,
+      "xp": 14,
+      "level": 1
+    },
+    "reload": {
+      "btn": "Continuar la finca",
+      "money": 35,
+      "harvests": 1
+    },
+    "fps": 12.041496850689596
+  },
+  "landscape": {
+    "errors": [],
+    "title": {
+      "btnBottom": 294.09375,
+      "vh": 390
+    },
+    "viewport": {
+      "canvas": [
+        844,
+        390
+      ],
+      "win": [
+        844,
+        390
+      ],
+      "scrollH": 390
+    },
+    "rotated": {
+      "canvas": [
+        390,
+        844
+      ],
+      "win": [
+        390,
+        844
+      ],
+      "scrollH": 844
+    }
+  }
+}
