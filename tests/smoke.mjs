@@ -105,6 +105,7 @@ async function run(name, opts, touch, shots) {
   await tapWorld(page, touch, 8.5, 0.1, 9.5);
   await waitFor('window.__finca.sim.s.plots.some((p) => p.crop)', 12000);
   const planted = await page.evaluate(() => window.__finca.sim.s.plots.filter((p) => p.crop).length);
+  if (!planted) res.plantDbg = await page.evaluate(() => { const g = window.__finca, q = g.project(8.5, 0.1, 9.5), el = document.elementFromPoint(q.x, q.y); return { q, el: el?.outerHTML?.slice(0, 160), seeds: g.sim.s.seeds, sel: g.sim.s.selectedSeed, p: [g.sim.player.x, g.sim.player.z], task: JSON.stringify(g.sim.player.task || null).slice(0, 100), dist: g.rig.goalDist }; });
   await page.evaluate(() => { for (const p of window.__finca.sim.s.plots) if (p.crop) p.at -= 9999; });
   await sleep(500);
   await tapWorld(page, touch, 8.5, 0.1, 9.5);
@@ -136,5 +137,5 @@ await run('phone', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2
 await run('ipad', { viewport: { width: 820, height: 1180 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }, true, true);
 await run('phone-landscape', { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: iphone }, true, true);
 await browser.close();
-fs.writeFileSync(OUT + 'smoke-report-v2.json', JSON.stringify(report, null, 2));
+{ const f = OUT + 'smoke-report-v2.json'; let prev = {}; if (process.env.ONLY) try { prev = JSON.parse(fs.readFileSync(f, 'utf8')); } catch {} fs.writeFileSync(f, JSON.stringify({ ...prev, ...report }, null, 2)); }
 console.log(JSON.stringify(report, null, 1));

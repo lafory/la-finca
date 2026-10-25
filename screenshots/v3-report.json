@@ -29,17 +29,17 @@
       "usedPill": true,
       "ripe": true,
       "autoStop": true,
-      "realSec": 8,
+      "realSec": 7.7,
       "growLeftAtStart": 59.9
     },
     "night": {
       "reached": true,
-      "tod": 0.8905838095238253,
+      "tod": 0.8886588095237345,
       "banner": true,
       "speed": 20
     },
-    "clockOffset": 59.7,
-    "jobs": 20,
+    "clockOffset": 40.7,
+    "jobs": 19,
     "reload": {
       "offsetKept": true,
       "workers": [
@@ -80,16 +80,16 @@
       "ripe": true,
       "autoStop": true,
       "realSec": 4,
-      "growLeftAtStart": 59.8
+      "growLeftAtStart": 59.9
     },
     "night": {
       "reached": true,
-      "tod": 0.8990639285717635,
+      "tod": 0.9124778571426125,
       "banner": true,
       "speed": 20
     },
     "clockOffset": 38,
-    "jobs": 18,
+    "jobs": 20,
     "reload": {
       "offsetKept": true,
       "workers": [
@@ -129,17 +129,17 @@
       "usedPill": true,
       "ripe": true,
       "autoStop": true,
-      "realSec": 8.2,
-      "growLeftAtStart": 59.8
+      "realSec": 7.2,
+      "growLeftAtStart": 59.9
     },
     "night": {
       "reached": true,
-      "tod": 0.8949476190476787,
+      "tod": 0.906743809524154,
       "banner": true,
       "speed": 20
     },
-    "clockOffset": 165.4,
-    "jobs": 19,
+    "clockOffset": 36.1,
+    "jobs": 20,
     "reload": {
       "offsetKept": true,
       "workers": [
@@ -179,17 +179,17 @@
       "usedPill": true,
       "ripe": true,
       "autoStop": true,
-      "realSec": 3.8,
+      "realSec": 4.1,
       "growLeftAtStart": 59.8
     },
     "night": {
       "reached": true,
-      "tod": 0.8970391666668658,
+      "tod": 0.900302142857003,
       "banner": true,
       "speed": 20
     },
-    "clockOffset": 37.8,
-    "jobs": 18,
+    "clockOffset": 38,
+    "jobs": 20,
     "reload": {
       "offsetKept": true,
       "workers": [
@@ -197,6 +197,6 @@
       ],
       "harvestable": 1
     },
-    "fps": 11.9
+    "fps": 60
   }
 }

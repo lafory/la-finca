@@ -1,0 +1,58 @@
+{
+  "desktop": {
+    "errors": [],
+    "level": 2,
+    "tag": "$Vende a los camiones por ti",
+    "hireEnabled": true,
+    "sawCarry": true,
+    "filled": true,
+    "waitingStatus": "Cargando el camión",
+    "notSkippedEarly": true,
+    "skipped": true,
+    "keep": 5,
+    "soldSurplus": true,
+    "eggsLeft": 11
+  },
+  "phone": {
+    "errors": [],
+    "level": 2,
+    "tag": "$Vende a los camiones por ti",
+    "hireEnabled": true,
+    "sawCarry": true,
+    "filled": true,
+    "waitingStatus": "Cargando el camión",
+    "notSkippedEarly": true,
+    "skipped": true,
+    "keep": 5,
+    "soldSurplus": true,
+    "eggsLeft": 11
+  },
+  "ipad": {
+    "errors": [],
+    "level": 2,
+    "tag": "$Vende a los camiones por ti",
+    "hireEnabled": true,
+    "sawCarry": true,
+    "filled": true,
+    "waitingStatus": "Cargando el camión",
+    "notSkippedEarly": true,
+    "skipped": true,
+    "keep": 5,
+    "soldSurplus": true,
+    "eggsLeft": 8
+  },
+  "phone-landscape": {
+    "errors": [],
+    "level": 2,
+    "tag": "$Vende a los camiones por ti",
+    "hireEnabled": true,
+    "sawCarry": true,
+    "filled": true,
+    "waitingStatus": "Cargando el camión",
+    "notSkippedEarly": true,
+    "skipped": true,
+    "keep": 5,
+    "soldSurplus": true,
+    "eggsLeft": 11
+  }
+}

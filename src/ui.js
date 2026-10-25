@@ -3,8 +3,8 @@ import { ICON, portrait } from './icons.js';
 import {
   ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, WORKERS, WORKER_ORDER, PARCELS, BUILDINGS, TRUCK_SPOT,
   SELLABLE, xpForLevel, EGG_INTERVAL, LEVEL_XP, WORKER_SPEED, workerUpgradePrice, FF_SPEEDS,
-} from './data.js';
-import { storageCap, invCount, chickenCap, now } from './state.js';
+  STRUCTURES, STRUCTURE_ORDER, OBSTACLES, STORAGE_CAPS, STORAGE_LEVELS, TRUCK_SLOTS, CAM_WAIT, CAM_KEEP } from './data.js';
+import { storageCap, invCount, chickenCap, now, parcelReachable } from './state.js';
 import { fmtTime, fmtClock } from './sim.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -18,12 +18,15 @@ export function unlocksAt(level) {
   for (const r of Object.values(RECIPES)) if (r.level === level) out.push(`Receta: ${r.name}`);
   for (const k of WORKER_ORDER) if (WORKERS[k].level === level) out.push(`Contratar: ${WORKERS[k].name}`);
   for (const p of PARCELS) if (p.level === level) out.push(`Terreno: ${p.name}`);
+  for (const k of STRUCTURE_ORDER) if (STRUCTURES[k].level === level) out.push(`Construir: ${STRUCTURES[k].name}`);
   if (level === 2) out.push('El fogón (cocina)', 'Almacén más grande');
   if (level === 3) out.push('Ampliar gallinero');
   if (level === 4) out.push('Abono');
-  if (level === 5) out.push('Almacén grande');
+  STORAGE_LEVELS.forEach((l, i) => { if (l === level && i >= 1) out.push(`Almacén de ${STORAGE_CAPS[i + 1]}`); });
   return out;
 }
+
+const STRUCT_ICON = { anden: 'truck', vacas: 'leche', chivos: 'queso', pozo: 'water', cerdos: 'carne', trapiche: 'azucar', gallinero2: 'hen', fogon2: 'fire', casaTabaco: 'puros' };
 
 export class UI {
   constructor(game) {
@@ -69,7 +72,10 @@ export class UI {
         <button class="big" data-act="land">${ICON.land}<span>Terreno</span></button>
         <button class="big" data-act="workers" id="btn-workers">${ICON.worker}<span>Trabajadores</span><em id="wcount" class="hidden">0</em></button>
         <button class="big seedsel" data-act="seed" id="seedsel">${ICON.seed}<span id="seedname">Tomate</span><em id="seedcount">2</em></button>
-        <button class="big small" data-act="center" aria-label="Centrar en el guajiro">${ICON.center}<span>Centrar</span></button>
+      </div>
+      <div class="camgroup">
+        <button class="round cam" data-act="viewfarm" id="btn-viewfarm" aria-label="Ver toda la finca">${ICON.land}<span>Ver finca</span></button>
+        <button class="round cam" data-act="center" aria-label="Centrar en el guajiro">${ICON.center}<span>Centrar</span></button>
       </div>
       <div class="hint" id="hint">Toca para caminar · WASD/flechas · E/Espacio usar · rueda o pellizco = zoom</div>
       <div class="joy hidden" id="joy"><div class="joy-knob" id="knob"></div></div>
@@ -131,6 +137,8 @@ export class UI {
       case 'hire': if (sim.hire(d.id)) { this.openWorker(d.id); } else this.refreshSheet(); return;
       case 'wup': sim.upgradeWorker(d.id); this.refreshSheet(); return;
       case 'wauto': sim.toggleAutobuy(d.id); this.refreshSheet(); return;
+      case 'wsell': sim.toggleSell(); this.refreshSheet(); return;
+      case 'wkeep': sim.cycleKeep(); this.refreshSheet(); return;
       case 'wfire': return this.confirmFire(d.id);
       case 'wfire-yes': sim.fireWorker(d.id); $('#modal-wrap').classList.add('hidden'); this.openWorkers(); return;
       case 'ff': this.g.cycleSpeed(); return;
@@ -140,19 +148,24 @@ export class UI {
       case 'settings': return this.openSettings();
       case 'levelinfo': return this.openLevel();
       case 'fullscreen': return this.toggleFullscreen();
-      case 'center': this.g.rig.recenter(); this.g.rig.goalDist = Math.min(this.g.rig.goalDist, 22); return;
+      case 'center': this.g.centerPlayer(); return;
+      case 'viewfarm': this.g.viewFarm(); return;
+      case 'build': if (sim.build(d.id)) this.closeSheet(); else this.refreshSheet(); return;
+      case 'opensite': return this.openBuild(d.id);
+      case 'goBuild': this.closeSheet(); { const st = STRUCTURES[d.id]; this.g.rig.goal.set(st.x + st.w / 2, 0, st.z + st.h / 2); this.g.rig.goalDist = Math.min(this.g.rig.maxDist, 24); this.g.rig.manualUntil = performance.now() + 5000; } return;
+      case 'clearobs': { const o = sim.obstacle(d.id); this.closeSheet(); if (o && this.s.money >= o.cost) this.g.commandTarget({ kind: 'obstacle', id: o.id }); else this.toast('Todavía no alcanzan los pesos.'); return; }
       case 'seed': return this.cycleSeed();
       case 'use': sim.use(); return;
-      case 'truckinfo': this.g.commandTarget({ kind: 'truck' }); return;
+      case 'truckinfo': this.g.commandTarget({ kind: 'truck', i: +(d.i || 0) }); return;
       case 'close': return this.closeSheet();
       case 'skiptut': this.s.tutorialDone = true; this.updateTutorial(); return;
       case 'buy': if (sim.buy(d.id, +(d.qty || 1))) { this.g.tut('buy'); this.refreshSheet(); } else this.refreshSheet(); return;
       case 'parcel': if (sim.buyParcel(d.id)) { this.g.onLandChanged(); this.closeSheet(); } return;
       case 'sell': sim.sellLoose(d.item, d.qty === 'all' ? 999 : +d.qty); this.refreshSheet(); return;
-      case 'skiptruck': sim.skipTruck(); this.closeSheet(); return;
-      case 'loadtruck': sim.loadTruck(); this.refreshSheet(); if (!sim.truckParked()) this.closeSheet(); return;
-      case 'cook': if (sim.startRecipe(d.id)) this.closeSheet(); else this.refreshSheet(); return;
-      case 'collectk': sim.collectKitchen(); this.closeSheet(); return;
+      case 'skiptruck': sim.skipTruck(+(d.i || 0)); this.closeSheet(); return;
+      case 'loadtruck': { const i = +(d.i || 0); sim.loadTruck(i); this.refreshSheet(); if (!sim.isParked(i) || this.truckSheetId !== sim.s.trucks[i]?.id) this.closeSheet(); return; }
+      case 'cook': if (sim.startRecipe(d.id, d.key || 'kitchen')) this.closeSheet(); else this.refreshSheet(); return;
+      case 'collectk': sim.collectKitchen(false, d.key || 'kitchen'); this.closeSheet(); return;
       case 'quality': this.g.setQuality(d.id); this.refreshSheet(); return;
       case 'toggle': this.s.settings[d.key] = !this.s.settings[d.key]; this.applySettings(); this.refreshSheet(); return;
       case 'reset': return this.confirmReset();
@@ -216,7 +229,8 @@ export class UI {
       const up = (id, name, detail, price, lvl, done) => `<div class="row ${s.level < lvl ? 'dim' : ''}"><div class="row-ico">${ICON.up}</div><div class="row-main"><b>${name}</b><small>${detail}</small></div>
         ${done ? '<button class="btn locked" disabled>Listo</button>' : this.priceBtn(price, { id, lockLevel: s.level < lvl ? lvl : 0 })}</div>`;
       const stLvl = s.upgrades.storage;
-      out += up('storage', stLvl === 0 ? 'Almacén más grande' : 'Almacén grande', `Caben ${[40, 80, 80][stLvl]} cosas (ahora ${storageCap(s)}).`, PRICES.storage[Math.min(stLvl, 1)], [2, 5][Math.min(stLvl, 1)], stLvl >= 2);
+      const maxSt = stLvl >= PRICES.storage.length;
+      out += up('storage', 'Almacén más grande', maxSt ? `Ya caben ${storageCap(s)} cosas.` : `Caben ${STORAGE_CAPS[stLvl + 1]} cosas (ahora ${storageCap(s)}).`, PRICES.storage[Math.min(stLvl, PRICES.storage.length - 1)], STORAGE_LEVELS[Math.min(stLvl, STORAGE_LEVELS.length - 1)], maxSt);
       out += up('coop', 'Ampliar gallinero', 'Caben 8 gallinas en vez de 4.', PRICES.coop, 3, s.upgrades.coop);
       out += up('abono', 'Abono', 'Todo crece un 20 % más rápido.', PRICES.abono, 4, s.upgrades.abono);
       out += `<h3>Trabajadores</h3><div class="row"><div class="row-ico">${ICON.worker}</div><div class="row-main"><b>Ayudantes para la finca</b><small>Recogen, riegan, siembran, cosechan, cocinan y cargan camiones.</small></div><button class="btn primary" data-act="workers">Ver</button></div>`;
@@ -231,9 +245,9 @@ export class UI {
     const btn = rt ? `<button class="btn" data-act="worker" data-id="${k}">Ver</button>`
       : lock ? `<button class="btn locked" disabled>Nivel ${lock}</button>`
       : `<button class="btn primary ${s.money < w.price ? 'poor' : ''}" data-act="hire" data-id="${k}" ${s.money < w.price ? 'disabled' : ''}>Contratar ${ICON.coin}${w.price}</button>`;
-    return `<div class="wcard ${lock ? 'dim' : ''} ${rt ? 'hired' : ''}" data-worker="${k}">
+    return `<div class="wcard ${lock ? 'dim' : ''} ${rt ? 'hired' : ''} ${w.tag ? 'feat' : ''}" data-worker="${k}">
       ${portrait(w.look, WORKER_ORDER.indexOf(k))}
-      <div class="wmain"><b>${w.who} ${stars}</b><span class="role">${ICON[w.icon] || ''}${w.name}</span>
+      <div class="wmain">${w.tag ? `<span class="wtag">${ICON.coin}${w.tag}</span>` : ''}<b>${w.who} ${stars}</b><span class="role">${ICON[w.icon] || ''}${w.name}</span>
         <small>${rt ? `Ahora: ${esc(rt.status)}` : w.detail}</small></div>
       <div class="wbtn">${btn}</div></div>`;
   }
@@ -242,7 +256,7 @@ export class UI {
       const s = this.s;
       const n = s.workers.length;
       return `<p class="note">Se contratan una sola vez (sin salario). Trabajan solos, también mientras adelantas el tiempo. ${n ? `Tienes ${n} de ${WORKER_ORDER.length}.` : 'El primero cuesta poco: ¡vende huevos y contrata a Pancho!'}</p>`
-        + WORKER_ORDER.map((k) => this.workerCard(k)).join('');
+        + [...WORKER_ORDER].sort((a, b) => (WORKERS[b].tag ? 1 : 0) - (WORKERS[a].tag ? 1 : 0)).map((k) => this.workerCard(k)).join('');
     });
   }
   openWorker(role) {
@@ -258,6 +272,14 @@ export class UI {
         out += `<div class="row"><div class="row-ico">${ICON.seed}</div><div class="row-main"><b>Comprar semillas sola</b><small>Si no quedan, compra ${CROPS[s.selectedSeed]?.seedName.toLowerCase() || 'semillas'} con tus pesos.</small></div>
           <button class="btn toggle ${rt.rec.autobuy ? 'on' : ''}" data-act="wauto" data-id="${role}">${rt.rec.autobuy ? 'Sí' : 'No'}</button></div>`;
       }
+      if (role === 'camionero') {
+        const keep = rt.rec.keep ?? 10;
+        out += `<div class="row"><div class="row-ico">${ICON.truck}</div><div class="row-main"><b>Atiende los camiones solo</b><small>Trae del bohío lo que piden, carga y cobra. Si piden lo que no hay, espera ${CAM_WAIT} s por si llega y luego lo despide.</small></div></div>`;
+        out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Vender lo que sobra</b><small>Venta suelta a precio normal de lo que pase de lo que guardas (nunca lo que piden los camiones).</small></div>
+          <button class="btn toggle ${rt.rec.sell ? 'on' : ''}" data-act="wsell" data-id="${role}">${rt.rec.sell ? 'Sí' : 'No'}</button></div>`;
+        out += `<div class="row ${rt.rec.sell ? '' : 'dim'}"><div class="row-ico">${ICON.basket || ICON.egg}</div><div class="row-main"><b>Guardar ${keep} de cada cosa</b><small>Lo demás lo vende Chucho. Toca para cambiar (${CAM_KEEP.join(' / ')}).</small></div>
+          <button class="btn" data-act="wkeep" data-id="${role}">${keep}</button></div>`;
+      }
       out += `<div class="modal-btns"><button class="btn" data-act="workers">Todos los trabajadores</button><button class="btn danger" data-act="wfire" data-id="${role}">Despedir</button></div>`;
       return out;
     });
@@ -270,15 +292,50 @@ export class UI {
   }
 
   openLand() {
-    this.openSheet('Terreno', () => {
+    this.openSheet('Terreno y obras', () => {
       const s = this.s;
-      return '<p class="note">Compra tierra para tener más canteros. Cada pedazo trae palmas y sorpresas.</p>' + PARCELS.map((p) => {
-        const owned = s.parcels.includes(p.id), lock = s.level < p.level ? p.level : 0;
-        return `<div class="row ${lock ? 'dim' : ''}"><div class="row-ico">${ICON.land}</div><div class="row-main"><b>${p.name}</b><small>${p.blurb} ${p.plots.length} canteros.</small></div>
-          ${owned ? '<button class="btn locked" disabled>Tuyo</button>' : this.priceBtn(p.price, { act: 'parcel', id: p.id, lockLevel: lock })}</div>`;
+      const owned = s.parcels.length;
+      let out = `<p class="note">Tienes ${owned} de ${PARCELS.length} pedazos de tierra. Compra la tierra de al lado, quita piedras, marabú y tocones para abrir canteros, y construye en los solares.</p>`;
+      out += '<h3>Construir</h3>';
+      for (const k of STRUCTURE_ORDER) {
+        const st = STRUCTURES[k], built = !!s.built[k], par = PARCELS.find((p) => p.id === st.parcel);
+        const hasLand = s.parcels.includes(st.parcel), lock = s.level < st.level ? st.level : 0;
+        const btn = built ? `<button class="btn" data-act="goBuild" data-id="${k}">Ver</button>`
+          : !hasLand ? `<button class="btn locked" disabled>${lock ? `Nivel ${lock}` : 'Sin tierra'}</button>`
+          : this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock });
+        out += `<div class="row ${lock || !hasLand ? 'dim' : ''} ${built ? 'sel' : ''}"><div class="row-ico">${ICON[STRUCT_ICON[k]] || ICON.up}</div><div class="row-main"><b>${st.name}</b><small>${st.detail}${built ? ' · ¡construido!' : hasLand ? '' : ` · en “${par.name}”`}</small></div>${btn}</div>`;
+      }
+      out += '<h3>Tierra</h3>';
+      out += PARCELS.map((p) => {
+        const own = s.parcels.includes(p.id), lock = s.level < p.level ? p.level : 0, reach = parcelReachable(s, p);
+        const extra = `${p.plots.length} canteros${p.obstacles.length ? ` · ${p.obstacles.length} obstáculos` : ''}${p.site ? ` · solar: ${STRUCTURES[p.site.id].name.toLowerCase()}` : ''}`;
+        const btn = own ? '<button class="btn locked" disabled>Tuyo</button>'
+          : lock ? `<button class="btn locked" disabled>Nivel ${lock}</button>`
+          : !reach ? '<button class="btn locked" disabled>Lejos</button>'
+          : this.priceBtn(p.price, { act: 'parcel', id: p.id });
+        return `<div class="row ${lock || (!own && !reach) ? 'dim' : ''}"><div class="row-ico">${ICON.land}</div><div class="row-main"><b>${p.name}</b><small>${p.blurb} ${extra}.${!own && !reach && !lock ? ' Primero compra la tierra de al lado.' : ''}</small></div>${btn}</div>`;
       }).join('');
+      return out;
     });
   }
+  openBuild(id) {
+    const st = STRUCTURES[id];
+    this.openSheet(st.name, () => {
+      const s = this.s, lock = s.level < st.level ? st.level : 0;
+      if (s.built[id]) return `<p class="note">Ya está construido. ${st.detail}</p>`;
+      let blocked = false;
+      for (let z = st.z; z < st.z + st.h; z++) for (let x = st.x; x < st.x + st.w; x++) if (this.sim.obstacleAt(x, z)) blocked = true;
+      return `<div class="row"><div class="row-ico">${ICON[STRUCT_ICON[id]] || ICON.up}</div><div class="row-main"><b>Solar para: ${st.name}</b><small>${st.detail}</small></div>${this.priceBtn(st.price, { act: 'build', id, lockLevel: lock })}</div>
+        ${blocked ? '<p class="note">Hay que limpiar el solar primero (toca las piedras o el marabú).</p>' : ''}`;
+    });
+  }
+  openObstacle(o) {
+    const O = OBSTACLES[o.kind];
+    const plot = PARCELS.find((p) => p.id === o.parcel).plots.some(([x, z]) => x === o.x && z === o.z);
+    this.openSheet(O.name, () => `<div class="row"><div class="row-ico">${ICON.land}</div><div class="row-main"><b>${O.verb}</b><small>${plot ? 'Debajo hay un cantero nuevo. ' : ''}+${O.xp} XP. Tu guajiro va y lo limpia.</small></div>
+      ${this.priceBtn(o.cost, { act: 'clearobs', id: o.id, label: 'Quitar · ' })}</div>`);
+  }
+
   openInventory() {
     this.openSheet('La canasta', () => {
       const s = this.s;
@@ -289,10 +346,11 @@ export class UI {
       return out + '</div>';
     });
   }
-  openTruck() {
-    this.openSheet('Camión de acopio', () => {
-      const s = this.s, sim = this.sim, tr = sim.front();
-      if (!tr || !sim.truckParked()) return '<p class="note">El próximo camión está entrando. Un momentico…</p>';
+  openTruck(i = 0) {
+    this.truckSheetId = this.s.trucks[i]?.id;
+    this.openSheet(i ? 'Camión de acopio · andén 2' : 'Camión de acopio', () => {
+      const s = this.s, sim = this.sim, tr = s.trucks[i];
+      if (!tr || !sim.isParked(i) || tr.id !== this.truckSheetId) return '<p class="note">El próximo camión está entrando. Un momentico…</p>';
       const o = tr.order, miss = sim.missing(tr);
       let out = '<div class="order"><h3>Este camión quiere</h3><div class="order-items">';
       for (const [k, q] of Object.entries(o.items)) {
@@ -301,13 +359,15 @@ export class UI {
         out += `<div class="oi ${need <= 0 ? 'ok' : ok ? 'ok' : have > 0 ? 'part' : ''}">${ICON[k]}<b>${got}/${q}</b><small>${ITEMS[k].plural} · tienes ${have}</small></div>`;
       }
       const some = sim.canLoadSome(tr), all = Object.keys(miss).length > 0 && sim.canDeliver(tr);
+      const cam = sim.workers.find((x) => x.role === 'camionero');
       out += `</div><div class="order-foot"><span>Paga ${ICON.coin}<b>${o.reward}</b> · ${ICON.xp}<b>${o.xp}</b> XP</span></div>
+        ${cam ? `<p class="note">${ICON.truck} ${WORKERS.camionero.who} atiende este camión por ti: ${esc(cam.status)}.</p>` : s.level >= WORKERS.camionero.level ? `<p class="note">¿Cansado de vender? Contrata a ${WORKERS.camionero.who} en “Trabajadores”: ${WORKERS.camionero.tag.toLowerCase()}.</p>` : ''}
         <div class="order-btns">
-          <button class="btn primary" data-act="loadtruck" ${some ? '' : 'disabled'}>${all ? 'Cargar todo' : some ? 'Cargar lo que hay' : 'Cargar'}</button>
-          <button class="btn" data-act="skiptruck">No tenemos, siguiente</button>
+          <button class="btn primary" data-act="loadtruck" data-i="${i}" ${some ? '' : 'disabled'}>${all ? 'Cargar todo' : some ? 'Cargar lo que hay' : 'Cargar'}</button>
+          <button class="btn" data-act="skiptruck" data-i="${i}">No tenemos, siguiente</button>
         </div></div>`;
       // la fila
-      const next = s.trucks.slice(1);
+      const next = s.trucks.slice(sim.docks());
       if (next.length) {
         out += '<h3>En la fila</h3><div class="queue">';
         for (const t of next) out += `<div class="qi">${ICON.truck}${Object.entries(t.order.items).map(([k, q]) => `${ICON[k]}${q}`).join(' ')}</div>`;
@@ -325,17 +385,18 @@ export class UI {
       return out;
     });
   }
-  openKitchen() {
-    this.openSheet('El fogón', () => {
-      const s = this.s, k = s.kitchen;
-      if (k.ready) return `<p class="note">¡Ya está! Recoge el ${ITEMS[k.ready].name.toLowerCase()}.</p><button class="btn primary wide" data-act="collectk">Recoger</button>`;
-      if (k.recipe) return `<p class="note">Cocinando ${RECIPES[k.recipe].name.toLowerCase()}… listo en ${fmtClock(RECIPES[k.recipe].time - (now() - k.at))}.</p>`;
-      return Object.entries(RECIPES).map(([id, r]) => {
+  openKitchen(key = 'kitchen') {
+    const title = key === 'kitchen' ? 'El fogón' : STRUCTURES[key].name;
+    this.openSheet(title, () => {
+      const s = this.s, k = this.sim.proc(key);
+      if (k.ready) return `<p class="note">¡Ya está! Recoge: ${ITEMS[k.ready].name.toLowerCase()}.</p><button class="btn primary wide" data-act="collectk" data-key="${key}">Recoger</button>`;
+      if (k.recipe) return `<p class="note">Haciendo ${RECIPES[k.recipe].name.toLowerCase()}… listo en ${fmtClock(RECIPES[k.recipe].time - (now() - k.at))}.</p>`;
+      return Object.entries(RECIPES).filter(([, r]) => r.where.includes(key)).map(([id, r]) => {
         const lock = s.level < r.level;
         const need = Object.entries(r.needs).map(([i, q]) => `${q} ${ITEMS[i].plural.toLowerCase()} (tienes ${s.inv[i]})`).join(', ');
         const can = !lock && Object.entries(r.needs).every(([i, q]) => s.inv[i] >= q);
         return `<div class="row ${lock ? 'dim' : ''}"><div class="row-ico">${ICON[r.out]}</div><div class="row-main"><b>${r.name}</b><small>${need} · ${fmtTime(r.time)} · se vende a ${ITEMS[r.out].sell}</small></div>
-          ${lock ? `<button class="btn locked" disabled>Nivel ${r.level}</button>` : `<button class="btn" data-act="cook" data-id="${id}" ${can ? '' : 'disabled'}>Cocinar</button>`}</div>`;
+          ${lock ? `<button class="btn locked" disabled>Nivel ${r.level}</button>` : `<button class="btn" data-act="cook" data-id="${id}" data-key="${key}" ${can ? '' : 'disabled'}>${key === 'trapiche' ? 'Moler' : key === 'casaTabaco' ? 'Torcer' : 'Cocinar'}</button>`}</div>`;
       }).join('');
     });
   }
@@ -422,9 +483,9 @@ export class UI {
     // fila de camiones: pedido grande en el primero, mini en los demás
     s.trucks.forEach((tr, i) => {
       const items = Object.entries(tr.order.items).map(([k, q]) => `${ICON[k]}${Math.max(0, q - (tr.loaded[k] || 0))}`).join(' ');
-      if (i === 0 && sim.truckParked()) {
+      if (sim.isParked(i)) {
         const ready = sim.canDeliver(tr), some = sim.canLoadSome(tr);
-        this.label('truck', tr.z !== undefined ? TRUCK_SPOT.x : 0, 2.3, tr.z, `<span class="lt">Pedido</span>${items}<span class="pay">${ICON.coin}${tr.order.reward}</span>${ready ? '<span class="go">¡Listo!</span>' : some ? '' : '<span class="no">No hay</span>'}`, ready ? 'ready' : '', 'truckinfo');
+        this.label(i ? 'truck-1' : 'truck', TRUCK_SPOT.x, 2.3, tr.z, `<span class="lt">${i ? 'Andén 2' : 'Pedido'}</span>${items}<span class="pay">${ICON.coin}${tr.order.reward}</span>${ready ? '<span class="go">¡Listo!</span>' : some ? '' : '<span class="no">No hay</span>'}`, ready ? 'ready' : '', `truckinfo" data-i="${i}`);
       } else if (Math.abs(tr.z - (tr.slotZ ?? tr.z)) < 0.05) {
         this.label(`truckq-${tr.id}`, TRUCK_SPOT.x, 2.0, tr.z, items, 'mini');
       }
@@ -436,13 +497,25 @@ export class UI {
     else if (s.kitchen.recipe) this.label('kitchen', K.x + 1, 2.6, K.z + 1, `${ICON[RECIPES[s.kitchen.recipe].out]} ${fmtClock(RECIPES[s.kitchen.recipe].time - (now() - s.kitchen.at))}`);
     else this.label('kitchen', K.x + 1, 2.6, K.z + 1, 'Fogón libre', 'muted');
     // terrenos a la venta
+    const frontier = this.g.world.frontierParcels();
     for (const p of PARCELS) {
-      if (s.parcels.includes(p.id)) continue;
+      if (s.parcels.includes(p.id) || !frontier.has(p.id)) continue;
       const [cx, cz] = this.g.world.parcelCenter(p);
       const lock = s.level < p.level;
       this.label(`parcel-${p.id}`, cx, 1.2, cz, lock ? `Se vende · nivel ${p.level}` : `Se vende ${ICON.coin}${p.price}`, lock ? 'muted' : 'sale', 'land');
     }
     // temporizador de la mata seleccionada
+    // estructuras: listo / tiempo / solar
+    for (const [id, st] of Object.entries(STRUCTURES)) {
+      if (!s.parcels.includes(st.parcel)) continue;
+      const cx = st.x + st.w / 2, cz = st.z + st.h / 2, b = s.built[id];
+      if (!b) { this.label(`st-${id}`, cx, 1.1, cz, `Solar · ${st.name}${s.level < st.level ? ` · nivel ${st.level}` : ''}`, s.level < st.level ? 'muted' : 'sale', `opensite" data-id="${id}`); continue; }
+      if (st.kind === 'animal') this.label(`st-${id}`, cx, 1.6, cz, b.ready ? `${ICON[st.produce.item]} ¡Listo!` : `${ICON[st.produce.item]} ${fmtClock(sim.animalLeft(id))}`, b.ready ? 'ready' : 'mini');
+      else if (st.kind === 'proc') {
+        const k = b;
+        this.label(`st-${id}`, cx, 2.4, cz, k.ready ? `${ICON[k.ready]} ¡Listo!` : k.recipe ? `${ICON[RECIPES[k.recipe].out]} ${fmtClock(RECIPES[k.recipe].time - (now() - k.at))}` : `${st.name} libre`, k.ready ? 'ready' : k.recipe ? '' : 'muted');
+      }
+    }
     // trabajadores: burbuja con lo que hacen
     for (const w of sim.workers) {
       const W0 = WORKERS[w.role];
@@ -502,6 +575,11 @@ export class UI {
     if (!s.hireHint && !n && s.money >= WORKERS.recolector.price && s.tutorial >= 2) {
       s.hireHint = true;
       this.toast(`¡Ya te alcanza para contratar a ${WORKERS.recolector.who}! Toca “Trabajadores”.`);
+      $('#btn-workers').classList.add('pulse-once');
+    }
+    if (!s.camHint && s.level >= WORKERS.camionero.level && !s.workers.some((w) => w.role === 'camionero') && s.money >= WORKERS.camionero.price && s.tutorialDone) {
+      s.camHint = true;
+      this.toast(`${WORKERS.camionero.who} el camionero ya se puede contratar: ${WORKERS.camionero.tag.toLowerCase()}.`);
       $('#btn-workers').classList.add('pulse-once');
     }
   }

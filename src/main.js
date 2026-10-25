@@ -8,7 +8,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { UI } from './ui.js';
 import { ICON } from './icons.js';
-import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT, FF_SPEEDS, FF_STEP, CROPS } from './data.js';
+import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT, FF_SPEEDS, FF_STEP, CROPS, STRUCTURES, TRUCK_SLOTS } from './data.js';
 
 class Game {
   constructor() {
@@ -32,9 +32,9 @@ class Game {
     this.input = new Input(this.canvas, this.rig, { onTap: (x, y) => this.tap(x, y), onUse: () => { this.sound.unlock(); this.sim.use(); } });
     this.ui = new UI(this);
     this.rig.follow = this.sim.player;
-    this.updateBounds();
     this.resize();
     this.fitFarm(true);
+    this.updateBounds(true);
     window.addEventListener('resize', () => this.resize());
     window.visualViewport?.addEventListener('resize', () => this.resize());
     window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
@@ -59,9 +59,16 @@ class Game {
         this.sound.play(n);
       },
       levelUp: (l) => { this.sound.play('level'); this.ui?.levelUp(l); },
-      changed: (k) => { this.ui?.refreshHud(); if (k === 'plots') this.world && (this.world.plotsDirty = true); },
-      openTruck: () => this.ui.openTruck(),
-      openKitchen: () => this.ui.openKitchen(),
+      changed: (k) => {
+        this.ui?.refreshHud();
+        if (!this.world) return;
+        if (k === 'plots') this.world.plotsDirty = true;
+        if (k === 'land') { this.world.buildStatic(); save(this.sim.s); }
+        if (k === 'obstacles') { this.world.buildObstacles(); }
+      },
+      openTruck: (i) => this.ui.openTruck(i),
+      openKitchen: (key) => this.ui.openKitchen(key),
+      openBuild: (id) => this.ui.openBuild(id),
       openShop: () => this.ui.openShop(),
       marker: (t) => {},
       burst: (x, z, item) => this.world.puff(x, 0.4, z, item === 'tomato' ? 0xd2402c : item === 'cane' ? 0xc9c070 : 0x9a6a2e, 5, 1.2),
@@ -115,27 +122,48 @@ class Game {
     for (const p of PARCELS) if (s.parcels.includes(p.id)) { x0 = Math.min(x0, p.rect.x0); z0 = Math.min(z0, p.rect.z0); x1 = Math.max(x1, p.rect.x1 + 1); z1 = Math.max(z1, p.rect.z1 + 1); }
     return { x0, z0, x1, z1 };
   }
-  updateBounds() { this.rig.setBounds({ x0: -2, z0: -2, x1: W + 2, z1: H + 2 }); }
-  fitFarm(snap) {
+  // Paneo y zoom máximo según la tierra propia (se animan al comprar)
+  updateBounds(snap = false) {
     const r = this.ownedRect();
+    this.rig.setBounds({ x0: r.x0 - 3, z0: r.z0 - 3, x1: r.x1 + 3, z1: r.z1 + 3 }, snap);
+    this.rig.setMaxDist(Math.max(46, this.rig.fitDist(r.x0, r.z0, r.x1, r.z1) * 1.2), snap);
+  }
+  // Vista inicial/cercana: la finca original (como antes)
+  fitFarm(snap) {
+    const r = { x0: START_AREA.x0, z0: START_AREA.z0, x1: START_AREA.x1 + 3, z1: START_AREA.z1 + 1 };
     this.rig.fit(r.x0, r.z0, r.x1, r.z1, snap);
-    // en pantallas chicas acerca un poco más
     if (Math.min(window.innerWidth, window.innerHeight) < 500) this.rig.goalDist = Math.max(this.rig.minDist, this.rig.goalDist * 0.8);
     if (snap) this.rig.dist = this.rig.goalDist;
+    this.closeDist = this.rig.goalDist;
     this.rig.manualUntil = performance.now() + 1500;
+  }
+  // "Ver finca": encuadra toda la tierra propia
+  viewFarm() {
+    const r = this.ownedRect();
+    this.updateBounds();
+    this.rig.maxDist = Math.max(this.rig.maxDist, this.rig.fitDist(r.x0, r.z0, r.x1, r.z1));
+    this.rig.fit(r.x0, r.z0, r.x1, r.z1);
+    this.rig.manualUntil = performance.now() + 6000;
+  }
+  // "Centrar": vuelve a la vista cercana sobre el guajiro
+  centerPlayer() {
+    this.rig.goal.set(this.sim.player.x, 0, this.sim.player.z);
+    this.rig.clampGoal();
+    this.rig.goalDist = Math.min(this.closeDist || 20, 22);
+    this.rig.recenter();
   }
   onLandChanged() {
     this.world.buildStatic();
     this.ui.refreshHud();
-    this.fitFarm(false);
+    this.updateBounds();
+    this.viewFarm();
     save(this.sim.s);
   }
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
     this.world.resize(w, h);
     this.rig.setAspect(w / h);
-    // en horizontal en teléfono, un poco más de alcance de zoom
-    this.rig.maxDist = w > h ? 42 : 52;
+    if (this.sim) this.updateBounds(true);
   }
   resetGame() {
     resetSave();
@@ -191,6 +219,12 @@ class Game {
   commandTarget(t) { this.sim.command(t); this.ui.closeSheet(); }
 
   // Toque en el mundo: decide qué tocaste y manda al guajiro.
+  debugPick(cx, cy) {
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(this.input.ndc(cx, cy), this.rig.camera);
+    const p = this.input.ground(cx, cy);
+    return { kind: this.world.pick(ray), ground: p && [+p.x.toFixed(2), +p.z.toFixed(2)] };
+  }
   tap(cx, cy) {
     if (!this.started) return;
     this.sound.unlock();
@@ -200,6 +234,12 @@ class Game {
     const s = this.sim.s;
     const go = (t, mx, mz) => { if (this.sim.command(t)) { this.world.showMarker(mx, mz); this.sound.play('tap'); } };
     if (kind && kind.startsWith('worker:')) return this.ui.openWorker(kind.slice(7));
+    if (kind && kind.startsWith('struct:')) {
+      const id = kind.slice(7), st = STRUCTURES[id];
+      if (!s.built[id]) return this.ui.openBuild(id);
+      return go({ kind: 'struct', id }, st.x + st.w / 2, st.z + st.h + 0.5);
+    }
+    if (kind === 'truck:1') return go({ kind: 'truck', i: 1 }, 14.5, TRUCK_SLOTS[1]);
     if (kind === 'truck' || (kind && kind.startsWith('truckq'))) {
       if (kind !== 'truck') return this.ui.toast('Ese camión está esperando en la fila. Atiende primero al de adelante.');
       if (this.sim.truckParked()) return go({ kind: 'truck' }, 14.5, 9.5);
@@ -214,6 +254,19 @@ class Game {
     if (best) return go({ kind: 'egg', id: best.id }, best.x, best.z);
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
     if (tx < 0 || tz < 0 || tx >= W || tz >= H) return;
+    // obstáculos: tolera tocar la parte alta (cae una casilla detrás)
+    let obs = this.sim.obstacleAt(tx, tz);
+    if (!obs) {
+      let od = 0.95;
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        const o = this.sim.obstacleAt(tx + dx, tz + dz);
+        if (!o) continue;
+        const d = Math.hypot(o.x + 0.5 - p.x, o.z + 0.5 - p.z);
+        if (d < od) { od = d; obs = o; }
+      }
+      if (obs && s.plots.some((q) => q.x === tx && q.z === tz)) obs = null;
+    }
+    if (obs) return this.ui.openObstacle(obs);
     const plot = s.plots.find((q) => q.x === tx && q.z === tz);
     if (plot) {
       if (plot.crop && this.sim.plotState(plot) === 'growing') this.ui.focus(plot);
@@ -255,7 +308,8 @@ class Game {
     this.rig.update(dt);
     this.world.update(dt, time);
     this.world.updateSky(dt, this.started ? (this.gameDt || dt) : 0, this.started ? this.ffSpeed : 1);
-    this.world.render(this.rig.camera);
+    this.world.ffSpeed = this.ffSpeed;
+    this.world.render(this.rig.camera, this.rig);
     this.ui.update(dt);
     this.autoQuality(dt);
     this.fps.frames++; this.fps.t += dt;

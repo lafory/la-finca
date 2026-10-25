@@ -4,8 +4,9 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, WORKERS, WORKER_ORDER,
+  STRUCTURES, OBSTACLE_LIST, TRUCK_SLOTS,
 } from './data.js';
-import { isOwned, isRoad, parcelAt, now } from './state.js';
+import { isOwned, isRoad, parcelAt, now, parcelReachable } from './state.js';
 import * as M from './models.js';
 import { patchMaterial, TIME } from './shaders.js';
 import { groundTexture, grassTileTexture, blobTexture, skyTexture } from './textures.js';
@@ -164,7 +165,7 @@ export class World {
     this.scene.environment = Q.env ? this.envTex : null;
     this.scene.environmentIntensity = 0.35;
     this.grassFactor = Q.grass;
-    if (this.grass) this.grass.count = Math.floor(this.grassTotal * Q.grass);
+    this.applyGrassCounts();
     if (this.farGrass) this.farGrass.count = Math.floor(this.farGrassTotal * Q.grass);
   }
 
@@ -198,7 +199,7 @@ export class World {
     const cane = M.caneLowGeo();
     const caneSpots = [];
     const field = (x0, z0, x1, z1) => { for (let z = z0; z < z1; z += 1.1) for (let x = x0; x < x1; x += 1.1) caneSpots.push([x + 0.5 + (r() - 0.5) * 0.3, z + 0.5 + (r() - 0.5) * 0.3]); };
-    field(-14, 3, -4, 15); field(24, 15, 36, 26); field(-10, -16, 3, -6); field(23, -12, 34, -3);
+    field(-14, 3, -4, 15); field(W + 4, 10, W + 16, 22); field(-10, -16, 3, -6); field(23, -12, 34, -3); field(-14, H + 4, -2, H + 14); field(24, H + 4, 38, H + 12);
     const caneMesh = new THREE.InstancedMesh(cane, this.matCrop, caneSpots.length);
     caneSpots.forEach(([x, z], i) => setMat(caneMesh, i, x, 0, z, r() * 6, 0.95 + r() * 0.2, 0.9 + r() * 0.35));
     caneMesh.receiveShadow = true;
@@ -206,21 +207,22 @@ export class World {
 
     const palmSpots = [];
     for (let i = 0; i < 70; i++) {
-      const a = r() * Math.PI * 2, d = 16 + r() * 34;
+      const a = r() * Math.PI * 2, d = 28 + r() * 34;
       const x = W / 2 + Math.cos(a) * d, z = H / 2 + Math.sin(a) * d;
       if (x > 14 && x < 18) continue;
+      if (x > -2 && x < W + 1 && z > -2 && z < H + 1) continue;
       palmSpots.push([x, z]);
     }
     for (let i = 0; i < 6; i++) palmSpots.push([-2 - r() * 3, r() * H], [W + 1 + r() * 3, r() * H], [r() * W, -2 - r() * 3], [r() * W, H + 1 + r() * 3]);
     this.outsidePalms = palmSpots.filter(([x]) => !(x > 14.5 && x < 17.5));
-    for (const [x, z, sd] of [[-30, -20, 1], [-14, -38, 2], [6, -42, 3], [-42, 0, 4], [30, -36, 5]]) {
+    for (const [x, z, sd] of [[-30, -20, 1], [-14, -38, 2], [6, -42, 3], [-42, 0, 4], [30, -36, 5], [W + 34, 8, 6], [W + 26, H + 30, 7], [4, H + 38, 8], [-40, H + 10, 9]]) {
       const m = new THREE.Mesh(M.mogoteGeo(sd), this.mat);
       m.position.set(x, 0, z); m.scale.setScalar(1.6);
       this.scene.add(m);
     }
     // hierba alta alrededor
     const spots = [];
-    for (let i = 0; i < 2600; i++) {
+    for (let i = 0; i < 3400; i++) {
       const x = -10 + r() * (W + 20), z = -10 + r() * (H + 20);
       if (x >= 0 && x < W && z >= 0 && z < H) continue;
       if (x > 14.8 && x < 17.2) continue;
@@ -233,7 +235,7 @@ export class World {
     this.scene.add(this.farGrass);
     // polvo dorado flotando
     const n = 90, pg = new THREE.BufferGeometry(), pp = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) pp.set([r() * W, 0.3 + r() * 3, r() * H], i * 3);
+    for (let i = 0; i < n; i++) pp.set([r() * 22, 0.3 + r() * 3, r() * 18], i * 3);
     pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
     this.motes = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.06, transparent: true, opacity: 0.7, depthWrite: false }));
     this.scene.add(this.motes);
@@ -247,7 +249,7 @@ export class World {
     const plotSet = new Set(s.plots.map((p) => `${p.x},${p.z}`));
     // Suelo pintado (una malla, una textura)
     if (this.groundMesh) { this.scene.remove(this.groundMesh); this.groundMesh.material.map.dispose(); }
-    const px = this.isSmall ? 40 : 64;
+    const px = this.isSmall ? 22 : 34; // el mapa es 46×40: textura ≤ 1564×1360
     const gtex = groundTexture(s, plotSet, px);
     const gg = new THREE.PlaneGeometry(W, H);
     gg.rotateX(-Math.PI / 2);
@@ -289,10 +291,26 @@ export class World {
         if (out || (!isOwned(s, nx, nz) && !isRoad(nx))) fence(x, z, nx, nz, 'wire', x * 13 + z * 7 + dx);
       }
     }
+    const frontier = this.frontierParcels();
     for (const p of PARCELS) {
       const owned = s.parcels.includes(p.id);
       if (owned) for (const d of p.decor || []) if (d.kind === 'tobaccoHouse') parts.push(M.place(M.tobaccoHouseGeo(), d.x + d.w / 2, d.z + d.h / 2));
-      if (!owned) { const [cx, cz] = this.parcelCenter(p); parts.push(M.place(M.signGeo(), cx, cz, Math.PI / 4)); }
+      if (!owned && frontier.has(p.id)) { const [cx, cz] = this.parcelCenter(p); parts.push(M.place(M.signGeo(), cx, cz, Math.PI / 4)); }
+    }
+    // estructuras construidas y solares
+    this.windmill = null;
+    for (const [id, st] of Object.entries(STRUCTURES)) {
+      if (!s.parcels.includes(st.parcel)) continue;
+      const cx = st.x + st.w / 2, cz = st.z + st.h / 2;
+      if (!s.built[id]) { parts.push(M.place(M.siteGeo(st.w, st.h), cx, cz)); continue; }
+      if (st.kind === 'animal') {
+        parts.push(M.place(M.penGeo(st.w, st.h, 300 + st.x), cx, cz));
+        if (id === 'gallinero2') parts.push(M.place(M.coopGeo(), st.x + st.w - 0.9, st.z + 0.9, Math.PI));
+      } else if (id === 'trapiche') parts.push(M.place(M.trapicheGeo(), cx, cz));
+      else if (id === 'fogon2') parts.push(M.place(M.kitchenGeo(), cx, cz));
+      else if (id === 'casaTabaco') parts.push(M.place(M.tobaccoHouseGeo(), cx, cz));
+      else if (id === 'anden') parts.push(M.place(M.andenGeo(), cx, cz));
+      else if (id === 'pozo') { parts.push(M.place(M.wellGeo(), cx, cz)); this.windmill = [cx + 0.45, 2.95, cz + 0.17]; }
     }
     const geo = new M.Builder();
     parts.forEach((g) => geo.add(g));
@@ -318,28 +336,111 @@ export class World {
       this.scene.add(this.farPalms);
     }
     // Hierba en el terreno (más densa en lo no comprado)
-    if (this.grass) { this.scene.remove(this.grass); this.grass.dispose(); }
-    const spots = [];
+    // Hierba en trozos de 8×8 tiles: cada trozo es un InstancedMesh con su propia esfera para el frustum culling.
+    if (this.grassChunks) for (const c of this.grassChunks) { this.scene.remove(c.mesh); c.mesh.dispose(); }
+    this.grassChunks = [];
     const gr = M.rng(31);
     const busy = new Set();
     for (const b of Object.values(B)) for (let z = b.z; z < b.z + b.h; z++) for (let x = b.x; x < b.x + b.w; x++) busy.add(`${x},${z}`);
-    for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
-      if (isRoad(x) || plotSet.has(`${x},${z}`) || busy.has(`${x},${z}`)) continue;
-      if (x >= PEN.x0 && x <= PEN.x1 && z >= PEN.z0 && z <= PEN.z1) continue;
-      if (x >= 4 && x <= 8 && z >= 4 && z <= 8) continue;
-      const owned = isOwned(s, x, z);
-      const n = owned ? 4 : 9;
-      for (let i = 0; i < n; i++) spots.push([x + gr(), z + gr(), owned ? 0.75 : 1.2]);
+    for (const [id, st] of Object.entries(STRUCTURES)) if (s.built[id]) for (let z = st.z; z < st.z + st.h; z++) for (let x = st.x; x < st.x + st.w; x++) busy.add(`${x},${z}`);
+    const cleared = new Set(s.cleared);
+    for (const o of OBSTACLE_LIST) if (s.parcels.includes(o.parcel) && !cleared.has(o.id)) busy.add(`${o.x},${o.z}`);
+    this.grassGeo ||= M.grassClumpGeo(3, 0.3);
+    const CH = 8;
+    for (let cz = 0; cz < H; cz += CH) for (let cx = 0; cx < W; cx += CH) {
+      const spots = [];
+      for (let z = cz; z < Math.min(H, cz + CH); z++) for (let x = cx; x < Math.min(W, cx + CH); x++) {
+        if (isRoad(x) || plotSet.has(`${x},${z}`) || busy.has(`${x},${z}`)) continue;
+        if (x >= PEN.x0 && x <= PEN.x1 && z >= PEN.z0 && z <= PEN.z1) continue;
+        if (x >= 4 && x <= 8 && z >= 4 && z <= 8) continue;
+        const owned = isOwned(s, x, z);
+        const n = owned ? 3 : 6;
+        for (let i = 0; i < n; i++) spots.push([x + gr(), z + gr(), owned ? 0.75 : 1.2]);
+      }
+      if (!spots.length) continue;
+      // barajar para que bajar el count raleé parejo
+      for (let i = spots.length - 1; i > 0; i--) { const j = Math.floor(gr() * (i + 1)); [spots[i], spots[j]] = [spots[j], spots[i]]; }
+      const mesh = new THREE.InstancedMesh(this.grassGeo, this.matGrass, spots.length);
+      spots.forEach(([x, z, sc], i) => setMat(mesh, i, x, 0, z, gr() * 6, sc * (0.7 + gr() * 0.6)));
+      mesh.receiveShadow = true;
+      mesh.computeBoundingSphere();
+      this.scene.add(mesh);
+      this.grassChunks.push({ mesh, total: spots.length });
     }
-    this.grass = new THREE.InstancedMesh(M.grassClumpGeo(3, 0.3), this.matGrass, spots.length);
-    spots.forEach(([x, z, sc], i) => setMat(this.grass, i, x, 0, z, gr() * 6, sc * (0.7 + gr() * 0.6)));
-    this.grass.receiveShadow = true;
-    this.grassTotal = spots.length;
-    this.grass.count = Math.floor(spots.length * (this.grassFactor ?? 1));
-    this.scene.add(this.grass);
+    this.applyGrassCounts();
+    this.buildObstacles();
+    this.buildAnimals();
+    if (this.blades) { this.scene.remove(this.blades); this.blades = null; }
+    if (this.windmill) {
+      this.blades = new THREE.Mesh(M.bladesGeo(), this.mat);
+      this.blades.position.set(...this.windmill);
+      this.blades.rotation.y = -Math.PI / 4;
+      this.blades.castShadow = true;
+      this.scene.add(this.blades);
+    }
     this.buildPlots();
     this.buildBlobs();
     this.buildPickers();
+  }
+  // Parcelas a la venta que tocan la tierra propia (las demás no muestran letrero para no llenar la vista)
+  frontierParcels() {
+    const s = this.s;
+    return new Set(PARCELS.filter((p) => !s.parcels.includes(p.id) && parcelReachable(s, p) && p.level <= s.level + 4).map((p) => p.id));
+  }
+  applyGrassCounts() {
+    const f = (this.grassFactor ?? 1) * (this.grassLod ?? 1);
+    for (const c of this.grassChunks || []) c.mesh.count = Math.floor(c.total * f);
+  }
+  buildObstacles() {
+    const s = this.s;
+    if (this.obstacleMeshes) for (const m of this.obstacleMeshes) { this.scene.remove(m); m.dispose(); }
+    this.obstacleMeshes = [];
+    const cleared = new Set(s.cleared);
+    const list = OBSTACLE_LIST.filter((o) => s.parcels.includes(o.parcel) && !cleared.has(o.id));
+    this.obstacleGeos ||= { rock: M.rockPileGeo(5), marabu: M.marabuGeo(6), stump: M.stumpGeo(7) };
+    const r = M.rng(55);
+    for (const kind of ['rock', 'marabu', 'stump']) {
+      const L = list.filter((o) => o.kind === kind);
+      if (!L.length) continue;
+      const m = new THREE.InstancedMesh(this.obstacleGeos[kind], kind === 'marabu' ? this.matFoliage : this.mat, L.length);
+      L.forEach((o, i) => setMat(m, i, o.x + 0.5, 0, o.z + 0.5, r() * 6.28, 0.9 + r() * 0.3));
+      m.castShadow = true; m.receiveShadow = true;
+      m.computeBoundingSphere();
+      this.scene.add(m);
+      this.obstacleMeshes.push(m);
+    }
+  }
+  buildAnimals() {
+    const s = this.s;
+    this.animals ||= [];
+    const have = new Set(this.animals.map((a) => a.id));
+    for (const [id, st] of Object.entries(STRUCTURES)) {
+      if (st.kind !== 'animal' || !s.built[id] || have.has(id)) continue;
+      const geos = [0, 1, 2].map((v) => (st.animal === 'cow' ? M.cowGeo(v) : st.animal === 'goat' ? M.goatGeo(v) : st.animal === 'pig' ? M.pigGeo(v) : M.chickenGeo(v)));
+      for (let i = 0; i < st.n; i++) {
+        const m = new THREE.Mesh(geos[i % 3], this.mat);
+        m.castShadow = true;
+        const a = { id, st, m, x: st.x + 0.8 + Math.random() * (st.w - 1.6), z: st.z + 1.2 + Math.random() * (st.h - 1.8), tx: 0, tz: 0, wait: Math.random() * 3, face: Math.random() * 6, speed: st.animal === 'cow' ? 0.35 : st.animal === 'hen' ? 0.8 : 0.5 };
+        a.tx = a.x; a.tz = a.z;
+        this.scene.add(m);
+        this.animals.push(a);
+      }
+    }
+  }
+  updateAnimals(dt, time) {
+    const sp = this.ffSpeed || 1;
+    for (const a of this.animals || []) {
+      const st = a.st;
+      a.wait -= dt * sp;
+      if (a.wait <= 0) { a.tx = st.x + 0.6 + Math.random() * (st.w - 1.2); a.tz = st.z + 1.3 + Math.random() * (st.h - 1.8); a.wait = 2 + Math.random() * 5; }
+      const dx = a.tx - a.x, dz = a.tz - a.z, d = Math.hypot(dx, dz);
+      const moving = d > 0.05;
+      if (moving) { const v = Math.min(d, dt * a.speed * Math.min(sp, 6)); a.x += (dx / d) * v; a.z += (dz / d) * v; a.face = Math.atan2(dx, dz); }
+      a.m.position.set(a.x, moving ? Math.abs(Math.sin(time * 8 + a.x)) * 0.02 : 0, a.z);
+      a.m.rotation.y = a.face + Math.PI;
+      a.m.rotation.x = !moving ? Math.max(0, Math.sin(time * 1.3 + a.z * 3)) * 0.25 : 0;
+    }
+    if (this.blades) this.blades.rotation.z += dt * (1.5 + sp * 0.5);
   }
   parcelCenter(p) {
     const r = p.rect;
@@ -363,6 +464,7 @@ export class World {
       [B.house.x + 1.5, B.house.z + 1.3, 3.6, 3.2], [B.coop.x + 1, B.coop.z + 1, 2.4, 2], [B.kitchen.x + 1, B.kitchen.z + 1, 2.4, 2.4],
       [B.ceiba.x + 1, B.ceiba.z + 1, 2.2, 2.2], [B.tank.x + 0.5, B.tank.z + 0.5, 1.2, 1.2],
       ...this.palmSpots.map(([x, z]) => [x, z, 0.8, 0.8]),
+      ...Object.entries(STRUCTURES).filter(([id, st]) => this.s.built[id] && st.kind !== 'animal').map(([, st]) => [st.x + st.w / 2, st.z + st.h / 2, st.w + 0.4, st.h + 0.4]),
     ];
   }
   updateBlobs() {
@@ -373,6 +475,7 @@ export class World {
     add(sim.player.x, sim.player.z, 0.7, 0.7);
     for (const w of sim.workers) add(w.x, w.z, 0.7, 0.7);
     for (const c of this.s.chickens) add(c.x, c.z, 0.5, 0.55);
+    for (const a of this.animals || []) add(a.x, a.z, a.st.animal === 'cow' ? 0.9 : 0.6, a.st.animal === 'cow' ? 1.6 : 0.9, a.face);
     for (const tv of this.truckViews.values()) if (tv.g.visible) add(tv.g.position.x, tv.g.position.z + 0.2, 1.9, 4.2);
     this.blobs.count = i;
     this.blobs.instanceMatrix.needsUpdate = true;
@@ -547,6 +650,10 @@ export class World {
         case 'camionero': lean = 0.05; v.armR.rotation.x = v.armL.rotation.x = -1.2 + Math.abs(k) * 0.9; v.body.position.y = Math.abs(k) * 0.05; break;
       }
     }
+    if (v.crate) {
+      v.crate.visible = !!ent.carry;
+      if (ent.carry) { v.armL.rotation.x = v.armR.rotation.x = -1.15 + sw * 0.08; v.armL.rotation.z = 0.25; v.armR.rotation.z = -0.25; lean = Math.min(lean, -0.06); v.crate.position.y = 0.78 + v.body.position.y; }
+    }
     v.root.rotation.x += (lean - v.root.rotation.x) * 0.25;
   }
   syncWorkers() {
@@ -562,6 +669,15 @@ export class World {
       tool.position.set(0, -0.42, -0.02);
       tool.castShadow = true;
       v.armR.add(tool);
+      if (w.role === 'camionero') {
+        // caja de mercancía en brazos (visible cuando lleva algo al camión)
+        v.crate = new THREE.Mesh(this.crateGeos ? this.crateGeos[0] : M.crateGeo(0), this.mat);
+        v.crate.scale.setScalar(0.62);
+        v.crate.position.set(0, 0.78, -0.3);
+        v.crate.castShadow = true; v.crate.visible = false;
+        v.root.add(v.crate);
+        tool.visible = false;
+      }
       for (const m of [v.body, v.legL, v.legR, v.armL, v.armR]) m.userData.worker = w.role;
       v.role = w.role;
       this.workerViewMap.set(w.role, v);
@@ -588,9 +704,11 @@ export class World {
     for (const [tr, leaving] of list) {
       const v = this.truckView(tr);
       v.seen = true;
-      v.g.position.set(TRUCK_SPOT.x, 0, tr.z);
+      v.g.position.set(TRUCK_SPOT.x + (tr.lx || 0), 0, tr.z);
       v.body.position.y = tr.moving ? Math.sin(time * 22 + tr.id) * 0.02 : 0;
-      v.body.userData.front = !leaving && tr === this.s.trucks[0];
+      const idx = leaving ? -1 : this.s.trucks.indexOf(tr);
+      v.body.userData.front = idx === 0;
+      v.body.userData.dock = idx >= 0 && this.sim.isParked(idx) ? idx : -1;
       const loaded = Object.values(tr.loaded || {}).reduce((a, b) => a + b, 0);
       v.crates.forEach((c, i) => { c.visible = loaded > i * 2; });
       if (tr.moving && Math.random() < dt * 10 && tr.z < 30) this.puff(TRUCK_SPOT.x + (Math.random() - 0.5), 0.15, tr.z + 2, 0xcfae80, 1, 0.6);
@@ -621,6 +739,7 @@ export class World {
     for (const [id, m] of this.henMeshes) if (!alive.has(id)) { this.scene.remove(m); this.henMeshes.delete(id); }
     this.rooster.rotation.z = Math.sin(time * 0.7) > 0.97 ? -0.3 : 0;
     this.updateTrucks(dt, time);
+    this.updateAnimals(dt, time);
     for (const f of this.flags) {
       const pos = f.m.geometry.attributes.position, b = f.base;
       for (let i = 0; i < pos.count; i++) {
@@ -674,6 +793,10 @@ export class World {
       mk('kitchen', B.kitchen.x + 1, B.kitchen.z + 1, 1.8, 1.8, 2.2),
       mk('tank', B.tank.x + 0.5, B.tank.z + 0.5, 0.8, 0.8, 2.0),
     ];
+    for (const [id, st] of Object.entries(STRUCTURES)) {
+      if (!this.s.parcels.includes(st.parcel)) continue;
+      this.pickers.push(mk(`struct:${id}`, st.x + st.w / 2, st.z + st.h / 2, st.w - 0.2, st.h - 0.2, this.s.built[id] ? 1.6 : 0.5));
+    }
   }
   pick(ray) {
     const bodies = [...this.truckViews.values()].map((v) => v.body);
@@ -683,13 +806,36 @@ export class World {
     if (!hits.length) return null;
     const o = hits[0].object;
     if (o.userData.worker) return `worker:${o.userData.worker}`;
-    if (o.userData.truckId !== undefined) return o.userData.front ? 'truck' : 'truckq';
+    if (o.userData.truckId !== undefined) return o.userData.dock === 0 || o.userData.front ? 'truck' : o.userData.dock === 1 ? 'truck:1' : 'truckq';
     return o.userData.kind;
   }
   resize(w, h) {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (QUALITY[this.quality] || QUALITY.alta).dpr));
     this.renderer.setSize(w, h, false);
   }
-  render(camera) { this.renderer.render(this.scene, camera); }
+  render(camera, rig) {
+    if (rig) {
+      // niebla y sombras siguen a la cámara: el mapa grande se ve completo al alejarse
+      const d = rig.dist;
+      this.scene.fog.near = d + 14; this.scene.fog.far = d * 1.6 + 70;
+      camera.far = Math.max(220, d * 3 + 60); camera.updateProjectionMatrix();
+      const snap = 2;
+      const tx = Math.round(rig.target.x / snap) * snap, tz = Math.round(rig.target.z / snap) * snap;
+      const ext = THREE.MathUtils.clamp(d * 0.75, 19, 48);
+      const sc = this.sun.shadow.camera;
+      if (tx !== this.lightTarget.x || tz !== this.lightTarget.z || sc.right !== ext) {
+        this.lightTarget.set(tx, 0, tz);
+        this.sun.target.position.copy(this.lightTarget);
+        this.sun.target.updateMatrixWorld();
+        Object.assign(sc, { left: -ext, right: ext, top: ext, bottom: -ext, far: 60 + ext });
+        sc.updateProjectionMatrix();
+        this.applyTod(this.tod);
+      }
+      // menos hierba cuando se ve la finca entera desde lejos
+      const lod = d > 52 ? 0.35 : d > 36 ? 0.6 : 1;
+      if (lod !== this.grassLod) { this.grassLod = lod; this.applyGrassCounts(); }
+    }
+    this.renderer.render(this.scene, camera);
+  }
 }
 export { parcelAt, CROPS };

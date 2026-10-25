@@ -1,6 +1,6 @@
 import {
   W, H, SAVE_KEY, START_AREA, ROAD, PARCELS, START_PLOTS, BUILDINGS, PEN, TRUCK_TILES,
-  EGG_INTERVAL, START_PALMS, FLAGPOLE,
+  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST,
 } from './data.js';
 
 // Reloj del juego: tiempo real + lo que se ha adelantado con ⏩ (se guarda en la partida).
@@ -22,6 +22,8 @@ export function newGame() {
     chickens: [],
     eggs: [],
     workers: [],
+    built: {}, // estructuras construidas: id → { at, ready, recipe }
+    cleared: [], // obstáculos quitados (ids)
     upgrades: { coop: false, abono: false, storage: 0 },
     trucks: null, // se crea la fila al iniciar (Sim.initTrucks)
     truckTrips: 0,
@@ -51,7 +53,7 @@ export function addChicken(s, t = now()) {
 }
 
 export function storageCap(s) {
-  return [20, 40, 80][s.upgrades.storage] ?? 80;
+  return STORAGE_CAPS[Math.min(s.upgrades.storage, STORAGE_CAPS.length - 1)];
 }
 export function invCount(s) {
   return Object.values(s.inv).reduce((a, b) => a + b, 0);
@@ -83,6 +85,17 @@ export function isOwned(s, x, z) {
   return !!(p && s.parcels.includes(p.id));
 }
 
+// ¿La parcela toca tierra propia o el camino real? (si no, no se podría llegar caminando)
+export function parcelReachable(s, p) {
+  const r = p.rect;
+  if (r.x1 === ROAD.x0 - 1 || r.x0 === ROAD.x1 + 1) return true;
+  for (let z = r.z0 - 1; z <= r.z1 + 1; z++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) {
+    if (x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1) continue;
+    if (inBounds(x, z) && !isRoad(x) && isOwned(s, x, z)) return true;
+  }
+  return false;
+}
+
 // Mapa de bloqueos (edificios, troncos). Se recalcula al comprar tierra.
 export function buildGrid(s) {
   const blocked = new Uint8Array(W * H);
@@ -92,6 +105,9 @@ export function buildGrid(s) {
   }
   for (const [x, z] of START_PALMS) mark(x, z);
   mark(FLAGPOLE[0], FLAGPOLE[1]);
+  const cleared = new Set(s.cleared || []);
+  for (const o of OBSTACLE_LIST) if (s.parcels.includes(o.parcel) && !cleared.has(o.id)) mark(o.x, o.z);
+  for (const [id, b] of Object.entries(STRUCTURES)) if (s.built?.[id]) for (let z = b.z; z < b.z + b.h; z++) for (let x = b.x; x < b.x + b.w; x++) mark(x, z);
   for (const p of PARCELS) {
     if (!s.parcels.includes(p.id)) continue;
     for (const [x, z] of p.palms) mark(x, z);
@@ -145,6 +161,8 @@ export function load() {
     s.settings = { ...base.settings, ...d.settings };
     s.stats = { ...base.stats, ...d.stats };
     s.kitchen = { ...base.kitchen, ...d.kitchen };
+    s.built = { ...(d.built || {}) };
+    s.cleared = Array.isArray(d.cleared) ? d.cleared : [];
     if (!Array.isArray(d.trucks)) { s.trucks = null; s.truck = d.truck; }
     for (const k of Object.keys(s.inv)) s.inv[k] = Math.max(0, Math.floor(+s.inv[k] || 0));
     s.money = Math.max(0, Math.floor(+s.money || 0));

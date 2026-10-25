@@ -17,19 +17,22 @@ export class CameraRig {
     this.update(1);
   }
   setAspect(a) { this.camera.aspect = a; this.camera.updateProjectionMatrix(); }
-  setBounds(b) { this.bounds = b; }
-  // Encaja un rectángulo del mundo en la vista.
-  fit(x0, z0, x1, z1, snap = false) {
-    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  // Los límites y el zoom máximo crecen con la tierra propia y se animan suave.
+  setBounds(b, snap = false) { this.boundsGoal = { ...b }; if (snap || !this.bounds) this.bounds = { ...b }; }
+  setMaxDist(d, snap = false) { this.maxGoal = d; if (snap) this.maxDist = d; }
+  // Distancia para que el rectángulo quepa en la vista
+  fitDist(x0, z0, x1, z1) {
     const w = Math.max(x1 - x0, 1), d = Math.max(z1 - z0, 1);
-    // Diagonal proyectada aprox. del rectángulo girado 45°.
     const across = (w + d) * Math.SQRT1_2;
     const deep = (w + d) * Math.SQRT1_2 * Math.sin(this.pitch);
     const vfov = THREE.MathUtils.degToRad(this.camera.fov);
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.camera.aspect);
-    const dW = (across / 2) / Math.tan(hfov / 2);
-    const dH = (deep / 2) / Math.tan(vfov / 2);
-    this.goalDist = THREE.MathUtils.clamp(Math.max(dW, dH) * 1.05, this.minDist, this.maxDist);
+    return Math.max((across / 2) / Math.tan(hfov / 2), (deep / 2) / Math.tan(vfov / 2)) * 1.05;
+  }
+  // Encaja un rectángulo del mundo en la vista.
+  fit(x0, z0, x1, z1, snap = false) {
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    this.goalDist = THREE.MathUtils.clamp(this.fitDist(x0, z0, x1, z1), this.minDist, Math.max(this.maxDist, this.maxGoal || 0));
     this.goal.set(cx, 0, cz);
     if (snap) { this.dist = this.goalDist; this.target.copy(this.goal); }
   }
@@ -48,6 +51,9 @@ export class CameraRig {
   }
   recenter() { this.manualUntil = 0; }
   update(dt) {
+    const kb = 1 - Math.exp(-dt * 2.5);
+    if (this.boundsGoal) for (const k of ['x0', 'z0', 'x1', 'z1']) this.bounds[k] += (this.boundsGoal[k] - this.bounds[k]) * kb;
+    if (this.maxGoal) this.maxDist += (this.maxGoal - this.maxDist) * kb;
     if (this.follow && this.follow.moving && performance.now() > this.manualUntil) {
       this.goal.x += (this.follow.x - this.goal.x) * Math.min(1, dt * 2.5);
       this.goal.z += (this.follow.z - this.goal.z) * Math.min(1, dt * 2.5);

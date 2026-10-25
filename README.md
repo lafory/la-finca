@@ -22,6 +22,8 @@ npm run preview             # = vite preview --host 0.0.0.0 --port 4173 --strict
 
 # Prueba de humo headless (con el preview corriendo en :4173)
 node tests/v3.mjs           # v3: contratar, ⏩, noche → screenshots/v3-*.png
+node tests/v31.mjs          # v3.1: finca grande, obstáculos, obras, cámara → screenshots/v31-*.png
+node tests/camionero.mjs    # camionero automático: cargar, despedir, venta suelta → screenshots/cam-*.png
 npm run smoke               # escritorio, iPad, teléfono vertical y horizontal → screenshots/v2-*.png y smoke-report-v2.json
 node tests/showcase.mjs     # capturas de una finca avanzada
 ```
@@ -43,9 +45,21 @@ Alternativa sin Vite para servir `dist/`: `npx serve dist -l 4173` o `python3 -m
 - **Trabajadores** (botón en la barra inferior): Pancho (recolector, 30 pesos, nivel 1), Yoel (regador), María (sembradora,
   puede comprar semillas sola), Cachita (cosechadora), Caridad (cocinera), Chucho (camionero). Pago único, mejora de rapidez ★1–3,
   despedir con confirmación. Toca a un trabajador para ver qué hace.
+- **Chucho, el camionero — "Vende a los camiones por ti"** (nivel 2, 45 pesos, destacado arriba en Trabajadores): espera en el andén,
+  va al bohío por lo que pide el camión, lo trae en una caja (se ve caminando con ella), carga y cobra. Si el camión pide lo que no hay,
+  espera 20 s de juego por si llega mercancía y luego lo despide. Opcional en su ficha: "Vender lo que sobra" (Sí/No) y
+  "Guardar X de cada cosa" (5/10/20/40): vende suelto lo que pase de X, sin tocar lo que piden los camiones de la fila.
 - **Adelantar el tiempo (⏩):** botón arriba: x1 → x5 → x20. Todo avanza (cultivos, huevos, fogón, trabajadores, camiones) en
   subpasos fijos de 0.1 s de juego. Ciclo de día y noche con farol en el bohío y sombras de nubes. Al tocar una mata que crece
   aparece "Adelantar" (x20 hasta que madura). El reloj adelantado se guarda (`clockOffset`), así que el progreso offline sigue igual.
+- **Finca grande (v3.1):** mapa de 46×40 casillas (≈4.6× el original) con 22 pedazos de tierra. Se compra la tierra de al
+  lado (pegada al camino o a lo tuyo), de nivel 2 a 22 y de 90 a 5 000 pesos. Las tierras nuevas traen piedras, marabú y tocones:
+  tócalos para quitarlos (cuesta unos pesos, da XP y a veces destapa un cantero). Botón **Terreno** → "Terreno y obras".
+- **Obras:** segundo andén para camiones (N6), corral de vacas → leche (N8), chivos → queso (N9), pozo con molino (riego dura más, N10),
+  corral de cerdos → carne (N11), trapiche → melao y azúcar con caña (N12), segundo gallinero (N13), segundo fogón (N14) y
+  casa de curar tabaco → puros (N15). Cada obra va en su solar dentro de su tierra.
+- **Cámara:** "Ver finca" (a la derecha) encuadra toda la tierra tuya; "Centrar" vuelve a la vista cercana sobre el guajiro.
+  El límite de alejar y de mover la vista crece (con animación) cada vez que compras tierra.
 - **Calidad gráfica:** Ajustes → Auto / Alta / Media / Baja. En Auto baja sola si el cuadro tarda > 25 ms.
 - Pantalla completa: botón ⛶ arriba (Android/escritorio); en iPhone, "Añadir a pantalla de inicio" abre a pantalla completa.
 

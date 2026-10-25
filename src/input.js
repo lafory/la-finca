@@ -13,10 +13,15 @@ export class Input {
     this.lastMid = null;
     this.joy = { x: 0, z: 0 };
     canvas.addEventListener('pointerdown', (e) => this.down(e));
+    // Las etiquetas flotantes del mundo no deben cortar el paneo ni el pellizco (finca grande = muchas etiquetas)
+    document.addEventListener('pointerdown', (e) => { if (e.target !== canvas && e.target.closest?.('#labels .wlabel')) this.down(e, true); });
+    window.addEventListener('click', (e) => { if (performance.now() < this.noClickUntil && e.target.closest?.('#labels')) { e.stopPropagation(); e.preventDefault(); } }, true);
+    this.noClickUntil = 0;
     window.addEventListener('pointermove', (e) => this.move(e));
     window.addEventListener('pointerup', (e) => this.up(e));
     window.addEventListener('pointercancel', (e) => this.up(e, true));
     canvas.addEventListener('wheel', (e) => this.wheel(e), { passive: false });
+    document.addEventListener('wheel', (e) => { if (e.target.closest?.('#labels')) this.wheel(e); }, { passive: false });
     // Safari: gesto de pellizco del trackpad
     canvas.addEventListener('gesturestart', (e) => e.preventDefault());
     canvas.addEventListener('gesturechange', (e) => { e.preventDefault(); if (e.scale) this.rig.zoomBy(1 / Math.pow(e.scale, 0.15)); });
@@ -34,9 +39,9 @@ export class Input {
     const p = new THREE.Vector3();
     return this.ray.ray.intersectPlane(this.plane, p) ? p : null;
   }
-  down(e) {
-    this.canvas.setPointerCapture?.(e.pointerId);
-    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() });
+  down(e, label = false) {
+    if (!label) this.canvas.setPointerCapture?.(e.pointerId);
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), label });
     if (this.pointers.size === 1) this.moved = false;
     if (this.pointers.size === 2) { this.moved = true; this.lastPinch = this.pinchDist(); this.lastMid = this.mid(); }
   }
@@ -68,7 +73,8 @@ export class Input {
     if (!p) return;
     this.pointers.delete(e.pointerId);
     if (this.pointers.size < 2) { this.lastPinch = 0; this.lastMid = null; }
-    if (!cancel && !this.moved && this.pointers.size === 0 && performance.now() - p.t < 600) {
+    if (this.moved) this.noClickUntil = performance.now() + 350; // un arrastre que acaba sobre una etiqueta no la activa
+    if (!cancel && !p.label && !this.moved && this.pointers.size === 0 && performance.now() - p.t < 600) {
       this.onTap(e.clientX, e.clientY);
     }
     if (this.pointers.size === 0) this.moved = false;

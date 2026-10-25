@@ -125,13 +125,37 @@ tierra en Terreno. Avanza por eventos; se guarda el progreso.
 
 ## 10c. v3 – trabajadores y adelantar el tiempo
 - 6 trabajadores (pago único, sin salario; mejora ★2 = precio×0.8+20, ★3 = precio×1.6+20): recolector 30 (N1),
-  regador 55 (N2), sembradora 70 (N2, compra semillas si se activa), cosechadora 90 (N3), cocinera 180 (N4), camionero 300 (N5).
+  regador 55 (N2), sembradora 70 (N2, compra semillas si se activa), cosechadora 90 (N3), cocinera 180 (N4), camionero 45 (N2; antes 300 N5).
   Rapidez ★1/2/3: caminar 2.6/3.3/4.1, trabajar 1.4/0.9/0.55 s. Burbujas de estado, animación de trabajo, herramientas en la mano.
 - ⏩ x1/x5/x20: reloj de juego = Date.now + clockOffset (guardado). Simulación en subpasos de ≤0.1 s de juego; el guajiro
   camina a velocidad real. Día = 240 s de juego al adelantar; a x1 la luz vuelve sola a la tarde.
 
+## 10d. v3.1 – la finca crece
+- Mapa 46×40 (antes 22×18); el núcleo queda arriba a la izquierda y el camino (x15–16) cruza todo el mapa.
+- 18 tierras nuevas generadas de forma determinista (`genParcel`): franjas de canteros (2 filas + 1 de paso), palmas en las
+  esquinas, ~30 % de los canteros tapados por obstáculos más algunos sueltos. Total 22 tierras, ~314 canteros, 169 obstáculos.
+  Precios/niveles: cuartón 90 (N2), rinconada 220 (N4), esquinita 380 (N6), potrero 650 (N8) … caminoreal 3 700 (N20),
+  ojodeagua 4 200 (N21), lavuelta 5 000 (N22). Solo se compra tierra alcanzable (pegada al camino o a lo tuyo).
+- Obstáculos: piedra (6 + nivel·2, 2 XP), marabú (10 + nivel·3, 3 XP), tocón (8 + nivel·2, 2 XP).
+- Obras (STRUCTURES): andén 450 N6, vacas 700 N8 (2 leche/120 s), chivos 820 N9 (queso/150 s), pozo 600 N10 (riego +45 %),
+  cerdos 1 000 N11 (carne/240 s), trapiche 1 300 N12 (melao 2 caña/60 s, azúcar 3 caña/90 s), gallinero 2 900 N13,
+  fogón 2 1 100 N14, casa de tabaco 1 800 N15 (puros 3 tabaco/120 s). Los trabajadores las atienden (recolector, cocinera, camionero).
+- Niveles hasta 30: XP(N>10) = 1200 + k·300 + k²·45. Almacén 20/40/80/150/250. Productos nuevos: leche 30, queso 55, carne 95,
+  melao 80, azúcar 125, puros 260.
+- Cámara: límites = tierra tuya ±3; alejar máx = max(46, encuadre·1.2), animados. "Ver finca" y "Centrar".
+- Rendimiento: hierba en trozos 8×8 instanciados (frustum culling) con LOD por distancia (100/60/35 %), obras y solares
+  fusionados en la malla estática, obstáculos instanciados por tipo, niebla/sombras/plano lejano siguen a la cámara.
+
+## 10e. v3.1 – camionero automático
+- Chucho baja a nivel 2 y 45 pesos, con etiqueta "Vende a los camiones por ti" y tarjeta destacada primera en la hoja.
+- Ciclo: esperar en el andén (x14, z9) → si un camión parqueado pide algo que hay, ir al bohío ("Juntando la mercancía") →
+  volver con la caja en brazos → cargar (parcial vale; completo = cobra y se va). Sin mercancía: espera CAM_WAIT = 20 s de juego
+  desde que parqueó o desde la última carga y lo despide (sin castigo). Con dos andenes atiende los dos.
+- Venta suelta opcional: rec.sell (No por defecto) y rec.keep ∈ {5, 10, 20, 40}; sobrante = inventario − guardar − lo que piden los camiones.
+- Sin toasts ni sonidos propios (solo flotantes sobre el camión); el panel del camión dice qué está haciendo Chucho.
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
-- v3: más animales (cerdo, vaca), decoraciones, día/noche, más recetas.
+- v3 (hecho): trabajadores, ⏩ y día/noche. v3.1 (hecho): finca grande, obstáculos, vacas/chivos/cerdos, trapiche, tabaco.
 - v4: eventos (carnaval), logros, PWA offline, balance con telemetría local.

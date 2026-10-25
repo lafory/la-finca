@@ -1,0 +1,241 @@
+{
+  "desktop": {
+    "errors": [],
+    "parcels": 20,
+    "zoomBounds": {
+      "start": {
+        "dist": 24.01854405867521,
+        "max": 46
+      },
+      "afterLand": {
+        "dist": 93.89067222936673,
+        "max": 98.04438086417379,
+        "bounds": {
+          "x0": -3,
+          "z0": -3,
+          "x1": 49,
+          "z1": 43
+        }
+      }
+    },
+    "builtFirstTry": 9,
+    "obstacle": {
+      "id": "loma-0",
+      "kind": "stump",
+      "cost": 26,
+      "x": 22,
+      "z": 10
+    },
+    "obsPick": {
+      "kind": null,
+      "ground": [
+        22.39,
+        10.36
+      ]
+    },
+    "obstacleCleared": true,
+    "builtTotal": 9,
+    "animalReady": true,
+    "viewFarm": {
+      "dist": 89.9,
+      "max": 112.7
+    },
+    "perfWhole": {
+      "fps": 10,
+      "calls": 118,
+      "tris": 364517
+    },
+    "zoomedIn": 9,
+    "centered": {
+      "dist": 21.8,
+      "close": 24
+    },
+    "perf": {
+      "fps": 11.7,
+      "calls": 70,
+      "tris": 344126,
+      "quality": "baja"
+    }
+  },
+  "phone": {
+    "errors": [],
+    "parcels": 20,
+    "zoomBounds": {
+      "start": {
+        "dist": 52.769424828769026,
+        "max": 79.15413724315353
+      },
+      "afterLand": {
+        "dist": 257.85059859512137,
+        "max": 269.25786869388344,
+        "bounds": {
+          "x0": -3,
+          "z0": -3,
+          "x1": 49,
+          "z1": 43
+        }
+      }
+    },
+    "builtFirstTry": 9,
+    "obstacle": {
+      "id": "loma-0",
+      "kind": "stump",
+      "cost": 26,
+      "x": 22,
+      "z": 10
+    },
+    "obsPick": {
+      "kind": null,
+      "ground": [
+        22.39,
+        10.38
+      ]
+    },
+    "obstacleCleared": true,
+    "builtTotal": 9,
+    "animalReady": true,
+    "viewFarm": {
+      "dist": 257.3,
+      "max": 309.4
+    },
+    "perfWhole": {
+      "fps": 10.8,
+      "calls": 121,
+      "tris": 358581
+    },
+    "zoomedIn": 9,
+    "centered": {
+      "dist": 22,
+      "close": 52.8
+    },
+    "perf": {
+      "fps": 11.8,
+      "calls": 64,
+      "tris": 328761,
+      "quality": "baja"
+    }
+  },
+  "ipad": {
+    "errors": [],
+    "parcels": 20,
+    "zoomBounds": {
+      "start": {
+        "dist": 43.86142011436449,
+        "max": 52.63370413723739
+      },
+      "afterLand": {
+        "dist": 171.45827862887936,
+        "max": 179.04356602260594,
+        "bounds": {
+          "x0": -3,
+          "z0": -3,
+          "x1": 49,
+          "z1": 43
+        }
+      }
+    },
+    "builtFirstTry": 9,
+    "obstacle": {
+      "id": "loma-0",
+      "kind": "stump",
+      "cost": 26,
+      "x": 22,
+      "z": 10
+    },
+    "obsPick": {
+      "kind": null,
+      "ground": [
+        22.39,
+        10.38
+      ]
+    },
+    "clearobsJsClick": true,
+    "obstacleCleared": false,
+    "obsDebug": {
+      "x": 19.150538238691624,
+      "z": 9.150538238691624,
+      "target": "null",
+      "money": 24680
+    },
+    "builtTotal": 9,
+    "animalReady": true,
+    "viewFarm": {
+      "dist": 164.5,
+      "max": 205.7
+    },
+    "perfWhole": {
+      "fps": 12.6,
+      "calls": 120,
+      "tris": 358341
+    },
+    "zoomedIn": 9,
+    "centered": {
+      "dist": 21.4,
+      "close": 43.9
+    },
+    "perf": {
+      "fps": 10,
+      "calls": 66,
+      "tris": 330322,
+      "quality": "baja"
+    }
+  },
+  "phone-landscape": {
+    "errors": [],
+    "parcels": 20,
+    "zoomBounds": {
+      "start": {
+        "dist": 19.21483524694017,
+        "max": 46
+      },
+      "afterLand": {
+        "dist": 93.89067222936673,
+        "max": 101.27929240161198,
+        "bounds": {
+          "x0": -3,
+          "z0": -3,
+          "x1": 49,
+          "z1": 43
+        }
+      }
+    },
+    "builtFirstTry": 9,
+    "obstacle": {
+      "id": "loma-0",
+      "kind": "stump",
+      "cost": 26,
+      "x": 22,
+      "z": 10
+    },
+    "obsPick": {
+      "kind": null,
+      "ground": [
+        22.39,
+        10.36
+      ]
+    },
+    "obstacleCleared": true,
+    "builtTotal": 9,
+    "animalReady": true,
+    "viewFarm": {
+      "dist": 93.7,
+      "max": 112.7
+    },
+    "perfWhole": {
+      "fps": 11.8,
+      "calls": 121,
+      "tris": 358621
+    },
+    "zoomedIn": 9,
+    "centered": {
+      "dist": 19.2,
+      "close": 19.2
+    },
+    "perf": {
+      "fps": 10.7,
+      "calls": 75,
+      "tris": 346214,
+      "quality": "baja"
+    }
+  }
+}

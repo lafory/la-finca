@@ -1,14 +1,17 @@
 // Economía, mapa y progresión de La Finca. Todo en una cuadrícula W×H (1 tile = 1 unidad).
-export const W = 22;
-export const H = 18;
+// v3.1: el mapa creció (4×): la finca original queda arriba a la izquierda y la tierra se extiende al este y al sur.
+export const W = 46;
+export const H = 40;
 
 export const SAVE_KEY = 'lafinca-v2';
 
 // Niveles: XP acumulada necesaria para llegar a cada nivel (índice = nivel).
 export const LEVEL_XP = [0, 0, 20, 55, 110, 190, 300, 450, 650, 900, 1200];
+export const MAX_LEVEL = 30;
 export function xpForLevel(l) {
   if (l < LEVEL_XP.length) return LEVEL_XP[l];
-  return LEVEL_XP[LEVEL_XP.length - 1] + (l - LEVEL_XP.length + 1) * 260;
+  const k = l - LEVEL_XP.length + 1; // 1 = nivel 11
+  return LEVEL_XP[LEVEL_XP.length - 1] + k * 300 + k * k * 45;
 }
 
 export const ITEMS = {
@@ -18,8 +21,14 @@ export const ITEMS = {
   tobacco: { name: 'Tabaco', plural: 'Hojas de tabaco', sell: 70, xp: 10 },
   ketchup: { name: 'Kétchup', plural: 'Pomos de kétchup', sell: 48, xp: 6 },
   guarapo: { name: 'Guarapo', plural: 'Jarras de guarapo', sell: 85, xp: 8 },
+  leche: { name: 'Leche', plural: 'Cantinas de leche', sell: 30, xp: 3 },
+  queso: { name: 'Queso de cabra', plural: 'Quesos de cabra', sell: 55, xp: 5 },
+  carne: { name: 'Carne de puerco', plural: 'Piezas de puerco', sell: 95, xp: 8 },
+  melao: { name: 'Melao de caña', plural: 'Botellas de melao', sell: 80, xp: 7 },
+  azucar: { name: 'Azúcar', plural: 'Sacos de azúcar', sell: 125, xp: 10 },
+  puros: { name: 'Tabacos', plural: 'Cajas de tabacos', sell: 260, xp: 18 },
 };
-export const SELLABLE = ['egg', 'tomato', 'cane', 'tobacco', 'ketchup', 'guarapo'];
+export const SELLABLE = ['egg', 'tomato', 'cane', 'tobacco', 'ketchup', 'guarapo', 'leche', 'queso', 'carne', 'melao', 'azucar', 'puros'];
 
 export const CROPS = {
   tomato: { name: 'Tomate', seedName: 'Semilla de tomate', seed: 5, grow: 60, level: 1, item: 'tomato', xpPlant: 1 },
@@ -28,9 +37,13 @@ export const CROPS = {
 };
 export const CROP_ORDER = ['tomato', 'cane', 'tobacco'];
 
+// where: en qué estructuras se puede hacer (kitchen = el fogón del batey)
 export const RECIPES = {
-  ketchup: { name: 'Kétchup', needs: { tomato: 3 }, time: 30, level: 2, out: 'ketchup' },
-  guarapo: { name: 'Guarapo', needs: { cane: 2 }, time: 45, level: 5, out: 'guarapo' },
+  ketchup: { name: 'Kétchup', needs: { tomato: 3 }, time: 30, level: 2, out: 'ketchup', where: ['kitchen', 'fogon2'] },
+  guarapo: { name: 'Guarapo', needs: { cane: 2 }, time: 45, level: 5, out: 'guarapo', where: ['kitchen', 'fogon2'] },
+  melao: { name: 'Melao de caña', needs: { cane: 2 }, time: 60, level: 12, out: 'melao', where: ['trapiche'] },
+  azucar: { name: 'Azúcar', needs: { cane: 3 }, time: 90, level: 12, out: 'azucar', where: ['trapiche'] },
+  puros: { name: 'Tabacos torcidos', needs: { tobacco: 3 }, time: 120, level: 15, out: 'puros', where: ['casaTabaco'] },
 };
 
 // Precios que escalan: base * factor^cantidad
@@ -38,8 +51,10 @@ export const PRICES = {
   chicken: 28, chickenStep: 1.25,
   coop: 90,      // nivel 3
   abono: 120,    // nivel 4
-  storage: [60, 220], // niveles 2 y 5
+  storage: [60, 220, 600, 1500], // niveles 2, 5, 9 y 14
 };
+export const STORAGE_CAPS = [20, 40, 80, 150, 250];
+export const STORAGE_LEVELS = [2, 5, 9, 14];
 export const WATER_BOOST = 0.3; // regar quita 30 % del tiempo restante
 export const ABONO_FACTOR = 0.8;
 export const ORDER_BONUS = 1.45;
@@ -66,9 +81,12 @@ export const WORKERS = {
     look: { shirt: 0xc9566a, hat: 0xd9c08a, scarf: 0xf2e6c4, skin: 0x7a4a2e, skirt: 0xe8dcc0 } },
   cocinera: { who: 'Caridad', name: 'Cocinera', detail: 'Prende el fogón, hace kétchup y guarapo y recoge lo que sale.', price: 180, level: 4, icon: 'ketchup',
     look: { shirt: 0xf0ece0, hat: null, scarf: 0xd94a3a, skin: 0xb07850, skirt: 0xb8574a } },
-  camionero: { who: 'Chucho', name: 'Camionero', detail: 'Carga los camiones y despide a los que piden lo que no hay.', price: 300, level: 5, icon: 'truck',
+  camionero: { who: 'Chucho', name: 'Camionero', tag: 'Vende a los camiones por ti', detail: 'Espera en el andén, trae del bohío lo que pide el camión, lo carga y cobra. Si piden lo que no hay, espera un poco y lo despide. Puede vender lo que sobra.', price: 45, level: 2, icon: 'truck',
     look: { shirt: 0x5f7f4f, hat: 0x3a3028, scarf: 0xe0b84a, skin: 0xe0b08a } },
 };
+// Camionero: segundos que espera mercancía antes de despedir un camión; cuántos de cada cosa guarda al vender sobrantes.
+export const CAM_WAIT = 20;
+export const CAM_KEEP = [5, 10, 20, 40];
 export const WORKER_ORDER = ['recolector', 'regador', 'sembrador', 'cosechador', 'cocinera', 'camionero'];
 // Mejora de rapidez: nivel → (multiplicador de velocidad al caminar, segundos de trabajo, espera entre tareas)
 export const WORKER_SPEED = [null, { walk: 2.6, work: 1.4, rest: 1.6 }, { walk: 3.3, work: 0.9, rest: 0.9 }, { walk: 4.1, work: 0.55, rest: 0.4 }];
@@ -82,7 +100,7 @@ export const FF_STEP = 0.1; // s de juego por subpaso de simulación
 export const START_AREA = { x0: 4, z0: 4, x1: 14, z1: 12 };
 export const ROAD = { x0: 15, x1: 16 };
 
-export const PARCELS = [
+const BASE_PARCELS = [
   {
     id: 'este', name: 'El cantero del este', blurb: 'Tierra roja al otro lado del camino.',
     price: 40, level: 1, rect: { x0: 17, z0: 3, x1: 20, z1: 13 },
@@ -109,6 +127,84 @@ export const PARCELS = [
     palms: [[4, 16], [14, 17], [9, 17], [4, 13]],
   },
 ];
+
+// Estructuras que se construyen en solares de la tierra nueva (x,z = esquina; w×h tiles).
+// kind: animal (produce solo, se recoge), proc (recetas), boost (mejora), dock (segundo andén de carga).
+export const STRUCTURES = {
+  anden: { name: 'Segundo andén', detail: 'Se cargan dos camiones a la vez.', price: 450, level: 6, kind: 'dock', parcel: 'esquinita', x: 17, z: 14, w: 2, h: 2 },
+  vacas: { name: 'Corral de vacas', detail: 'Dos vacas dan 2 cantinas de leche cada 2 min.', price: 700, level: 8, kind: 'animal', parcel: 'potrero', x: 23, z: 2, w: 4, h: 3, animal: 'cow', n: 2, produce: { item: 'leche', qty: 2, time: 120 } },
+  chivos: { name: 'Corral de chivos', detail: 'Las chivas dan queso cada 2 min y medio.', price: 820, level: 9, kind: 'animal', parcel: 'loma', x: 23, z: 13, w: 3, h: 3, animal: 'goat', n: 3, produce: { item: 'queso', qty: 1, time: 150 } },
+  pozo: { name: 'Pozo con molino', detail: 'Regar quita 45 % del tiempo restante (antes 30 %).', price: 600, level: 10, kind: 'boost', parcel: 'platanal', x: 2, z: 20, w: 2, h: 2 },
+  cerdos: { name: 'Chiquero', detail: 'Los puercos dan una pieza de carne cada 4 min.', price: 1000, level: 11, kind: 'animal', parcel: 'arrozal', x: 11, z: 19, w: 3, h: 3, animal: 'pig', n: 3, produce: { item: 'carne', qty: 1, time: 240 } },
+  trapiche: { name: 'Trapiche', detail: 'Muele caña: melao y azúcar.', price: 1300, level: 12, kind: 'proc', parcel: 'trapiche', x: 19, z: 20, w: 3, h: 2 },
+  gallinero2: { name: 'Gallinero grande', detail: 'Más gallinas: 4 huevos cada minuto y medio, en su cesta.', price: 900, level: 13, kind: 'animal', parcel: 'monte', x: 30, z: 4, w: 3, h: 3, animal: 'hen', n: 4, produce: { item: 'egg', qty: 4, time: 90 } },
+  fogon2: { name: 'Segundo fogón', detail: 'Otro fogón para kétchup y guarapo.', price: 1100, level: 14, kind: 'proc', parcel: 'sabana', x: 30, z: 16, w: 2, h: 2 },
+  casaTabaco: { name: 'Casa de curar tabaco', detail: 'Tuerce las hojas en tabacos.', price: 1800, level: 15, kind: 'proc', parcel: 'vega_sur', x: 3, z: 28, w: 3, h: 2 },
+};
+export const STRUCTURE_ORDER = ['anden', 'vacas', 'chivos', 'pozo', 'cerdos', 'trapiche', 'gallinero2', 'fogon2', 'casaTabaco'];
+export const OBSTACLES = {
+  rock: { name: 'Piedras', verb: 'Quitar las piedras', base: 6, xp: 2 },
+  marabu: { name: 'Marabú', verb: 'Chapear el marabú', base: 10, xp: 3 },
+  stump: { name: 'Tocón viejo', verb: 'Sacar el tocón', base: 8, xp: 2 },
+};
+
+// Generador determinista de las parcelas nuevas: canteros en franjas de 2 filas, palmas en las esquinas,
+// obstáculos (piedras, marabú, tocones) que hay que quitar; algunos tapan canteros.
+function srng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function genParcel(d, seed) {
+  const r = srng(seed);
+  const { x0, z0, x1, z1 } = d.rect;
+  const st = Object.entries(STRUCTURES).find(([, v]) => v.parcel === d.id);
+  const site = st ? { id: st[0], x: st[1].x, z: st[1].z, w: st[1].w, h: st[1].h } : null;
+  const nearSite = (x, z) => site && x >= site.x - 1 && x <= site.x + site.w && z >= site.z - 1 && z <= site.z + site.h;
+  const palms = [[x0, z0], [x1, z1], [x1, z0]].filter(([x, z]) => !(x >= 15 && x <= 16) && !nearSite(x, z)).slice(0, 2 + (seed % 2));
+  const taken = new Set(palms.map(([x, z]) => `${x},${z}`));
+  const plots = [];
+  for (let z = z0 + 1, row = 0; z <= z1 - 1; z++, row++) {
+    if (row % 3 === 2) continue; // camino entre franjas
+    for (let x = x0 + 1; x <= x1 - 1; x++) {
+      if (x >= 15 && x <= 16) continue;
+      if (nearSite(x, z) || taken.has(`${x},${z}`)) continue;
+      if (plots.length < d.plots) plots.push([x, z]);
+    }
+  }
+  plots.forEach(([x, z]) => taken.add(`${x},${z}`));
+  const kinds = d.obstacles || ['rock', 'marabu', 'stump'];
+  const obstacles = [];
+  let i = 0;
+  // algunos canteros tapados
+  for (const [x, z] of plots) if (r() < (d.covered ?? 0.3)) obstacles.push({ id: `${d.id}-${i++}`, kind: kinds[Math.floor(r() * kinds.length)], x, z });
+  // y monte suelto en el resto
+  for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+    if (x >= 15 && x <= 16) continue;
+    if (taken.has(`${x},${z}`) || nearSite(x, z)) continue;
+    if (r() < (d.wild ?? 0.07)) obstacles.push({ id: `${d.id}-${i++}`, kind: kinds[Math.floor(r() * kinds.length)], x, z });
+  }
+  for (const o of obstacles) o.cost = OBSTACLES[o.kind].base + Math.round(d.level * (o.kind === 'marabu' ? 3 : 2));
+  return { ...d, plots, palms, obstacles, site };
+}
+const NEW_PARCELS = [
+  { id: 'cuarton', name: 'El cuartón', blurb: 'Un pedacito con piedras al norte del camino.', price: 90, level: 2, rect: { x0: 17, z0: 0, x1: 20, z1: 2 }, plots: 4, obstacles: ['rock'], covered: 0.5 },
+  { id: 'rinconada', name: 'La rinconada', blurb: 'Rincón de marabú detrás del bohío.', price: 220, level: 4, rect: { x0: 0, z0: 14, x1: 3, z1: 17 }, plots: 4, obstacles: ['marabu'] },
+  { id: 'esquinita', name: 'La esquinita', blurb: 'Junto al camino: solar para un segundo andén.', price: 380, level: 6, rect: { x0: 17, z0: 14, x1: 20, z1: 17 }, plots: 4, obstacles: ['stump', 'rock'] },
+  { id: 'potrero', name: 'El potrero', blurb: 'Pasto para un corral de vacas.', price: 650, level: 8, rect: { x0: 21, z0: 0, x1: 27, z1: 8 }, plots: 10 },
+  { id: 'loma', name: 'La loma', blurb: 'Lomita con espacio para chivos.', price: 800, level: 9, rect: { x0: 21, z0: 9, x1: 27, z1: 17 }, plots: 10 },
+  { id: 'platanal', name: 'El platanal', blurb: 'Tierra húmeda: aquí va el pozo.', price: 950, level: 10, rect: { x0: 0, z0: 18, x1: 6, z1: 25 }, plots: 12, obstacles: ['marabu', 'stump'] },
+  { id: 'arrozal', name: 'El arrozal', blurb: 'Llano grande con solar para el chiquero.', price: 1100, level: 11, rect: { x0: 7, z0: 18, x1: 14, z1: 25 }, plots: 14 },
+  { id: 'trapiche', name: 'El batey del trapiche', blurb: 'Al otro lado del camino: muele tu caña.', price: 1300, level: 12, rect: { x0: 17, z0: 18, x1: 27, z1: 25 }, plots: 16 },
+  { id: 'monte', name: 'El monte', blurb: 'Mucho marabú, pero tierra buena.', price: 1500, level: 13, rect: { x0: 28, z0: 0, x1: 35, z1: 12 }, plots: 18, obstacles: ['marabu'], covered: 0.45, wild: 0.12 },
+  { id: 'sabana', name: 'La sabana', blurb: 'Abierta y llana, con solar para otro fogón.', price: 1750, level: 14, rect: { x0: 28, z0: 13, x1: 35, z1: 25 }, plots: 18 },
+  { id: 'vega_sur', name: 'La vega del sur', blurb: 'Para tabaco del bueno y su casa de curar.', price: 2000, level: 15, rect: { x0: 0, z0: 26, x1: 14, z1: 32 }, plots: 22 },
+  { id: 'lagunita', name: 'La lagunita', blurb: 'Tierra fresca junto al camino.', price: 2300, level: 16, rect: { x0: 17, z0: 26, x1: 27, z1: 32 }, plots: 16, obstacles: ['stump', 'rock'] },
+  { id: 'canada', name: 'La cañada', blurb: 'Al fondo del monte, tierra negra.', price: 2600, level: 17, rect: { x0: 36, z0: 0, x1: 45, z1: 12 }, plots: 22, obstacles: ['marabu', 'stump'], covered: 0.4 },
+  { id: 'mangos', name: 'Los mangos', blurb: 'Sombra de mangos viejos y buena tierra.', price: 2900, level: 18, rect: { x0: 36, z0: 13, x1: 45, z1: 25 }, plots: 22 },
+  { id: 'fondo', name: 'El fondo', blurb: 'La parte más baja de la finca.', price: 3300, level: 19, rect: { x0: 0, z0: 33, x1: 14, z1: 39 }, plots: 24 },
+  { id: 'caminoreal', name: 'El camino real', blurb: 'A los dos lados de la entrada de los camiones.', price: 3700, level: 20, rect: { x0: 17, z0: 33, x1: 27, z1: 39 }, plots: 18 },
+  { id: 'ojodeagua', name: 'El ojo de agua', blurb: 'Manantial y monte cerrado.', price: 4200, level: 21, rect: { x0: 28, z0: 26, x1: 35, z1: 39 }, plots: 20, obstacles: ['marabu', 'rock'], covered: 0.4 },
+  { id: 'lavuelta', name: 'La vuelta de abajo', blurb: 'La última esquina: ¡la finca completa!', price: 5000, level: 22, rect: { x0: 36, z0: 26, x1: 45, z1: 39 }, plots: 26 },
+];
+export const PARCELS = [...BASE_PARCELS.map((p) => ({ ...p, obstacles: [], site: null })), ...NEW_PARCELS.map((d, i) => genParcel(d, 1000 + i * 37))];
+export const OBSTACLE_LIST = PARCELS.flatMap((p) => p.obstacles.map((o) => ({ ...o, parcel: p.id })));
 
 export function rectTiles(x0, z0, x1, z1) {
   const out = [];
