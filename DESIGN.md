@@ -154,6 +154,39 @@ tierra en Terreno. Avanza por eventos; se guarda el progreso.
 - Venta suelta opcional: rec.sell (No por defecto) y rec.keep ∈ {5, 10, 20, 40}; sobrante = inventario − guardar − lo que piden los camiones.
 - Sin toasts ni sonidos propios (solo flotantes sobre el camión); el panel del camión dice qué está haciendo Chucho.
 
+## 10f. Plan v4 – salir de la finca: manigua, batey, campos y central
+Mapa global en cuadrícula de 88×80 (la finca de 46×40 queda arriba a la izquierda). Cada zona es una región con su
+rectángulo, nivel de apertura y vista propia que se construye "perezosa" (al abrirse o cuando la cámara se acerca),
+así más adelante se puede añadir un mapa del mundo con otras regiones (pueblos, ciudades) sin tocar la finca.
+
+| Zona | Tiles | Abre | Qué hay |
+|---|---|---|---|
+| Camino del sur | x0–87, z40–41 (+ camino real x15–16 hasta z79) | siempre | une finca, batey, manigua y campos |
+| La manigua (monte salvaje) | x46–87, z0–39 | N3 | guásimas y algarrobos (leña), marabú, ceibas (no se tumban), palmas reales, cocoteros, mangos, guayabas, arroyo con pasos de piedra, mogotes; jutías, puercos jíbaros, guineas, gallinas perdidas, caballos |
+| El batey (pueblo) | x0–30, z42–57 | N5 | plaza con ceiba, 8 solares de casas (bohío → casa de zinc), bodega, escuela, iglesia |
+| Campos grandes | x32–87, z42–79 | N18–30 | bloques de 6×6 de caña, tabaco y tomate que se siembran y cosechan enteros; tractor/carreta de bueyes y cuadrillas |
+| Central azucarero | x0–30, z58–79 | N28 (obra en 4 etapas) | basculador, casa de calderas con chimenea humeante, almacenes, estación; tren cañero de vía estrecha en lazo por los campos |
+
+Recursos nuevos: **leña** (contador propio, tope 500; machete gratis al abrir la manigua; árbol 3, marabú 1; vuelven a crecer en 5 min),
+frutas sueltas (mango 8, guayaba 10, coco 14 pesos), animales (jutía 40, puerco jíbaro 70 o +1 pieza en el chiquero,
+guinea/gallina → al gallinero, caballo domado → el guajiro camina 50 % más rápido). Lo capturado se lleva en brazos (máx. 3)
+y se entrega al entrar en la finca. Industria: caña en masa → azúcar crudo, melaza y ron en el central; pedidos de tren.
+
+Economía: niveles hasta 40 (misma fórmula). Leña en obras: casas del batey (8–20), bodega 12, escuela 30, iglesia 40,
+obras v3.1 aún no construidas (6–20) y almacén 4–5 (15/30). Tope de trabajadores: 4 + 1 por bohío + 2 por casa de zinc
+(los saves viejos conservan a todos). Nuevo trabajador: leñero (N4, 120 pesos) que tumba árboles y trae la leña al bohío.
+Bodega −15 % en semillas y gallinas; escuela +10 % XP; iglesia +5 % en pedidos.
+Campos: N18 caña (6×6 = 36 cañas por cosecha), N22 tabaco, N25 tomate; tractor N24 y cuadrilla de campo (trabajadores extra).
+Central: N28, cuatro etapas (cimientos, basculador y vía, calderas y chimenea, estación) con leña + pesos + azúcar/caña;
+después tren cañero (locomotora + 4 vagones) y pedidos de tren de 60–200 unidades.
+
+Guardado: misma clave y versión; los campos nuevos se rellenan con valores por defecto (no se borra el progreso).
+Truco de desarrollo (solo `npm run dev`): en Ajustes, subir nivel, +pesos, +leña. Rendimiento: árboles y hierba de cada zona
+en trozos instanciados con culling por trozo y LOD (copa simplificada lejos), suelo de zona en una textura pequeña,
+pathfinding con montículo binario sobre 88×80.
+
+Entregas: **v4a** manigua + batey + leña + leñero; **v4b** campos grandes + central + tren.
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
