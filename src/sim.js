@@ -1,6 +1,6 @@
 // Lógica del juego: jugador, gallinas, huevos, canteros, camión, fogón, trabajadores, progresión.
 import {
-  W, H, ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, EGG_INTERVAL, MAX_GROUND_EGGS, TRUCK_CAP, TRUCK_TIMES,
+  W, H, ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, EGG_INTERVAL, MAX_GROUND_EGGS, TRUCK_SLOTS, TRUCK_SPEED, TRUCK_RESPAWN, TRUCK_MODELS, TRUCK_COLORS,
   WORKERS, PARCELS, BUILDINGS, PEN, TRUCK_TILES, TRUCK_SPOT, WATER_BOOST, ABONO_FACTOR, ORDER_BONUS,
   xpForLevel, SELLABLE, FLAGPOLE,
 } from './data.js';
@@ -29,13 +29,24 @@ export class Sim {
     this.reserved = new Set();
     this.eggFullWarned = false;
     this.lastUseTarget = null;
-    if (!state.truck.order) state.truck.order = this.makeOrder();
+    this.leaving = [];
+    this.initTrucks();
   }
 
   // ------------------------------------------------------------ utilidades
-  can(x, z) { return walkable(this.s, this.grid, x, z, this.truckParked()); }
+  can(x, z) { return walkable(this.s, this.grid, x, z) && !this.truckBlocks(x, z); }
   edge(ax, az, bx, bz) { return this.grid.edges.has(this.grid.ek(ax, az, bx, bz)); }
-  truckParked() { return this.s.truck.phase === 'parked'; }
+  front() { return this.s.trucks[0] || null; }
+  truckParked() { const f = this.front(); return !!f && Math.abs(f.z - TRUCK_SLOTS[0]) < 0.05; }
+  // Los camiones detenidos ocupan los tiles del camino donde esperan.
+  truckBlocks(x, z) {
+    if (x !== 15 && x !== 16) return false;
+    for (const t of this.s.trucks) {
+      if (Math.abs(t.z - (t.slotZ ?? t.z)) > 0.05) continue;
+      if (z >= Math.floor(t.z - 1.6) && z <= Math.floor(t.z + 1.6)) return true;
+    }
+    return false;
+  }
   rebuildGrid() { this.grid = buildGrid(this.s); }
   addXp(n) {
     const s = this.s;
@@ -70,76 +81,189 @@ export class Sim {
   }
   plotProgress(p, t = now()) { return p.crop ? Math.min(1, (t - p.at) / p.dur) : 0; }
 
-  // ------------------------------------------------------------ pedidos del camión
-  makeOrder() {
+  // ------------------------------------------------------------ fila de camiones y pedidos
+  queueSize() { return this.s.level >= 4 ? 4 : 3; }
+  initTrucks() {
     const s = this.s;
-    if (s.truck.trips === 0) return { items: { egg: 3 }, reward: 25, xp: 6 };
-    const pool = ['egg', 'tomato'];
-    if (s.level >= 2) pool.push('ketchup');
-    if (s.level >= 3) pool.push('cane');
-    if (s.level >= 4) pool.push('tobacco');
-    if (s.level >= 5) pool.push('guarapo');
-    const n = Math.min(pool.length, 1 + Math.floor(Math.random() * (s.level >= 3 ? 3 : 2)));
+    if (!Array.isArray(s.trucks)) {
+      s.trucks = [];
+      s.truckTrips = s.truck?.trips || 0;
+      delete s.truck;
+      for (let i = 0; i < this.queueSize(); i++) this.spawnTruck(TRUCK_SLOTS[i]);
+    }
+    if (!s.nextTruckAt) s.nextTruckAt = 0;
+  }
+  spawnTruck(atZ) {
+    const s = this.s;
+    const t = {
+      id: s.nextId++,
+      model: Math.floor(Math.random() * TRUCK_MODELS),
+      color: TRUCK_COLORS[Math.floor(Math.random() * TRUCK_COLORS.length)],
+      order: this.makeOrder(s.trucks.length),
+      loaded: {},
+      z: atZ ?? 46,
+      arrivedAt: now(),
+    };
+    s.trucks.push(t);
+    s.truckTrips = (s.truckTrips || 0) + 1;
+    return t;
+  }
+  // Pedidos que favorecen lo que el jugador puede producir ahora mismo.
+  makeOrder(pos = 0) {
+    const s = this.s, t = now();
+    if ((s.truckTrips || 0) === 0 && pos === 0) return { items: { egg: 3 }, reward: 25, xp: 6 };
+    const growing = (crop) => s.plots.some((p) => p.crop === crop);
+    const pending = new Set(s.trucks.flatMap((tr) => Object.keys(tr.order.items)));
+    const weights = {};
+    weights.egg = 6 + Math.min(4, s.chickens.length - 3) + (s.inv.egg > 2 ? 3 : 0);
+    const crop = (item, crop, lvl) => {
+      if (s.level < lvl) return;
+      let w = 0.4;
+      if (s.inv[item] > 0) w += 4;
+      if (growing(crop)) w += 3;
+      if (s.seeds[crop] > 0) w += 1;
+      weights[item] = w;
+    };
+    crop('tomato', 'tomato', 1); crop('cane', 'cane', 3); crop('tobacco', 'tobacco', 4);
+    const prod = (item, recipe) => {
+      const r = RECIPES[recipe];
+      if (s.level < r.level) return;
+      const [ing, q] = Object.entries(r.needs)[0];
+      let w = 0.3;
+      if (s.inv[item] > 0) w += 4;
+      if (s.kitchen.recipe === recipe || s.kitchen.ready === item) w += 3;
+      if (s.inv[ing] >= q) w += 2;
+      weights[item] = w;
+    };
+    prod('ketchup', 'ketchup'); prod('guarapo', 'guarapo');
+    // un poco de variedad: baja el peso de lo que ya piden los demás camiones
+    for (const k of pending) if (weights[k]) weights[k] *= 0.6;
+    const pick = (exclude) => {
+      const ents = Object.entries(weights).filter(([k]) => !exclude.has(k));
+      const tot = ents.reduce((a, [, w]) => a + w, 0);
+      let r = Math.random() * tot;
+      for (const [k, w] of ents) { r -= w; if (r <= 0) return k; }
+      return ents[0]?.[0];
+    };
+    const kinds = Math.min(Object.keys(weights).length, s.level >= 3 && Math.random() < 0.45 ? 2 : 1);
     const items = {};
-    const picks = [...pool].sort(() => Math.random() - 0.5).slice(0, n);
-    for (const k of picks) {
-      const base = { egg: 4, tomato: 3, ketchup: 1, cane: 2, tobacco: 2, guarapo: 1 }[k];
-      items[k] = base + Math.floor(Math.random() * (1 + s.level * 0.6));
+    const used = new Set();
+    for (let i = 0; i < kinds; i++) {
+      const k = pick(used);
+      if (!k) break;
+      used.add(k);
+      const base = { egg: 3, tomato: 2, ketchup: 1, cane: 2, tobacco: 1, guarapo: 1 }[k];
+      let q = base + Math.floor(Math.random() * (1 + Math.min(4, s.level * 0.5)));
+      if (s.inv[k] > 0 && Math.random() < 0.6) q = Math.max(1, Math.min(q, s.inv[k] + 1));
+      items[k] = q;
     }
     let value = 0, xp = 0;
     for (const [k, q] of Object.entries(items)) { value += ITEMS[k].sell * q; xp += ITEMS[k].xp * q; }
-    return { items, reward: Math.round(value * ORDER_BONUS + 5), xp: Math.round(xp * 1.5 + 3) };
+    return { items, reward: Math.round(value * ORDER_BONUS + 3 + s.level), xp: Math.round(xp * 1.5 + 2) };
   }
-  canDeliver() {
-    const o = this.s.truck.order;
-    if (!o || !this.truckParked()) return false;
-    return Object.entries(o.items).every(([k, q]) => this.s.inv[k] >= q);
+  missing(tr = this.front()) {
+    if (!tr) return {};
+    const out = {};
+    for (const [k, q] of Object.entries(tr.order.items)) { const m = q - (tr.loaded[k] || 0); if (m > 0) out[k] = m; }
+    return out;
   }
-  deliverOrder() {
-    const s = this.s, o = s.truck.order;
-    if (!this.canDeliver()) { this.h.toast('Todavía falta algo para el pedido.'); this.h.sfx('error'); return false; }
-    for (const [k, q] of Object.entries(o.items)) s.inv[k] -= q;
-    s.stats.sold++;
-    this.addMoney(o.reward, TRUCK_SPOT.x, TRUCK_SPOT.z);
-    this.addXp(o.xp);
-    this.h.float(TRUCK_SPOT.x, TRUCK_SPOT.z - 1, `+${o.xp} XP`, 'xp');
-    this.h.sfx('coins');
-    this.h.toast(`¡Pedido entregado! +${o.reward} pesos`);
-    s.truck.cargo.order = (s.truck.cargo.order || 0) + 1;
-    this.sendTruck(true);
+  canLoadSome(tr = this.front()) {
+    return Object.keys(this.missing(tr)).some((k) => this.s.inv[k] > 0);
+  }
+  canDeliver(tr = this.front()) {
+    if (!tr || !this.truckParked()) return false;
+    return Object.entries(this.missing(tr)).every(([k, q]) => this.s.inv[k] >= q);
+  }
+  // Carga lo que haya (parcial vale). Si se completa, cobra y el camión se va.
+  loadTruck() {
+    const s = this.s, tr = this.front();
+    if (!tr || !this.truckParked()) return false;
+    let n = 0;
+    for (const [k, q] of Object.entries(this.missing(tr))) {
+      const m = Math.min(q, s.inv[k]);
+      if (m > 0) { s.inv[k] -= m; tr.loaded[k] = (tr.loaded[k] || 0) + m; n += m; }
+    }
+    if (!n) { this.h.toast('No tienes nada de lo que pide. Pulsa “No tenemos, siguiente”.'); this.h.sfx('error'); return false; }
+    this.h.sfx('load');
+    this.h.changed('inv');
+    if (Object.keys(this.missing(tr)).length === 0) {
+      const o = tr.order;
+      s.stats.sold++;
+      this.addMoney(o.reward, TRUCK_SPOT.x, TRUCK_SPOT.z);
+      this.addXp(o.xp);
+      this.h.float(TRUCK_SPOT.x, TRUCK_SPOT.z - 1, `+${o.xp} XP`, 'xp');
+      this.h.sfx('coins');
+      this.h.toast(`¡Pedido completo! +${o.reward} pesos`);
+      this.departFront();
+    } else this.h.toast(`Cargaste ${n}. Faltan cosas, pero el camión espera.`);
     return true;
+  }
+  deliverOrder() { return this.loadTruck(); }
+  // "No tenemos, siguiente": se va sin castigo; paga a precio normal lo que ya se cargó.
+  skipTruck() {
+    const s = this.s, tr = this.front();
+    if (!tr || !this.truckParked()) return false;
+    let pay = 0;
+    for (const [k, q] of Object.entries(tr.loaded)) pay += ITEMS[k].sell * q;
+    if (pay) { this.addMoney(pay, TRUCK_SPOT.x, TRUCK_SPOT.z); s.stats.sold++; }
+    this.h.toast(pay ? `Se fue con lo cargado: +${pay} pesos. Ya viene el próximo.` : 'Sin problema, compay. Ya viene el próximo camión.');
+    this.h.sfx('horn');
+    this.departFront();
+    return true;
+  }
+  departFront() {
+    const s = this.s, tr = s.trucks.shift();
+    if (!tr) return;
+    this.leaving.push({ ...tr });
+    s.skippedAt = now();
+    if (!s.nextTruckAt || s.nextTruckAt < now()) s.nextTruckAt = now() + TRUCK_RESPAWN;
+    this.h.changed('truck');
   }
   sellLoose(k, qty) {
     const s = this.s;
-    if (!this.truckParked()) { this.h.toast('El camión no está. Ya mismo vuelve.'); return false; }
-    const load = Object.values(s.truck.cargo).reduce((a, b) => a + b, 0);
-    qty = Math.min(qty, s.inv[k], TRUCK_CAP - load);
-    if (qty <= 0) { this.h.toast(load >= TRUCK_CAP ? 'El camión está lleno. ¡Mándalo!' : 'No tienes de eso.'); this.h.sfx('error'); return false; }
+    if (!this.truckParked()) { this.h.toast('Espera a que el camión se parquee.'); return false; }
+    qty = Math.min(qty, s.inv[k]);
+    if (qty <= 0) { this.h.toast('No tienes de eso.'); this.h.sfx('error'); return false; }
     s.inv[k] -= qty;
-    s.truck.cargo[k] = (s.truck.cargo[k] || 0) + qty;
     const pesos = ITEMS[k].sell * qty;
     this.addMoney(pesos, TRUCK_SPOT.x, TRUCK_SPOT.z);
     this.addXp(Math.max(1, Math.round(ITEMS[k].xp * qty * 0.5)));
     s.stats.sold++;
-    this.h.sfx('load');
+    this.h.sfx('coins');
     this.h.changed('inv');
-    if (load + qty >= TRUCK_CAP) { this.h.toast('Camión lleno. ¡Arrancó!'); this.sendTruck(); }
     return true;
   }
-  sendTruck(silent) {
-    const s = this.s;
-    if (!this.truckParked()) return;
-    s.truck.phase = 'leaving'; s.truck.at = now();
-    if (!silent) this.h.toast('¡Arrancó el camión! Vuelve con un pedido nuevo.');
-    this.h.sfx('horn');
-    this.h.changed('truck');
-  }
-  truckRemaining() {
-    const tr = this.s.truck, t = now() - tr.at;
-    if (tr.phase === 'leaving') return TRUCK_TIMES.leaving + TRUCK_TIMES.gone + TRUCK_TIMES.arriving - t;
-    if (tr.phase === 'gone') return TRUCK_TIMES.gone + TRUCK_TIMES.arriving - t;
-    if (tr.phase === 'arriving') return TRUCK_TIMES.arriving - t;
-    return 0;
+  updateTrucks(dt) {
+    const s = this.s, t = now();
+    s.trucks.forEach((tr, i) => {
+      tr.slotZ = TRUCK_SLOTS[i];
+      const d = tr.z - tr.slotZ;
+      if (Math.abs(d) < 0.02) {
+        if (tr.z !== tr.slotZ && i === 0) this.h.sfx('horn');
+        tr.z = tr.slotZ;
+        if (i === 0 && !tr.parkedSince) tr.parkedSince = now();
+        return;
+      }
+      const sp = Math.min(TRUCK_SPEED, 1.2 + Math.abs(d) * 2.2) * dt;
+      tr.z -= Math.sign(d) * Math.min(Math.abs(d), sp);
+      tr.moving = true;
+    });
+    for (const tr of s.trucks) if (tr.z === tr.slotZ) tr.moving = false;
+    for (let i = this.leaving.length - 1; i >= 0; i--) {
+      const tr = this.leaving[i];
+      tr.v = Math.min(TRUCK_SPEED * 1.3, (tr.v || 0) + dt * 4);
+      tr.z -= tr.v * dt; tr.moving = true;
+      if (tr.z < -40) this.leaving.splice(i, 1);
+    }
+    if (s.trucks.length < this.queueSize() && t >= (s.nextTruckAt || 0)) {
+      const back = s.trucks[s.trucks.length - 1];
+      this.spawnTruck(Math.max(46, (back?.z || 0) + 6));
+      s.nextTruckAt = t + TRUCK_RESPAWN;
+      this.h.changed('truck');
+    }
+    // si el jugador quedó donde se para un camión, apártalo
+    const p = this.player;
+    if (this.truckBlocks(Math.floor(p.x), Math.floor(p.z))) { p.x = 14.5; p.path = null; }
   }
 
   // ------------------------------------------------------------ fogón
@@ -301,7 +425,7 @@ export class Sim {
     switch (t.kind) {
       case 'egg': { const e = this.s.eggs.find((q) => q.id === t.id); return e ? [[Math.floor(e.x), Math.floor(e.z)]] : []; }
       case 'plot': return this.footprintGoals(t.p.x, t.p.z, 1, 1);
-      case 'truck': return TRUCK_TILES.map(([x, z]) => [x - 1, z]).filter(([x, z]) => this.can(x, z)).concat([[14, 12], [15, 12], [16, 12], [15, 7], [16, 7]].filter(([x, z]) => this.can(x, z)));
+      case 'truck': return TRUCK_TILES.map(([x, z]) => [x - 1, z]).filter(([x, z]) => this.can(x, z)).concat([[15, 7], [16, 7]].filter(([x, z]) => this.can(x, z)));
       case 'kitchen': return this.footprintGoals(B.kitchen.x, B.kitchen.z, B.kitchen.w, B.kitchen.h);
       case 'coop': return this.footprintGoals(B.coop.x, B.coop.z, B.coop.w, B.coop.h);
       case 'house': return this.footprintGoals(B.house.x, B.house.z, B.house.w, B.house.h);
@@ -388,7 +512,11 @@ export class Sim {
       const canCook = !k.recipe && !k.ready && Object.values(RECIPES).some((r) => s.level >= r.level && Object.entries(r.needs).every(([i, q]) => s.inv[i] >= q));
       if (k.ready || canCook) return { x: 13, z: 5, t: { kind: 'kitchen' }, key: 'kitchen' };
     }
-    if (w.role === 'camionero' && this.canDeliver() && free('truck')) return { x: 15, z: 9, t: { kind: 'truck' }, key: 'truck' };
+    if (w.role === 'camionero' && free('truck') && this.truckParked()) {
+      const f = this.front();
+      const stale = now() - (s.skippedAt || 0) > 40 && now() - (f.parkedSince || now()) > 40;
+      if (this.canDeliver() || (stale && !this.canLoadSome())) return { x: 15, z: 9, t: { kind: 'truck' }, key: 'truck' };
+    }
     return null;
   }
   workerDo(w, t) {
@@ -406,7 +534,7 @@ export class Sim {
         const r = ['guarapo', 'ketchup'].find((id) => s.level >= RECIPES[id].level && Object.entries(RECIPES[id].needs).every(([i, q]) => s.inv[i] >= q));
         if (r) this.startRecipe(r);
       }
-    } else if (t.kind === 'truck') this.deliverOrder();
+    } else if (t.kind === 'truck') { if (this.canDeliver()) this.loadTruck(); else if (!this.canLoadSome()) this.skipTruck(); }
   }
   updateWorker(w, dt) {
     if (w.path) { this.stepAlong(w, dt); if (w.path) return; }
@@ -512,15 +640,8 @@ export class Sim {
         if (t - c.nextLay > EGG_INTERVAL * MAX_GROUND_EGGS) c.nextLay = t + EGG_INTERVAL * 0.5;
       }
     }
-    // camión
-    const tr = s.truck, el = t - tr.at;
-    if (tr.phase === 'leaving' && el >= TRUCK_TIMES.leaving) { tr.phase = 'gone'; tr.at += TRUCK_TIMES.leaving; tr.cargo = {}; this.h.changed('truck'); }
-    if (tr.phase === 'gone' && t - tr.at >= TRUCK_TIMES.gone) { tr.phase = 'arriving'; tr.at += TRUCK_TIMES.gone; tr.trips++; tr.order = this.makeOrder(); this.h.changed('truck'); }
-    if (tr.phase === 'arriving' && t - tr.at >= TRUCK_TIMES.arriving) {
-      tr.phase = 'parked'; tr.at += TRUCK_TIMES.arriving; this.h.sfx('horn'); this.h.changed('truck');
-      // si el jugador quedó parado donde se parquea, apártalo
-      if (TRUCK_TILES.some(([x, z]) => x === Math.floor(p.x) && z === Math.floor(p.z))) { p.x = 14.5; p.path = null; }
-    }
+    // camiones
+    this.updateTrucks(dt);
     // fogón
     const k = s.kitchen;
     if (k.recipe && t - k.at >= RECIPES[k.recipe].time) { k.ready = RECIPES[k.recipe].out; k.recipe = null; this.h.changed('kitchen'); }

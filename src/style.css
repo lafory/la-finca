@@ -182,3 +182,18 @@ button:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .tut-arrow svg, .pulse, .toast, .sheet, .modal { animation: none !important; }
 }
+
+/* ---- v2: fila de camiones, calidad, viñeta */
+#vignette { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(40,20,5,0.28) 100%); }
+.order-btns { display: flex; gap: 8px; margin-top: 10px; }
+.order-btns .btn { flex: 1; min-height: 50px; white-space: normal; text-align: center; line-height: 1.15; }
+.oi.part { border-color: #e0b860; background: #fff2cf; }
+.queue { display: flex; gap: 6px; flex-wrap: wrap; }
+.qi { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 12px; background: #fffaf0; border: 1px solid #e3cfa4; font-weight: 700; font-size: 14px; }
+.qi .ico { width: 20px; height: 20px; }
+.wlabel .pay { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; padding-left: 6px; border-left: 1px solid #c9ad7c; }
+.wlabel .no { color: #a0503c; font-size: 12px; margin-left: 4px; }
+.wlabel.mini { padding: 2px 7px; font-size: 12px; opacity: 0.9; background: rgba(246, 234, 208, 0.85); border-width: 1px; }
+.wlabel.mini .ico { width: 15px; height: 15px; }
+.seg { display: flex; gap: 6px; margin: 2px 0 8px; }
+.seg .btn { flex: 1; min-height: 40px; }

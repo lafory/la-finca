@@ -1,7 +1,7 @@
 // Interfaz DOM: HUD, barra inferior, hojas (Tienda, Terreno, Canasta, Camión, Fogón, Ajustes), tutorial, etiquetas del mundo.
 import { ICON } from './icons.js';
 import {
-  ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, WORKERS, WORKER_ORDER, PARCELS, BUILDINGS, TRUCK_SPOT, TRUCK_CAP,
+  ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, WORKERS, WORKER_ORDER, PARCELS, BUILDINGS, TRUCK_SPOT,
   SELLABLE, xpForLevel, EGG_INTERVAL, LEVEL_XP,
 } from './data.js';
 import { storageCap, invCount, chickenCap, now } from './state.js';
@@ -134,11 +134,12 @@ export class UI {
       case 'skiptut': this.s.tutorialDone = true; this.updateTutorial(); return;
       case 'buy': if (sim.buy(d.id, +(d.qty || 1))) { this.g.tut('buy'); this.refreshSheet(); } else this.refreshSheet(); return;
       case 'parcel': if (sim.buyParcel(d.id)) { this.g.onLandChanged(); this.closeSheet(); } return;
-      case 'deliver': if (sim.deliverOrder()) this.closeSheet(); return;
       case 'sell': sim.sellLoose(d.item, d.qty === 'all' ? 999 : +d.qty); this.refreshSheet(); return;
-      case 'sendtruck': sim.sendTruck(); this.closeSheet(); return;
+      case 'skiptruck': sim.skipTruck(); this.closeSheet(); return;
+      case 'loadtruck': sim.loadTruck(); this.refreshSheet(); if (!sim.truckParked()) this.closeSheet(); return;
       case 'cook': if (sim.startRecipe(d.id)) this.closeSheet(); else this.refreshSheet(); return;
       case 'collectk': sim.collectKitchen(); this.closeSheet(); return;
+      case 'quality': this.g.setQuality(d.id); this.refreshSheet(); return;
       case 'toggle': this.s.settings[d.key] = !this.s.settings[d.key]; this.applySettings(); this.refreshSheet(); return;
       case 'reset': return this.confirmReset();
       case 'reset-yes': this.g.resetGame(); return;
@@ -234,27 +235,38 @@ export class UI {
     });
   }
   openTruck() {
-    this.openSheet('El camión de acopio', () => {
-      const s = this.s, sim = this.sim, o = s.truck.order;
-      if (!sim.truckParked()) return `<p class="note">El camión anda por el pueblo. Vuelve en ${fmtClock(sim.truckRemaining())}.</p>`;
-      let out = '<div class="order"><h3>Pedido del pueblo</h3><div class="order-items">';
+    this.openSheet('Camión de acopio', () => {
+      const s = this.s, sim = this.sim, tr = sim.front();
+      if (!tr || !sim.truckParked()) return '<p class="note">El próximo camión está entrando. Un momentico…</p>';
+      const o = tr.order, miss = sim.missing(tr);
+      let out = '<div class="order"><h3>Este camión quiere</h3><div class="order-items">';
       for (const [k, q] of Object.entries(o.items)) {
-        const ok = s.inv[k] >= q;
-        out += `<div class="oi ${ok ? 'ok' : ''}">${ICON[k]}<b>${Math.min(s.inv[k], q)}/${q}</b><small>${ITEMS[k].plural}</small></div>`;
+        const got = tr.loaded[k] || 0, need = q - got, have = s.inv[k];
+        const ok = need <= 0 || have >= need;
+        out += `<div class="oi ${need <= 0 ? 'ok' : ok ? 'ok' : have > 0 ? 'part' : ''}">${ICON[k]}<b>${got}/${q}</b><small>${ITEMS[k].plural} · tienes ${have}</small></div>`;
       }
-      out += `</div><div class="order-foot"><span>Paga ${ICON.coin}<b>${o.reward}</b> · ${ICON.xp}<b>${o.xp}</b> XP</span>
-        <button class="btn primary" data-act="deliver" ${sim.canDeliver() ? '' : 'disabled'}>Entregar</button></div></div>`;
-      const load = Object.values(s.truck.cargo).reduce((a, b) => a + b, 0);
-      out += `<h3>Venta suelta <small>(${load}/${TRUCK_CAP} en el camión)</small></h3>`;
+      const some = sim.canLoadSome(tr), all = Object.keys(miss).length > 0 && sim.canDeliver(tr);
+      out += `</div><div class="order-foot"><span>Paga ${ICON.coin}<b>${o.reward}</b> · ${ICON.xp}<b>${o.xp}</b> XP</span></div>
+        <div class="order-btns">
+          <button class="btn primary" data-act="loadtruck" ${some ? '' : 'disabled'}>${all ? 'Cargar todo' : some ? 'Cargar lo que hay' : 'Cargar'}</button>
+          <button class="btn" data-act="skiptruck">No tenemos, siguiente</button>
+        </div></div>`;
+      // la fila
+      const next = s.trucks.slice(1);
+      if (next.length) {
+        out += '<h3>En la fila</h3><div class="queue">';
+        for (const t of next) out += `<div class="qi">${ICON.truck}${Object.entries(t.order.items).map(([k, q]) => `${ICON[k]}${q}`).join(' ')}</div>`;
+        out += '</div>';
+      }
+      out += '<h3>Venta suelta <small>(a precio normal)</small></h3>';
       let any = false;
       for (const k of SELLABLE) {
         if (!s.inv[k]) continue;
         any = true;
         out += `<div class="row"><div class="row-ico">${ICON[k]}</div><div class="row-main"><b>${ITEMS[k].plural}: ${s.inv[k]}</b><small>${ITEMS[k].sell} pesos cada uno</small></div>
-          <div class="row-btns"><button class="btn" data-act="sell" data-item="${k}" data-qty="1">Cargar 1</button><button class="btn" data-act="sell" data-item="${k}" data-qty="all">Todo</button></div></div>`;
+          <div class="row-btns"><button class="btn" data-act="sell" data-item="${k}" data-qty="1">Vender 1</button><button class="btn" data-act="sell" data-item="${k}" data-qty="all">Todo</button></div></div>`;
       }
-      if (!any) out += '<p class="note">No tienes nada para cargar. Recoge huevos o cosecha.</p>';
-      out += `<button class="btn wide" data-act="sendtruck">¡Arranca! (trae otro pedido)</button>`;
+      if (!any) out += '<p class="note">La canasta está vacía. Recoge huevos o cosecha.</p>';
       return out;
     });
   }
@@ -278,6 +290,9 @@ export class UI {
       const tg = (key, label, icon) => `<div class="row"><div class="row-ico">${icon}</div><div class="row-main"><b>${label}</b></div>
         <button class="switch ${st[key] ? 'on' : ''}" data-act="toggle" data-key="${key}" role="switch" aria-checked="${!!st[key]}"><i></i></button></div>`;
       let out = tg('music', 'Música guajira', ICON.music) + tg('sfx', 'Efectos de sonido', ICON.sound) + tg('joystick', 'Joystick en pantalla', ICON.center);
+      const q = st.quality || 'auto';
+      out += `<div class="row"><div class="row-ico">${ICON.xp}</div><div class="row-main"><b>Calidad gráfica</b><small>Ahora: ${this.g.world.quality}${q === 'auto' ? ' (automática)' : ''}</small></div></div>
+        <div class="seg">${[['auto', 'Auto'], ['alta', 'Alta'], ['media', 'Media'], ['baja', 'Baja']].map(([id, l]) => `<button class="btn ${q === id ? 'primary' : ''}" data-act="quality" data-id="${id}">${l}</button>`).join('')}</div>`;
       if (this.fsSupported()) out += `<div class="row"><div class="row-ico">${ICON.full}</div><div class="row-main"><b>Pantalla completa</b></div><button class="btn" data-act="fullscreen">${this.isFullscreen() ? 'Salir' : 'Activar'}</button></div>`;
       else out += '<p class="note">En iPhone: Compartir → “Añadir a pantalla de inicio” para jugar a pantalla completa.</p>';
       out += `<p class="note">Controles: toca el suelo para caminar, toca huevos, canteros, el camión o el fogón para usarlos. Arrastra para mover la vista y pellizca (o usa la rueda) para acercar o alejar.</p>`;
@@ -343,19 +358,22 @@ export class UI {
       $('#labels').appendChild(L.el);
       this.labels.set(key, L);
     }
-    if (L.html !== html) { L.el.innerHTML = html; L.html = html; }
+    if (L.html !== html) { L.el.innerHTML = html; L.html = html; L.w = 0; }
     L.x = x; L.y = y; L.z = z; L.seen = true;
   }
   updateLabels() {
     const s = this.s, sim = this.sim;
     for (const L of this.labels.values()) L.seen = false;
-    // camión
-    const tp = this.g.world.truckPose(0);
-    if (tp.visible && sim.truckParked()) {
-      const ready = sim.canDeliver();
-      const items = Object.entries(s.truck.order.items).map(([k, q]) => `${ICON[k]}${q}`).join(' ');
-      this.label('truck', tp.x, 2.2, tp.z, `<span class="lt">Pedido</span>${items}<span class="${ready ? 'go' : ''}">${ready ? '¡Listo!' : ''}</span>`, ready ? 'ready' : '', 'truckinfo');
-    } else if (!sim.truckParked()) this.label('truck', TRUCK_SPOT.x, 1.0, TRUCK_SPOT.z, `${ICON.truck} Vuelve en ${fmtClock(sim.truckRemaining())}`, 'muted');
+    // fila de camiones: pedido grande en el primero, mini en los demás
+    s.trucks.forEach((tr, i) => {
+      const items = Object.entries(tr.order.items).map(([k, q]) => `${ICON[k]}${Math.max(0, q - (tr.loaded[k] || 0))}`).join(' ');
+      if (i === 0 && sim.truckParked()) {
+        const ready = sim.canDeliver(tr), some = sim.canLoadSome(tr);
+        this.label('truck', tr.z !== undefined ? TRUCK_SPOT.x : 0, 2.3, tr.z, `<span class="lt">Pedido</span>${items}<span class="pay">${ICON.coin}${tr.order.reward}</span>${ready ? '<span class="go">¡Listo!</span>' : some ? '' : '<span class="no">No hay</span>'}`, ready ? 'ready' : '', 'truckinfo');
+      } else if (Math.abs(tr.z - (tr.slotZ ?? tr.z)) < 0.05) {
+        this.label(`truckq-${tr.id}`, TRUCK_SPOT.x, 2.0, tr.z, items, 'mini');
+      }
+    });
     // fogón
     const K = BUILDINGS.kitchen;
     if (!sim.kitchenOpen()) this.label('kitchen', K.x + 1, 2.6, K.z + 1, 'Fogón · nivel 2', 'muted');
@@ -379,7 +397,9 @@ export class UI {
     for (const [k, L] of this.labels) {
       if (!L.seen) { L.el.remove(); this.labels.delete(k); continue; }
       const p = this.g.project(L.x, L.y, L.z);
-      L.el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`;
+      let x = p.x;
+      if (k === 'truck') { const hw = (L.w ||= L.el.offsetWidth) / 2 + 6; x = Math.min(W - hw, Math.max(hw, x)); }
+      L.el.style.transform = `translate(${x}px, ${p.y}px) translate(-50%, -100%)`;
       L.el.style.visibility = p.ok && p.x > -50 && p.x < W + 50 && p.y > 0 && p.y < H + 50 ? 'visible' : 'hidden';
     }
   }
@@ -395,7 +415,7 @@ export class UI {
     const egg = s.eggs[0];
     switch (s.tutorial) {
       case 0: return { text: '¡Qué volá, guajiro! Toca los huevos del corral para recogerlos. Tu guajiro camina solo.', at: egg ? [egg.x, 0.6, egg.z] : [9.5, 0.8, 7] };
-      case 1: return { text: 'El camión de acopio quiere 3 huevos. Tócalo y pulsa “Entregar”.', at: [TRUCK_SPOT.x, 2.6, TRUCK_SPOT.z] };
+      case 1: return { text: 'Los camiones hacen fila. El primero quiere 3 huevos: tócalo y pulsa “Cargar”. Si pide algo que no tienes, pulsa “No tenemos, siguiente”.', at: [TRUCK_SPOT.x, 2.9, TRUCK_SPOT.z] };
       case 2:
         if (!anySeeds) return { text: 'Compra semillas de tomate en la Tienda.', dom: '[data-act="shop"]' };
         return { text: 'Toca un cantero de tierra colorada para sembrar tomates.', at: empty ? [empty.x + 0.5, 0.4, empty.z + 0.5] : null };
@@ -405,7 +425,7 @@ export class UI {
       case 4:
         if (!ripe) return { text: 'Espera a que brille: cuando la mata tiene una estrellita dorada, está lista.', at: growing ? [growing.x + 0.5, 0.6, growing.z + 0.5] : null };
         return { text: '¡Tomates listos! Toca la mata (o camina encima) para cosecharlos.', at: [ripe.x + 0.5, 0.9, ripe.z + 0.5] };
-      case 5: return { text: 'Vende tus cosas en el camión, sube de nivel y compra tierra en “Terreno”. ¡A levantar la finca!', dom: '[data-act="land"]', done: true };
+      case 5: return { text: 'Vende huevos y cosechas a los camiones (salta los que pidan lo que no tienes), sube de nivel y compra tierra en “Terreno”.', dom: '[data-act="land"]', done: true };
       default: return null;
     }
   }

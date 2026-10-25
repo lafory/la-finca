@@ -21,7 +21,9 @@ export function newGame() {
     eggs: [],
     workers: [],
     upgrades: { coop: false, abono: false, storage: 0 },
-    truck: { phase: 'parked', at: t, cargo: {}, trips: 0 },
+    trucks: null, // se crea la fila al iniciar (Sim.initTrucks)
+    truckTrips: 0,
+    nextTruckAt: 0,
     kitchen: { recipe: null, at: 0, ready: null },
     player: { x: 13.5, z: 8.5 },
     tutorial: 0,
@@ -104,10 +106,9 @@ export function buildGrid(s) {
   return { blocked, edges, ek };
 }
 
-export function walkable(s, grid, x, z, truckParked) {
+export function walkable(s, grid, x, z) {
   if (!isOwned(s, x, z)) return false;
   if (grid.blocked[z * W + x]) return false;
-  if (truckParked && TRUCK_TILES.some(([tx, tz]) => tx === x && tz === z)) return false;
   return true;
 }
 
@@ -137,7 +138,7 @@ export function load() {
     s.settings = { ...base.settings, ...d.settings };
     s.stats = { ...base.stats, ...d.stats };
     s.kitchen = { ...base.kitchen, ...d.kitchen };
-    s.truck = { ...base.truck, ...d.truck };
+    if (!Array.isArray(d.trucks)) { s.trucks = null; s.truck = d.truck; }
     for (const k of Object.keys(s.inv)) s.inv[k] = Math.max(0, Math.floor(+s.inv[k] || 0));
     s.money = Math.max(0, Math.floor(+s.money || 0));
     return s;

@@ -46,8 +46,12 @@ export const ORDER_BONUS = 1.45;
 
 export const EGG_INTERVAL = 30; // s por gallina
 export const MAX_GROUND_EGGS = 10;
-export const TRUCK_CAP = 20;
-export const TRUCK_TIMES = { leaving: 5, gone: 9, arriving: 5 };
+// Fila de camiones en el camino: el primero se parquea en TRUCK_SPOT, los demás esperan detrás (z crece hacia el sur).
+export const TRUCK_SLOTS = [9.5, 13.8, 18.1, 22.4];
+export const TRUCK_SPEED = 6.5;
+export const TRUCK_RESPAWN = 4; // s hasta que llega otro camión al final de la fila
+export const TRUCK_MODELS = 3;
+export const TRUCK_COLORS = [0x8fb3a3, 0x7f97b0, 0xb5594a, 0xd9c9a0, 0x8c9a5e, 0x6f8f8a, 0xc98e4a];
 
 export const WORKERS = {
   recolector: { name: 'Recolector', detail: 'Junta huevos y cosecha lo maduro.', price: 90, level: 2, shirt: 0x6f8fa8 },

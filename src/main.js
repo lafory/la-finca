@@ -8,7 +8,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { UI } from './ui.js';
 import { ICON } from './icons.js';
-import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES } from './data.js';
+import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT } from './data.js';
 
 class Game {
   constructor() {
@@ -22,7 +22,10 @@ class Game {
     this.sim = new Sim(state, this.hooks());
     this.sim.update(0); // pone al día huevos/cultivos del tiempo fuera
     this.rig = new CameraRig(window.innerWidth / window.innerHeight);
-    this.world = new World(this.canvas, this.sim);
+    this.isPhone = Math.min(window.innerWidth, window.innerHeight) < 600 || matchMedia('(pointer: coarse)').matches;
+    const q = state.settings.quality || 'auto';
+    this.world = new World(this.canvas, this.sim, q === 'auto' ? (this.isPhone ? 'media' : 'alta') : q);
+    this.perf = { sum: 0, n: 0, checks: 0 };
     this.input = new Input(this.canvas, this.rig, { onTap: (x, y) => this.tap(x, y), onUse: () => { this.sound.unlock(); this.sim.use(); } });
     this.ui = new UI(this);
     this.rig.follow = this.sim.player;
@@ -134,6 +137,26 @@ class Game {
   }
   tut(ev) { /* el tutorial avanza leyendo el estado real */ }
 
+  // Calidad automática: si el tiempo de cuadro promedio pasa de ~25 ms, baja un escalón.
+  autoQuality(dt) {
+    if (!this.started || (this.sim.s.settings.quality || 'auto') !== 'auto' || document.hidden) return;
+    const p = this.perf;
+    p.sum += dt; p.n++;
+    if (p.sum < 3) return;
+    const avg = p.sum / p.n;
+    p.sum = 0; p.n = 0; p.checks++;
+    if (p.checks < 2) return; // ignora el arranque
+    const order = ['alta', 'media', 'baja'];
+    const i = order.indexOf(this.world.quality);
+    if (avg > 0.025 && i < 2) { this.world.setQuality(order[i + 1]); this.resize(); }
+  }
+  setQuality(q) {
+    this.sim.s.settings.quality = q;
+    this.perf = { sum: 0, n: 0, checks: 0 };
+    this.world.setQuality(q === 'auto' ? (this.isPhone ? 'media' : 'alta') : q);
+    this.resize();
+  }
+
   commandTarget(t) { this.sim.command(t); this.ui.closeSheet(); }
 
   // Toque en el mundo: decide qué tocaste y manda al guajiro.
@@ -145,9 +168,10 @@ class Game {
     const kind = this.world.pick(ray);
     const s = this.sim.s;
     const go = (t, mx, mz) => { if (this.sim.command(t)) { this.world.showMarker(mx, mz); this.sound.play('tap'); } };
-    if (kind === 'truck') {
+    if (kind === 'truck' || (kind && kind.startsWith('truckq'))) {
+      if (kind !== 'truck') return this.ui.toast('Ese camión está esperando en la fila. Atiende primero al de adelante.');
       if (this.sim.truckParked()) return go({ kind: 'truck' }, 14.5, 9.5);
-      return this.ui.toast('El camión anda por el pueblo. Ya mismo vuelve.');
+      return this.ui.toast('El camión está entrando. Un momentico.');
     }
     if (kind) { const b = BUILDINGS[kind]; return go({ kind }, b.x + b.w / 2, b.z + b.h + 0.5); }
     const p = this.input.ground(cx, cy);
@@ -188,6 +212,7 @@ class Game {
     this.world.update(dt, time);
     this.world.render(this.rig.camera);
     this.ui.update(dt);
+    this.autoQuality(dt);
     this.fps.frames++; this.fps.t += dt;
     if (this.fps.t >= 1) { this.fps.value = this.fps.frames / this.fps.t; this.fps.frames = 0; this.fps.t = 0; }
   }

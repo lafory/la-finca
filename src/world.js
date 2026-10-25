@@ -1,93 +1,127 @@
-// Escena 3D: terreno, edificios, decorado, entidades. Optimizada: estáticos fusionados + instancing.
+// Escena 3D: suelo pintado, edificios, decorado, entidades, fila de camiones.
+// Estilizado-realista: PBR (MeshStandard), texturas procedurales, viento, sombras suaves y de contacto.
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
-  W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, TRUCK_TIMES, CROPS, START_AREA,
+  W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS,
 } from './data.js';
 import { isOwned, isRoad, parcelAt, now } from './state.js';
 import * as M from './models.js';
+import { patchMaterial, TIME } from './shaders.js';
+import { groundTexture, grassTileTexture, blobTexture, skyTexture } from './textures.js';
 
 const CROP_KEYS = ['tomato', 'cane', 'tobacco'];
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpE = new THREE.Euler();
-const setMat = (mesh, i, x, y, z, ry = 0, s = 1, sy = s) => {
+const setMat = (mesh, i, x, y, z, ry = 0, s = 1, sy = s, sz = s) => {
   tmpQ.setFromEuler(tmpE.set(0, ry, 0));
-  tmpM.compose(tmpV.set(x, y, z), tmpQ, tmpS.set(s, sy, s));
+  tmpM.compose(tmpV.set(x, y, z), tmpQ, tmpS.set(s, sy, sz));
   mesh.setMatrixAt(i, tmpM);
 };
 
+export const QUALITY = {
+  alta: { dpr: 2, shadow: 2048, grass: 1, env: true },
+  media: { dpr: 1.5, shadow: 1024, grass: 0.45, env: true },
+  baja: { dpr: 1, shadow: 512, grass: 0.2, env: false },
+};
+
 export class World {
-  constructor(canvas, sim) {
+  constructor(canvas, sim, quality = 'alta') {
     this.sim = sim;
     this.s = sim.s;
-    const isSmall = Math.min(window.innerWidth, window.innerHeight) < 600;
+    this.isSmall = Math.min(window.innerWidth, window.innerHeight) < 600;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.toneMappingExposure = 1.0;
     this.scene = new THREE.Scene();
-    const haze = new THREE.Color(0xe9bf8c);
-    this.scene.background = haze;
-    this.scene.fog = new THREE.Fog(haze, 45, 110);
+    this.scene.background = skyTexture();
+    this.scene.fog = new THREE.Fog(0xe6bf92, 38, 95);
 
-    this.mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-    this.matDS = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const std = (o = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86, metalness: 0, ...o });
+    this.mat = patchMaterial(std());
+    this.matFoliage = patchMaterial(std({ side: THREE.DoubleSide, roughness: 0.75 }), { sway: 0.012 });
+    this.matCrop = patchMaterial(std({ roughness: 0.75 }), { sway: 0.05 });
+    this.matGrass = patchMaterial(std({ side: THREE.DoubleSide, roughness: 1 }), { sway: 0.35, detail: false });
+    this.matDS = std({ side: THREE.DoubleSide, roughness: 0.9 });
 
-    // Luz de atardecer
-    const hemi = new THREE.HemisphereLight(0xffe2b8, 0x6b4a2a, 1.25);
-    this.scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xffcf96, 2.6);
-    sun.position.set(11 - 9, 14, 9 + 11);
+    // Luz de atardecer: cielo cálido + sol bajo
+    this.hemi = new THREE.HemisphereLight(0xffe6c4, 0x5a4026, 1.15);
+    this.scene.add(this.hemi);
+    const sun = new THREE.DirectionalLight(0xffd2a0, 3.0);
+    sun.position.set(2, 14, 20);
     sun.target.position.set(11, 0, 9);
     sun.castShadow = true;
-    const ss = isSmall ? 1024 : 2048;
-    sun.shadow.mapSize.set(ss, ss);
     Object.assign(sun.shadow.camera, { left: -19, right: 19, top: 19, bottom: -19, near: 1, far: 60 });
-    sun.shadow.bias = -0.0006;
-    sun.shadow.normalBias = 0.03;
-    sun.shadow.radius = 3;
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.035;
+    sun.shadow.radius = 4;
     this.scene.add(sun, sun.target);
     this.sun = sun;
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
 
+    this.blobTex = blobTexture();
     this.buildOutside();
     this.staticMesh = null;
     this.buildStatic();
     this.buildDynamic();
+    this.setQuality(quality);
+  }
+
+  setQuality(q) {
+    const Q = QUALITY[q] || QUALITY.alta;
+    this.quality = q;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.dpr));
+    const size = this.isSmall ? Math.min(Q.shadow, 1024) : Q.shadow;
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+    this.scene.environment = Q.env ? this.envTex : null;
+    this.scene.environmentIntensity = 0.35;
+    this.grassFactor = Q.grass;
+    if (this.grass) this.grass.count = Math.floor(this.grassTotal * Q.grass);
+    if (this.farGrass) this.farGrass.count = Math.floor(this.farGrassTotal * Q.grass);
   }
 
   // ------------------------------------------------------------ entorno fuera de la finca
   buildOutside() {
     const r = M.rng(99);
-    const size = 170, seg = 85;
-    const g = new THREE.PlaneGeometry(size, size, seg, seg).toNonIndexed();
+    const size = 170, seg = 60;
+    const g = new THREE.PlaneGeometry(size, size, 84, 84);
     g.rotateX(-Math.PI / 2);
-    g.translate(W / 2, -0.02, H / 2);
+    g.translate(W / 2, -0.03, H / 2);
     const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
-    const c = new THREE.Color(), palette = [0x6f8240, 0x7e8f47, 0x8b9a52, 0x65793a, 0x9a9a5a];
-    for (let t = 0; t < pos.count; t += 3) {
+    const c = new THREE.Color(), ca = new THREE.Color(0x65793a), cb = new THREE.Color(0x94965a), road = new THREE.Color(0xc4a072), earth = new THREE.Color(0x9b4a2a);
+    for (let t = 0; t < pos.count; t++) {
       const x = pos.getX(t), z = pos.getZ(t);
-      const n = Math.sin(x * 0.21) * Math.cos(z * 0.17) + Math.sin((x + z) * 0.09) * 0.8;
-      let hex = palette[Math.floor((n + 2) * 1.2 + r() * 0.8) % palette.length];
-      if (x > 15 && x < 17 && (z < 0 || z > H)) hex = 0xc19a6a; // camino real
+      const n = Math.sin(x * 0.21) * Math.cos(z * 0.17) * 0.6 + Math.sin((x + z) * 0.09) * 0.5 + Math.sin(x * 0.53 - z * 0.41) * 0.2 + (r() - 0.5) * 0.15;
+      c.copy(ca).lerp(cb, Math.min(1, Math.max(0, n * 0.5 + 0.5)));
       const far = Math.hypot(x - W / 2, z - H / 2) > 18;
-      if (far && Math.sin(x * 0.23 + 1) * Math.cos(z * 0.19) > 0.82) hex = (Math.floor(z * 1.5) % 2) ? 0x9b4a2a : 0x8a3f24; // canteros de tierra colorada
-      c.set(hex);
-      for (let k = 0; k < 3; k++) col.set([c.r, c.g, c.b], (t + k) * 3);
+      if (far) { const e = Math.sin(x * 0.23 + 1) * Math.cos(z * 0.19); if (e > 0.7) c.lerp(earth, Math.min(1, (e - 0.7) * 4) * 0.85); }
+      if (z < 0 || z > H) { const d = Math.abs(x - 16); if (d < 1.6) c.lerp(road, Math.min(1, (1.6 - d) * 1.4)); }
+      col.set([c.r, c.g, c.b], t * 3);
     }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    g.deleteAttribute('uv');
-    const ground = new THREE.Mesh(g, this.mat);
+    const uv = g.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / 3, pos.getZ(i) / 3);
+    const tex = grassTileTexture();
+    const ground = new THREE.Mesh(g, patchMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, map: tex, roughness: 1 })));
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    // Cañaverales y palmares alrededor (instanciados)
+    // Cañaverales alrededor (instanciados, con viento)
     const cane = M.caneLowGeo();
     const caneSpots = [];
-    const field = (x0, z0, x1, z1) => { for (let z = z0; z < z1; z += 1.2) for (let x = x0; x < x1; x += 1.2) caneSpots.push([x + 0.5 + (r() - 0.5) * 0.3, z + 0.5 + (r() - 0.5) * 0.3]); };
+    const field = (x0, z0, x1, z1) => { for (let z = z0; z < z1; z += 1.1) for (let x = x0; x < x1; x += 1.1) caneSpots.push([x + 0.5 + (r() - 0.5) * 0.3, z + 0.5 + (r() - 0.5) * 0.3]); };
     field(-14, 3, -4, 15); field(24, 15, 36, 26); field(-10, -16, 3, -6); field(23, -12, 34, -3);
-    const caneMesh = new THREE.InstancedMesh(cane, this.mat, caneSpots.length);
-    caneSpots.forEach(([x, z], i) => setMat(caneMesh, i, x, 0, z, r() * 0.4, 0.95 + r() * 0.2, 0.9 + r() * 0.35));
-    caneMesh.castShadow = false; caneMesh.receiveShadow = true;
+    const caneMesh = new THREE.InstancedMesh(cane, this.matCrop, caneSpots.length);
+    caneSpots.forEach(([x, z], i) => setMat(caneMesh, i, x, 0, z, r() * 6, 0.95 + r() * 0.2, 0.9 + r() * 0.35));
+    caneMesh.receiveShadow = true;
     this.scene.add(caneMesh);
 
     const palmSpots = [];
@@ -99,17 +133,29 @@ export class World {
     }
     for (let i = 0; i < 6; i++) palmSpots.push([-2 - r() * 3, r() * H], [W + 1 + r() * 3, r() * H], [r() * W, -2 - r() * 3], [r() * W, H + 1 + r() * 3]);
     this.outsidePalms = palmSpots.filter(([x]) => !(x > 14.5 && x < 17.5));
-    // mogotes en el horizonte
     for (const [x, z, sd] of [[-30, -20, 1], [-14, -38, 2], [6, -42, 3], [-42, 0, 4], [30, -36, 5]]) {
       const m = new THREE.Mesh(M.mogoteGeo(sd), this.mat);
       m.position.set(x, 0, z); m.scale.setScalar(1.6);
       this.scene.add(m);
     }
+    // hierba alta alrededor
+    const spots = [];
+    for (let i = 0; i < 2600; i++) {
+      const x = -10 + r() * (W + 20), z = -10 + r() * (H + 20);
+      if (x >= 0 && x < W && z >= 0 && z < H) continue;
+      if (x > 14.8 && x < 17.2) continue;
+      spots.push([x, z]);
+    }
+    this.farGrass = new THREE.InstancedMesh(M.grassClumpGeo(9, 0.42), this.matGrass, spots.length);
+    spots.forEach(([x, z], i) => setMat(this.farGrass, i, x, 0, z, r() * 6, 0.9 + r() * 0.8));
+    this.farGrass.receiveShadow = true;
+    this.farGrassTotal = spots.length;
+    this.scene.add(this.farGrass);
     // polvo dorado flotando
     const n = 90, pg = new THREE.BufferGeometry(), pp = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) pp.set([r() * W, 0.3 + r() * 3, r() * H], i * 3);
     pg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
-    this.motes = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.07, transparent: true, opacity: 0.7, depthWrite: false }));
+    this.motes = new THREE.Points(pg, new THREE.PointsMaterial({ color: 0xffe2a0, size: 0.06, transparent: true, opacity: 0.7, depthWrite: false }));
     this.scene.add(this.motes);
   }
 
@@ -118,28 +164,19 @@ export class World {
     const s = this.s, r = M.rng(5);
     if (this.staticMesh) { this.scene.remove(this.staticMesh); this.staticMesh.geometry.dispose(); }
     const parts = [];
-    // Terreno por tiles
     const plotSet = new Set(s.plots.map((p) => `${p.x},${p.z}`));
-    const allPlots = new Set([...START_PLOTS, ...PARCELS.flatMap((p) => p.plots)].map(([x, z]) => `${x},${z}`));
-    const tile = new THREE.PlaneGeometry(1, 1).toNonIndexed();
-    tile.rotateX(-Math.PI / 2);
-    for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
-      const owned = isOwned(s, x, z), road = isRoad(x);
-      const chk = (x + z) % 2 ? 1.03 : 0.97;
-      let hex;
-      if (road) hex = M.worn(x === 15 ? 0xc9a477 : 0xbf9a6c, r, 0.05);
-      else if (!owned) hex = M.worn(M.P.wild, r, 0.1);
-      else if (x >= PEN.x0 && x <= PEN.x1 && z >= PEN.z0 && z <= PEN.z1) hex = M.worn(0xa48a58, r, 0.12);
-      else if (x >= 4 && x <= 8 && z >= 4 && z <= 8) hex = M.worn(0xb59468, r, 0.1); // batey
-      else if (allPlots.has(`${x},${z}`) || plotSet.has(`${x},${z}`)) hex = M.worn(0x9c5634, r, 0.06);
-      else hex = M.worn([M.P.grass, M.P.grassB, M.P.grassC][Math.floor(r() * 3)], r, 0.06);
-      const c = new THREE.Color(hex).multiplyScalar(chk);
-      parts.push(M.part(tile, c.getHex(), { x: x + 0.5, z: z + 0.5 }));
-      // hierba silvestre en terreno no comprado / mata en el patio
-      if (!owned && !road && r() < 0.7) parts.push(M.place(M.tuftGeo(x * 31 + z, 0x6f8a3a, 0.34), x + r(), z + r()));
-      else if (owned && !road && r() < 0.12 && !plotSet.has(`${x},${z}`)) parts.push(M.place(M.tuftGeo(x * 7 + z, M.P.grassC, 0.18), x + r(), z + r()));
-      if (road && r() < 0.15) parts.push(M.place(M.rockGeo(x * 3 + z), x + r(), z + r()));
-    }
+    // Suelo pintado (una malla, una textura)
+    if (this.groundMesh) { this.scene.remove(this.groundMesh); this.groundMesh.material.map.dispose(); }
+    const px = this.isSmall ? 40 : 64;
+    const gtex = groundTexture(s, plotSet, px);
+    const gg = new THREE.PlaneGeometry(W, H);
+    gg.rotateX(-Math.PI / 2);
+    gg.translate(W / 2, 0, H / 2);
+    this.groundMesh = new THREE.Mesh(gg, patchMaterial(new THREE.MeshStandardMaterial({ map: gtex, roughness: 0.95 })));
+    this.groundMesh.receiveShadow = true;
+    this.scene.add(this.groundMesh);
+    // piedras en el camino
+    for (let z = 0; z < H; z++) for (let x = 15; x <= 16; x++) if (r() < 0.12) parts.push(M.place(M.rockGeo(x * 3 + z), x + r(), z + r()));
     // Edificios
     const B = BUILDINGS;
     const center = (b) => [b.x + b.w / 2, b.z + b.h / 2];
@@ -152,10 +189,9 @@ export class World {
     parts.push(M.place(M.flagPoleGeo(1.2), B.house.x + 2.75, B.house.z + 2.3, 0, 0.02));
     parts.push(M.place(M.wheelDecorGeo(), 4.5, 8.5, 0.3, 0, 1));
     for (let i = 0; i < 6; i++) parts.push(M.place(M.rockGeo(100 + i), 4.2 + r() * 0.6 + (i % 2) * 9.5, 12.5 + r() * 0.4));
-    // Cerca de tablas del corral
     const fence = (ax, az, bx, bz, kind, seed) => {
       const geo = kind === 'plank' ? M.plankFenceGeo(seed) : M.wireFenceGeo(seed);
-      if (ax !== bx) parts.push(M.place(geo, Math.max(ax, bx), Math.min(az, bz) + 0.5 + 0, Math.PI / 2));
+      if (ax !== bx) parts.push(M.place(geo, Math.max(ax, bx), Math.min(az, bz) + 0.5, Math.PI / 2));
       else parts.push(M.place(geo, Math.min(ax, bx) + 0.5, Math.max(az, bz)));
     };
     for (let x = PEN.x0; x <= PEN.x1; x++) {
@@ -165,7 +201,6 @@ export class World {
     for (let z = PEN.z0; z <= PEN.z1; z++) { fence(PEN.x0 - 1, z, PEN.x0, z, 'plank', z + 20); fence(PEN.x1, z, PEN.x1 + 1, z, 'plank', z + 30); }
     parts.push(M.place(M.fencePost(), PEN.x1 + 1, PEN.z1 + 1));
     parts.push(M.place(M.fencePost(), PEN.x0 + 2, PEN.z1 + 1));
-    // Cerca de alambre en el borde de lo comprado
     for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
       if (!isOwned(s, x, z) || isRoad(x)) continue;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -174,14 +209,10 @@ export class World {
         if (out || (!isOwned(s, nx, nz) && !isRoad(nx))) fence(x, z, nx, nz, 'wire', x * 13 + z * 7 + dx);
       }
     }
-    // Parcelas: decorado comprado o letrero "Se vende"
     for (const p of PARCELS) {
       const owned = s.parcels.includes(p.id);
       if (owned) for (const d of p.decor || []) if (d.kind === 'tobaccoHouse') parts.push(M.place(M.tobaccoHouseGeo(), d.x + d.w / 2, d.z + d.h / 2));
-      if (!owned) {
-        const [cx, cz] = this.parcelCenter(p);
-        parts.push(M.place(M.signGeo(), cx, cz, Math.PI / 4));
-      }
+      if (!owned) { const [cx, cz] = this.parcelCenter(p); parts.push(M.place(M.signGeo(), cx, cz, Math.PI / 4)); }
     }
     const geo = new M.Builder();
     parts.forEach((g) => geo.add(g));
@@ -190,32 +221,81 @@ export class World {
     this.staticMesh.receiveShadow = true;
     this.scene.add(this.staticMesh);
 
-    // Palmas (instanciadas): dentro + fuera
+    // Palmas (instanciadas, con viento)
     if (this.palms) { this.scene.remove(this.palms); this.palms.dispose(); }
     const inside = [...START_PALMS, ...PARCELS.filter((p) => s.parcels.includes(p.id)).flatMap((p) => p.palms)];
     const all = inside.map(([x, z]) => [x + 0.5, z + 0.5]);
     this.palmGeo = this.palmGeo || M.palmGeo(3, 3.6);
-    this.palms = new THREE.InstancedMesh(this.palmGeo, this.mat, all.length);
+    this.palms = new THREE.InstancedMesh(this.palmGeo, this.matFoliage, all.length);
     const pr = M.rng(17);
     all.forEach(([x, z], i) => setMat(this.palms, i, x, 0, z, pr() * 6.28, 0.72 + pr() * 0.18));
     this.palms.castShadow = true; this.palms.receiveShadow = true;
     this.scene.add(this.palms);
+    this.palmSpots = all;
     if (!this.farPalms) {
-      this.farPalms = new THREE.InstancedMesh(M.palmLowGeo(2, 3.6), this.mat, this.outsidePalms.length);
-      this.outsidePalms.forEach(([x, z], i) => setMat(this.farPalms, i, x, 0, z, pr() * 6.28, 0.75 + pr() * 0.3));
+      this.farPalms = new THREE.InstancedMesh(this.palmGeo, this.matFoliage, this.outsidePalms.length);
+      this.outsidePalms.forEach(([x, z], i) => setMat(this.farPalms, i, x, 0, z, pr() * 6.28, 0.7 + pr() * 0.3));
       this.scene.add(this.farPalms);
     }
-    this.palmsInsideCount = inside.length;
+    // Hierba en el terreno (más densa en lo no comprado)
+    if (this.grass) { this.scene.remove(this.grass); this.grass.dispose(); }
+    const spots = [];
+    const gr = M.rng(31);
+    const busy = new Set();
+    for (const b of Object.values(B)) for (let z = b.z; z < b.z + b.h; z++) for (let x = b.x; x < b.x + b.w; x++) busy.add(`${x},${z}`);
+    for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) {
+      if (isRoad(x) || plotSet.has(`${x},${z}`) || busy.has(`${x},${z}`)) continue;
+      if (x >= PEN.x0 && x <= PEN.x1 && z >= PEN.z0 && z <= PEN.z1) continue;
+      if (x >= 4 && x <= 8 && z >= 4 && z <= 8) continue;
+      const owned = isOwned(s, x, z);
+      const n = owned ? 4 : 9;
+      for (let i = 0; i < n; i++) spots.push([x + gr(), z + gr(), owned ? 0.75 : 1.2]);
+    }
+    this.grass = new THREE.InstancedMesh(M.grassClumpGeo(3, 0.3), this.matGrass, spots.length);
+    spots.forEach(([x, z, sc], i) => setMat(this.grass, i, x, 0, z, gr() * 6, sc * (0.7 + gr() * 0.6)));
+    this.grass.receiveShadow = true;
+    this.grassTotal = spots.length;
+    this.grass.count = Math.floor(spots.length * (this.grassFactor ?? 1));
+    this.scene.add(this.grass);
     this.buildPlots();
+    this.buildBlobs();
     this.buildPickers();
   }
   parcelCenter(p) {
-    // centro del rectángulo, ajustado a un tile libre (sin canteros ni palmas)
     const r = p.rect;
     let cx = Math.floor((r.x0 + r.x1) / 2), cz = Math.floor((r.z0 + r.z1) / 2);
     const bad = new Set([...p.plots, ...p.palms, ...(p.decor || []).flatMap((d) => [[d.x, d.z]])].map(([x, z]) => `${x},${z}`));
     if (bad.has(`${cx},${cz}`)) cz = r.z0 === 0 ? r.z1 : r.z0;
     return [cx + 0.5, cz + 0.5];
+  }
+
+  // ------------------------------------------------------------ sombras de contacto
+  buildBlobs() {
+    if (!this.blobs) {
+      const g = new THREE.PlaneGeometry(1, 1);
+      g.rotateX(-Math.PI / 2);
+      this.blobs = new THREE.InstancedMesh(g, new THREE.MeshBasicMaterial({ map: this.blobTex, transparent: true, depthWrite: false, opacity: 0.55, color: 0x2a1a0c, polygonOffset: true, polygonOffsetFactor: -2 }), 200);
+      this.blobs.renderOrder = 1;
+      this.scene.add(this.blobs);
+    }
+    const B = BUILDINGS;
+    this.staticBlobs = [
+      [B.house.x + 1.5, B.house.z + 1.3, 3.6, 3.2], [B.coop.x + 1, B.coop.z + 1, 2.4, 2], [B.kitchen.x + 1, B.kitchen.z + 1, 2.4, 2.4],
+      [B.ceiba.x + 1, B.ceiba.z + 1, 2.2, 2.2], [B.tank.x + 0.5, B.tank.z + 0.5, 1.2, 1.2],
+      ...this.palmSpots.map(([x, z]) => [x, z, 0.8, 0.8]),
+    ];
+  }
+  updateBlobs() {
+    let i = 0;
+    const add = (x, z, sx, sz, ry = 0) => { if (i < 200) setMat(this.blobs, i++, x, 0.012, z, ry, sx, 1, sz); };
+    for (const [x, z, sx, sz] of this.staticBlobs) add(x, z, sx, sz);
+    const sim = this.sim;
+    add(sim.player.x, sim.player.z, 0.7, 0.7);
+    for (const w of sim.workers) add(w.x, w.z, 0.7, 0.7);
+    for (const c of this.s.chickens) add(c.x, c.z, 0.5, 0.55);
+    for (const tv of this.truckViews.values()) if (tv.g.visible) add(tv.g.position.x, tv.g.position.z + 0.2, 1.9, 4.2);
+    this.blobs.count = i;
+    this.blobs.instanceMatrix.needsUpdate = true;
   }
 
   // ------------------------------------------------------------ canteros y cultivos instanciados
@@ -229,7 +309,7 @@ export class World {
       this.cropMeshes = {};
       for (const c of CROP_KEYS) {
         this.cropMeshes[c] = [0, 1, 2].map((st) => {
-          const m = new THREE.InstancedMesh(st === 0 ? (this.sproutGeo ||= M.cropGeo('tomato', 0)) : M.cropGeo(c, st), this.mat, n);
+          const m = new THREE.InstancedMesh(st === 0 ? (this.sproutGeo ||= M.cropGeo('tomato', 0)) : M.cropGeo(c, st), this.matCrop, n);
           m.castShadow = st > 0; m.receiveShadow = true; m.count = 0;
           this.scene.add(m);
           return m;
@@ -274,12 +354,10 @@ export class World {
   // ------------------------------------------------------------ dinámicos
   buildDynamic() {
     const B = BUILDINGS;
-    // huevos
     this.eggMesh = new THREE.InstancedMesh(M.eggGeo(), this.mat, 16);
     this.eggMesh.castShadow = true;
     this.eggMesh.count = 0;
     this.scene.add(this.eggMesh);
-    // gallinas
     this.henGeos = [0, 1, 2, 3].map((v) => M.chickenGeo(v));
     this.henMeshes = new Map();
     this.rooster = new THREE.Mesh(M.roosterGeo(), this.mat);
@@ -287,21 +365,10 @@ export class World {
     this.rooster.rotation.y = 0.9;
     this.rooster.castShadow = true;
     this.scene.add(this.rooster);
-    // camión
-    this.truck = new THREE.Group();
-    const body = new THREE.Mesh(M.truckGeo(), this.mat);
-    body.castShadow = true; body.receiveShadow = true;
-    this.truck.add(body);
-    this.truckBody = body;
-    this.crates = [];
-    const cg = [M.crateGeo(0), M.crateGeo(1)];
-    [[-0.3, 0.45], [0.3, 0.45], [-0.3, 1.0], [0.3, 1.0], [0, 1.45], [0, 0.72]].forEach(([x, z], i) => {
-      const c = new THREE.Mesh(cg[i % 2], this.mat);
-      c.position.set(x, 0.46 + (i >= 4 ? 0.3 : 0), z);
-      c.castShadow = true; c.visible = false;
-      body.add(c); this.crates.push(c);
-    });
-    this.scene.add(this.truck);
+    // camiones (uno por cada camión de la fila)
+    this.truckGeos = new Map();
+    this.truckViews = new Map();
+    this.crateGeos = [M.crateGeo(0), M.crateGeo(1)];
     // banderas
     this.flagGeoBase = M.flagGeo();
     this.flags = [];
@@ -315,31 +382,54 @@ export class World {
     };
     addFlag(FLAGPOLE[0] + 0.5, 2.3, FLAGPOLE[1] + 0.5, 1, 0.5);
     addFlag(B.house.x + 2.75, 1.0, B.house.z + 2.3, 0.6, 0.5);
-    // personas
     this.player = this.makePerson(M.P.white, M.P.hat, 1);
     this.basket = new THREE.Mesh(M.basketGeo(), this.mat);
     this.basket.position.set(0.22, 0.5, -0.12);
     this.player.root.add(this.basket);
     this.workerViews = [];
-    // humo del fogón
     this.smoke = [];
-    const sg = new THREE.IcosahedronGeometry(0.12, 0);
+    const sg = new THREE.SphereGeometry(0.12, 8, 6);
     const smat = new THREE.MeshLambertMaterial({ color: 0xd8d0c4, transparent: true, opacity: 0.5, depthWrite: false });
     for (let i = 0; i < 7; i++) { const m = new THREE.Mesh(sg, smat); m.visible = false; this.scene.add(m); this.smoke.push({ m, t: i / 7 }); }
-    // polvo del camión / estallidos
     this.puffs = [];
-    const pg = new THREE.IcosahedronGeometry(0.15, 0);
-    for (let i = 0; i < 14; i++) {
+    const pg = new THREE.SphereGeometry(0.15, 8, 6);
+    for (let i = 0; i < 18; i++) {
       const m = new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ color: 0xcfae80, transparent: true, opacity: 0.6, depthWrite: false }));
       m.visible = false; this.scene.add(m); this.puffs.push({ m, life: 0, vx: 0, vy: 0, vz: 0 });
     }
-    // marcador de destino
-    const ring = new THREE.RingGeometry(0.36, 0.46, 24);
+    const ring = new THREE.RingGeometry(0.36, 0.46, 32);
     ring.rotateX(-Math.PI / 2);
     this.marker = new THREE.Mesh(ring, new THREE.MeshBasicMaterial({ color: 0xfff1c9, transparent: true, opacity: 0.0, depthWrite: false }));
     this.marker.position.y = 0.03;
     this.scene.add(this.marker);
     this.markerT = 0;
+  }
+  truckGeo(model, color) {
+    const k = `${model}-${color}`;
+    if (!this.truckGeos.has(k)) this.truckGeos.set(k, M.truckGeo(model, color));
+    return this.truckGeos.get(k);
+  }
+  truckView(tr) {
+    let v = this.truckViews.get(tr.id);
+    if (!v) {
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(this.truckGeo(tr.model, tr.color), this.mat);
+      body.castShadow = true; body.receiveShadow = true;
+      body.userData.truckId = tr.id;
+      g.add(body);
+      const crates = [];
+      const bedZ = tr.model === 1 ? 1.3 : 0.85;
+      [[-0.3, -0.35], [0.3, -0.35], [-0.3, 0.2], [0.3, 0.2], [0, 0.7], [-0.3, 0.7]].forEach(([x, z], i) => {
+        const c = new THREE.Mesh(this.crateGeos[i % 2], this.mat);
+        c.position.set(x, 0.46, bedZ + z);
+        c.castShadow = true; c.visible = false;
+        body.add(c); crates.push(c);
+      });
+      this.scene.add(g);
+      v = { g, body, crates, seen: true };
+      this.truckViews.set(tr.id, v);
+    }
+    return v;
   }
   makePerson(shirt, hat, seed) {
     const parts = M.personParts(shirt, hat, seed);
@@ -347,15 +437,14 @@ export class World {
     const body = new THREE.Mesh(parts.body, this.mat);
     const legL = new THREE.Mesh(parts.leg, this.mat), legR = new THREE.Mesh(parts.leg, this.mat);
     const armL = new THREE.Mesh(parts.arm, this.mat), armR = new THREE.Mesh(parts.arm, this.mat);
-    legL.position.set(-0.08, 0.5, 0); legR.position.set(0.08, 0.5, 0);
-    armL.position.set(-0.23, 0.92, 0); armR.position.set(0.23, 0.92, 0);
+    legL.position.set(-0.075, 0.5, 0); legR.position.set(0.075, 0.5, 0);
+    armL.position.set(-0.2, 0.9, 0); armR.position.set(0.2, 0.9, 0);
     for (const m of [body, legL, legR, armL, armR]) { m.castShadow = true; root.add(m); }
     this.scene.add(root);
     return { root, legL, legR, armL, armR, body };
   }
   posePerson(v, ent, time) {
     v.root.position.set(ent.x, 0, ent.z);
-    // giro suave
     const target = ent.face + Math.PI;
     let d = target - v.root.rotation.y;
     d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -363,6 +452,7 @@ export class World {
     const sw = ent.moving ? Math.sin(ent.walk) * 0.6 : 0;
     v.legL.rotation.x = sw; v.legR.rotation.x = -sw;
     v.armL.rotation.x = -sw * 0.8; v.armR.rotation.x = sw * 0.8;
+    v.armL.rotation.z = 0.08; v.armR.rotation.z = -0.08;
     v.body.position.y = ent.moving ? Math.abs(Math.sin(ent.walk)) * 0.04 : Math.sin(time * 2) * 0.008;
   }
   syncWorkers() {
@@ -386,28 +476,32 @@ export class World {
   }
   showMarker(x, z) { this.marker.position.x = x; this.marker.position.z = z; this.markerT = 1; }
 
-  truckPose(time) {
-    const tr = this.s.truck, el = now() - tr.at;
-    let z = TRUCK_SPOT.z, visible = true, moving = false;
-    const ease = (u) => u * u * (3 - 2 * u);
-    if (tr.phase === 'leaving') { const u = Math.min(1, el / TRUCK_TIMES.leaving); z = TRUCK_SPOT.z - ease(u) * u * 38; moving = true; }
-    else if (tr.phase === 'gone') visible = false;
-    else if (tr.phase === 'arriving') { const u = Math.min(1, el / TRUCK_TIMES.arriving); z = TRUCK_SPOT.z + (1 - ease(u)) * 40; moving = u < 1; }
-    return { x: TRUCK_SPOT.x, z, visible, moving };
+  updateTrucks(dt, time) {
+    for (const v of this.truckViews.values()) v.seen = false;
+    const list = [...this.s.trucks.map((t) => [t, false]), ...this.sim.leaving.map((t) => [t, true])];
+    for (const [tr, leaving] of list) {
+      const v = this.truckView(tr);
+      v.seen = true;
+      v.g.position.set(TRUCK_SPOT.x, 0, tr.z);
+      v.body.position.y = tr.moving ? Math.sin(time * 22 + tr.id) * 0.02 : 0;
+      v.body.userData.front = !leaving && tr === this.s.trucks[0];
+      const loaded = Object.values(tr.loaded || {}).reduce((a, b) => a + b, 0);
+      v.crates.forEach((c, i) => { c.visible = loaded > i * 2; });
+      if (tr.moving && Math.random() < dt * 10 && tr.z < 30) this.puff(TRUCK_SPOT.x + (Math.random() - 0.5), 0.15, tr.z + 2, 0xcfae80, 1, 0.6);
+    }
+    for (const [id, v] of this.truckViews) if (!v.seen) { this.scene.remove(v.g); this.truckViews.delete(id); }
   }
 
   update(dt, time) {
+    TIME.value = time;
     const s = this.s, sim = this.sim;
-    // jugador y trabajadores
     this.posePerson(this.player, sim.player, time);
     this.basket.visible = Object.values(s.inv).some((v) => v > 0);
     this.syncWorkers();
     sim.workers.forEach((w, i) => this.posePerson(this.workerViews[i], w, time));
-    // huevos
     this.eggMesh.count = Math.min(16, s.eggs.length);
     for (let i = 0; i < this.eggMesh.count; i++) { const e = s.eggs[i]; setMat(this.eggMesh, i, e.x, 0, e.z, e.id); }
     this.eggMesh.instanceMatrix.needsUpdate = true;
-    // gallinas
     const alive = new Set();
     for (const c of s.chickens) {
       alive.add(c.id);
@@ -420,15 +514,7 @@ export class World {
     }
     for (const [id, m] of this.henMeshes) if (!alive.has(id)) { this.scene.remove(m); this.henMeshes.delete(id); }
     this.rooster.rotation.z = Math.sin(time * 0.7) > 0.97 ? -0.3 : 0;
-    // camión
-    const tp = this.truckPose(time);
-    this.truck.visible = tp.visible;
-    this.truck.position.set(tp.x, 0, tp.z);
-    this.truckBody.position.y = tp.moving ? Math.sin(time * 22) * 0.025 : 0;
-    const cargo = Object.values(s.truck.cargo || {}).reduce((a, b) => a + b, 0);
-    this.crates.forEach((c, i) => { c.visible = cargo > i * 3; });
-    if (tp.moving && tp.visible && Math.random() < dt * 14) this.puff(tp.x + (Math.random() - 0.5), 0.15, tp.z + 1.8 * (s.truck.phase === 'leaving' ? 1 : 1), 0xcfae80, 1, 0.6);
-    // banderas
+    this.updateTrucks(dt, time);
     for (const f of this.flags) {
       const pos = f.m.geometry.attributes.position, b = f.base;
       for (let i = 0; i < pos.count; i++) {
@@ -438,18 +524,16 @@ export class World {
       }
       pos.needsUpdate = true;
     }
-    // humo
     const cooking = !!s.kitchen.recipe;
     const K = BUILDINGS.kitchen;
     for (const sm of this.smoke) {
       sm.t += dt * 0.35;
       if (sm.t > 1) sm.t -= 1;
-      sm.m.visible = cooking || (sm.t < 0.4 && Math.random() < 0);
+      sm.m.visible = cooking;
       sm.m.position.set(K.x + 0.58 + Math.sin(sm.t * 6) * 0.1, 1.55 + sm.t * 2.2, K.z + 0.45 - sm.t * 0.4);
       sm.m.scale.setScalar(0.6 + sm.t * 1.8);
       sm.m.material.opacity = 0.45 * (1 - sm.t);
     }
-    // partículas
     for (const p of this.puffs) {
       if (p.life <= 0) continue;
       p.life -= dt;
@@ -459,16 +543,14 @@ export class World {
       p.m.material.opacity = Math.max(0, p.life);
       if (p.life <= 0) p.m.visible = false;
     }
-    // motas
     this.motes.position.y = Math.sin(time * 0.4) * 0.2;
-    this.motes.rotation.y = Math.sin(time * 0.05) * 0.02;
-    // marcador
     if (this.markerT > 0) {
       this.markerT = Math.max(0, this.markerT - dt * 1.4);
       this.marker.material.opacity = this.markerT * 0.9;
       this.marker.scale.setScalar(1 + (1 - this.markerT) * 0.4);
     }
     this.updatePlots(time);
+    this.updateBlobs();
   }
 
   // ------------------------------------------------------------ selección
@@ -480,25 +562,23 @@ export class World {
       m.position.set(x, h / 2, z); m.userData.kind = kind; this.scene.add(m); return m;
     };
     const B = BUILDINGS;
-    this.truckPicker = mk('truck', 0, 0, 1.5, 3.6, 1.6);
     this.pickers = [
       mk('house', B.house.x + 1.5, B.house.z + 1.4, 2.6, 2.4, 2.8),
       mk('coop', B.coop.x + 1, B.coop.z + 1, 1.8, 1.4, 1.6),
       mk('kitchen', B.kitchen.x + 1, B.kitchen.z + 1, 1.8, 1.8, 2.2),
       mk('tank', B.tank.x + 0.5, B.tank.z + 0.5, 0.8, 0.8, 2.0),
-      this.truckPicker,
     ];
   }
   pick(ray) {
-    const tp = this.truckPose(0);
-    this.truckPicker.position.set(tp.x, 0.8, tp.z);
-    this.truckPicker.visible = true;
-    const pickers = tp.visible ? this.pickers : this.pickers.filter((p) => p !== this.truckPicker);
-    const hits = ray.intersectObjects(pickers, false);
-    return hits.length ? hits[0].object.userData.kind : null;
+    const bodies = [...this.truckViews.values()].map((v) => v.body);
+    const hits = ray.intersectObjects([...this.pickers, ...bodies], false);
+    if (!hits.length) return null;
+    const o = hits[0].object;
+    if (o.userData.truckId !== undefined) return o.userData.front ? 'truck' : 'truckq';
+    return o.userData.kind;
   }
   resize(w, h) {
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, (QUALITY[this.quality] || QUALITY.alta).dpr));
     this.renderer.setSize(w, h, false);
   }
   render(camera) { this.renderer.render(this.scene, camera); }

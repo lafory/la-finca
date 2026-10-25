@@ -1,0 +1,313 @@
+{
+  "desktop": {
+    "errors": [],
+    "title": {
+      "btnBottom": 546,
+      "vh": 800
+    },
+    "viewport": {
+      "canvas": [
+        1280,
+        800
+      ],
+      "win": [
+        1280,
+        800
+      ],
+      "scrollH": 800
+    },
+    "pwa": {
+      "fsButton": true,
+      "manifestDisplay": "fullscreen",
+      "appleCapable": true
+    },
+    "zoom": {
+      "before": 24,
+      "after": 9.8,
+      "ok": true
+    },
+    "eggs": 5,
+    "load": {
+      "order": {
+        "egg": 3
+      },
+      "money": 35,
+      "sold": 1,
+      "tut": 2,
+      "queueLen": 2
+    },
+    "skip": {
+      "parkedBefore": true,
+      "before": [
+        8,
+        9,
+        16
+      ],
+      "afterSkip": [
+        9,
+        16
+      ],
+      "after": [
+        9,
+        16,
+        18
+      ],
+      "frontChanged": true,
+      "refilled": true,
+      "parkedAfter": true
+    },
+    "buySeeds": {
+      "seedsBefore": 2,
+      "seedsAfter": 3,
+      "money": 30
+    },
+    "crops": {
+      "planted": 1,
+      "harvests": 1,
+      "tomatoes": 1
+    },
+    "reload": {
+      "btn": "Continuar la finca",
+      "money": 30,
+      "trucks": 3
+    },
+    "perf": {
+      "fps": 60,
+      "quality": "alta",
+      "calls": 44,
+      "tris": 188163
+    }
+  },
+  "phone": {
+    "errors": [],
+    "title": {
+      "btnBottom": 568,
+      "vh": 844
+    },
+    "viewport": {
+      "canvas": [
+        390,
+        844
+      ],
+      "win": [
+        390,
+        844
+      ],
+      "scrollH": 844
+    },
+    "pwa": {
+      "fsButton": true,
+      "manifestDisplay": "fullscreen",
+      "appleCapable": true
+    },
+    "zoom": {
+      "before": 41.6,
+      "after": 11.3,
+      "ok": true
+    },
+    "eggs": 4,
+    "load": {
+      "order": {
+        "egg": 3
+      },
+      "money": 35,
+      "sold": 1,
+      "tut": 2,
+      "queueLen": 2
+    },
+    "skip": {
+      "parkedBefore": true,
+      "before": [
+        8,
+        9
+      ],
+      "afterSkip": [
+        9
+      ],
+      "after": [
+        9,
+        14,
+        15
+      ],
+      "frontChanged": true,
+      "refilled": true,
+      "parkedAfter": true
+    },
+    "buySeeds": {
+      "seedsBefore": 2,
+      "seedsAfter": 3,
+      "money": 30
+    },
+    "crops": {
+      "planted": 1,
+      "harvests": 1,
+      "tomatoes": 1
+    },
+    "reload": {
+      "btn": "Continuar la finca",
+      "money": 30,
+      "trucks": 3
+    },
+    "perf": {
+      "fps": 11.9,
+      "quality": "media",
+      "calls": 46,
+      "tris": 174250
+    }
+  },
+  "ipad": {
+    "errors": [],
+    "title": {
+      "btnBottom": 736,
+      "vh": 1180
+    },
+    "viewport": {
+      "canvas": [
+        820,
+        1180
+      ],
+      "win": [
+        820,
+        1180
+      ],
+      "scrollH": 1180
+    },
+    "pwa": {
+      "fsButton": true,
+      "manifestDisplay": "fullscreen",
+      "appleCapable": true
+    },
+    "zoom": {
+      "before": 43.9,
+      "after": 12,
+      "ok": true
+    },
+    "eggs": 4,
+    "load": {
+      "order": {
+        "egg": 3
+      },
+      "money": 35,
+      "sold": 1,
+      "tut": 2,
+      "queueLen": 2
+    },
+    "skip": {
+      "parkedBefore": true,
+      "before": [
+        8,
+        9
+      ],
+      "afterSkip": [
+        9,
+        18
+      ],
+      "after": [
+        9,
+        18,
+        20
+      ],
+      "frontChanged": true,
+      "refilled": true,
+      "parkedAfter": true
+    },
+    "buySeeds": {
+      "seedsBefore": 2,
+      "seedsAfter": 3,
+      "money": 30
+    },
+    "crops": {
+      "planted": 1,
+      "harvests": 1,
+      "tomatoes": 1
+    },
+    "reload": {
+      "btn": "Continuar la finca",
+      "money": 30,
+      "trucks": 3
+    },
+    "perf": {
+      "fps": 60,
+      "quality": "media",
+      "calls": 46,
+      "tris": 174810
+    }
+  },
+  "phone-landscape": {
+    "errors": [],
+    "title": {
+      "btnBottom": 294,
+      "vh": 390
+    },
+    "viewport": {
+      "canvas": [
+        844,
+        390
+      ],
+      "win": [
+        844,
+        390
+      ],
+      "scrollH": 390
+    },
+    "pwa": {
+      "fsButton": true,
+      "manifestDisplay": "fullscreen",
+      "appleCapable": true
+    },
+    "zoom": {
+      "before": 19.2,
+      "after": 9,
+      "ok": true
+    },
+    "eggs": 4,
+    "load": {
+      "order": {
+        "egg": 3
+      },
+      "money": 35,
+      "sold": 1,
+      "tut": 2,
+      "queueLen": 2
+    },
+    "skip": {
+      "parkedBefore": true,
+      "before": [
+        8,
+        9
+      ],
+      "afterSkip": [
+        9
+      ],
+      "after": [
+        9,
+        13,
+        14
+      ],
+      "frontChanged": true,
+      "refilled": true,
+      "parkedAfter": true
+    },
+    "buySeeds": {
+      "seedsBefore": 2,
+      "seedsAfter": 3,
+      "money": 30
+    },
+    "crops": {
+      "planted": 1,
+      "harvests": 1,
+      "tomatoes": 1
+    },
+    "reload": {
+      "btn": "Continuar la finca",
+      "money": 30,
+      "trucks": 3
+    },
+    "perf": {
+      "fps": 12.3,
+      "quality": "media",
+      "calls": 44,
+      "tris": 171554
+    }
+  }
+}

@@ -110,7 +110,21 @@ tierra en Terreno. Avanza por eventos; se guarda el progreso.
 - Cultivos y huevos con InstancedMesh; < ~60 draw calls.
 - Guardado en localStorage con autosave cada 10 s y al ocultar la pestaña.
 
+## 10b. v2 – fila de camiones y gráficos más realistas
+- **Fila de camiones** (pedido del usuario): 3 camiones (4 desde nivel 4) en fila en el camino real (x≈15.5,
+  z = 9.5 / 13.8 / 18.1 / 22.4). Modelos de los años 50 variados (pickup, camión de acopio con barandas, pickup con lona),
+  7 colores desgastados con óxido. El primero muestra su pedido (artículos, cantidad, pago). Al tocarlo: "Cargar"
+  (carga parcial permitida, paga recompensa ×1.45 + XP al completar) o "No tenemos, siguiente" (sin multa; lo ya
+  cargado se paga a precio base). El camión se va, la fila avanza suave y llega otro al final a los 4 s.
+- Pedidos ponderados por lo que el jugador puede producir: el primero siempre 3 huevos; huevos con peso alto;
+  cultivos/recetas solo si están desbloqueados, con más peso si hay existencias o se están cultivando/cocinando.
+- Gráficos: MeshStandardMaterial + detalle procedural en shader (atributo matId), tone mapping ACES, sRGB,
+  luz hemisférica + sol cálido con sombras PCF, niebla, cielo degradado, sombras de contacto, hierba instanciada,
+  palmas reales con pencas curvas, viento en vértices, viñeta CSS. Calidad Alta/Media/Baja/Auto (pixelRatio,
+  sombras 2048/1024/512, densidad de hierba, entorno). Descarga total ≈ 0.75 MB.
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
-- v2: más animales (cerdo, vaca), pedidos del pueblo (tablero), decoraciones, día/noche, más recetas.
-- v3: eventos (carnaval), logros, PWA offline, balance con telemetría local.
+- v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
+- v3: más animales (cerdo, vaca), decoraciones, día/noche, más recetas.
+- v4: eventos (carnaval), logros, PWA offline, balance con telemetría local.
