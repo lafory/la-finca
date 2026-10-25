@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
-  W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS,
+  W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, WORKERS, WORKER_ORDER,
 } from './data.js';
 import { isOwned, isRoad, parcelAt, now } from './state.js';
 import * as M from './models.js';
@@ -68,7 +68,87 @@ export class World {
     this.staticMesh = null;
     this.buildStatic();
     this.buildDynamic();
+    this.buildSkyFx();
     this.setQuality(quality);
+  }
+
+  // ------------------------------------------------------------ día y noche, nubes, faroles
+  buildSkyFx() {
+    this.tod = 0.6;
+    this.lightTarget = this.sun.target.position.clone();
+    // farol del bohío (siempre en la escena para no recompilar shaders; de día con intensidad 0)
+    const B = BUILDINGS.house;
+    this.lantern = new THREE.PointLight(0xffa850, 0, 9, 1.6);
+    this.lantern.position.set(B.x + 1.5, 1.35, B.z + B.h + 0.15);
+    this.scene.add(this.lantern);
+    const bulbMat = new THREE.MeshBasicMaterial({ color: 0x3a2a1a });
+    this.bulbs = [];
+    const bulbGeo = new THREE.SphereGeometry(0.07, 10, 8);
+    const addBulb = (x, y, z) => { const m = new THREE.Mesh(bulbGeo, bulbMat); m.position.set(x, y, z); this.scene.add(m); this.bulbs.push(m); };
+    addBulb(B.x + 1.5, 1.32, B.z + B.h + 0.12);
+    const K = BUILDINGS.kitchen;
+    addBulb(K.x + 1, 1.25, K.z + K.h + 0.05);
+    this.bulbMat = bulbMat;
+    // sombras de nubes que barren el campo
+    const cm = new THREE.MeshBasicMaterial({ map: this.blobTex, color: 0x000000, transparent: true, opacity: 0.16, depthWrite: false });
+    this.cloudMat = cm;
+    this.clouds = [];
+    const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2);
+    for (let i = 0; i < 5; i++) {
+      const m = new THREE.Mesh(g, cm);
+      m.scale.set(9 + i * 2.5, 1, 6 + i * 1.5);
+      m.position.set(-20 + i * 13, 0.09, -10 + ((i * 37) % 40));
+      m.renderOrder = 2;
+      this.scene.add(m); this.clouds.push(m);
+    }
+    this.cDay = { sky: new THREE.Color(0xffe6c4), ground: new THREE.Color(0x5a4026), fog: new THREE.Color(0xe6bf92) };
+    this.cNight = { sky: new THREE.Color(0x4a5f96), ground: new THREE.Color(0x1e2230), fog: new THREE.Color(0x27304a) };
+    this.cSet = new THREE.Color(0xff8a4a); this.cNoon = new THREE.Color(0xffd2a0); this.cMoon = new THREE.Color(0xa8bcff);
+    this.applyTod(0.6);
+  }
+  // tod: 0 = medianoche, 0.25 = amanecer, 0.5 = mediodía, 0.75 = anochecer
+  applyTod(tod) {
+    this.tod = tod;
+    const TAU = Math.PI * 2;
+    const elev = Math.sin((tod - 0.25) * TAU);
+    const day = THREE.MathUtils.smoothstep(elev, -0.12, 0.22);
+    const night = 1 - day;
+    const isMoon = elev < 0;
+    const t2 = isMoon ? tod + 0.5 : tod;
+    const E = 0.94 * Math.max(0.28, Math.abs(Math.sin((t2 - 0.25) * TAU)));
+    const phi = THREE.MathUtils.degToRad(129) + (t2 - 0.6) * TAU;
+    const R = 20;
+    this.sun.position.set(this.lightTarget.x + Math.cos(phi) * Math.cos(E) * R, Math.sin(E) * R, this.lightTarget.z + Math.sin(phi) * Math.cos(E) * R);
+    const low = 1 - THREE.MathUtils.smoothstep(elev, 0.05, 0.6);
+    if (isMoon) { this.sun.color.copy(this.cMoon); this.sun.intensity = 0.55 * THREE.MathUtils.smoothstep(-elev, 0.0, 0.25); }
+    else { this.sun.color.copy(this.cNoon).lerp(this.cSet, low * 0.85); this.sun.intensity = 3.0 * THREE.MathUtils.smoothstep(elev, -0.02, 0.18); }
+    this.hemi.color.copy(this.cDay.sky).lerp(this.cNight.sky, night);
+    this.hemi.groundColor.copy(this.cDay.ground).lerp(this.cNight.ground, night);
+    this.hemi.intensity = 0.42 + 0.73 * day;
+    this.scene.fog.color.copy(this.cDay.fog).lerp(this.cSet, low * day * 0.35).lerp(this.cNight.fog, night);
+    this.scene.backgroundIntensity = 0.22 + 0.78 * day;
+    this.renderer.toneMappingExposure = 1.0 + night * 0.15;
+    this.lantern.intensity = night * 5.5;
+    this.bulbMat.color.setRGB(0.23 + night * 0.77, 0.16 + night * 0.62, 0.1 + night * 0.25);
+    this.cloudMat.opacity = 0.16 * day;
+    this.nightness = night;
+  }
+  // dtGame: segundos de juego de este cuadro; speed: 1, 5 o 20
+  updateSky(dt, dtGame, speed) {
+    let tod = this.s.tod ?? 0.6;
+    const DAY = 240; // segundos de juego por día al adelantar
+    if (speed > 1) tod += dtGame / DAY;
+    else if (tod >= 0.3 && tod < 0.6) tod = Math.min(0.6, tod + dt / 40);
+    else if (tod < 0.3 || tod > 0.6001) tod += dt / 14; // pasa la noche rápido y vuelve la tarde
+    if (tod >= 1) tod -= 1;
+    this.s.tod = tod;
+    if (Math.abs(tod - this.tod) > 1e-5) this.applyTod(tod);
+    for (const c of this.clouds) {
+      c.position.x += dt * (speed > 1 ? speed * 0.6 : 1) * 0.35;
+      c.position.z += dt * (speed > 1 ? speed * 0.6 : 1) * 0.25;
+      if (c.position.x > W + 30) { c.position.x = -30; c.position.z = -12 + Math.random() * 30; }
+      if (c.position.z > H + 25) c.position.z = -20;
+    }
   }
 
   setQuality(q) {
@@ -386,7 +466,7 @@ export class World {
     this.basket = new THREE.Mesh(M.basketGeo(), this.mat);
     this.basket.position.set(0.22, 0.5, -0.12);
     this.player.root.add(this.basket);
-    this.workerViews = [];
+    this.workerViewMap = new Map();
     this.smoke = [];
     const sg = new THREE.SphereGeometry(0.12, 8, 6);
     const smat = new THREE.MeshLambertMaterial({ color: 0xd8d0c4, transparent: true, opacity: 0.5, depthWrite: false });
@@ -431,9 +511,10 @@ export class World {
     }
     return v;
   }
-  makePerson(shirt, hat, seed) {
-    const parts = M.personParts(shirt, hat, seed);
+  makePerson(shirt, hat, seed, look) {
+    const parts = M.personParts(shirt, hat, seed, look || {});
     const root = new THREE.Group();
+    root.rotation.order = 'YXZ';
     const body = new THREE.Mesh(parts.body, this.mat);
     const legL = new THREE.Mesh(parts.leg, this.mat), legR = new THREE.Mesh(parts.leg, this.mat);
     const armL = new THREE.Mesh(parts.arm, this.mat), armR = new THREE.Mesh(parts.arm, this.mat);
@@ -454,15 +535,40 @@ export class World {
     v.armL.rotation.x = -sw * 0.8; v.armR.rotation.x = sw * 0.8;
     v.armL.rotation.z = 0.08; v.armR.rotation.z = -0.08;
     v.body.position.y = ent.moving ? Math.abs(Math.sin(ent.walk)) * 0.04 : Math.sin(time * 2) * 0.008;
+    // animación de trabajo
+    let lean = 0;
+    if (ent.work > 0 && !ent.moving) {
+      const k = Math.sin(time * 9);
+      switch (ent.role) {
+        case 'recolector': case 'cosechador': case 'sembrador':
+          lean = 0.35; v.armR.rotation.x = -0.9 + k * 0.5; v.armL.rotation.x = -0.6 - k * 0.4; break;
+        case 'regador': lean = 0.1; v.armR.rotation.x = -1.1 + k * 0.12; v.armR.rotation.z = -0.15; break;
+        case 'cocinera': lean = 0.12; v.armR.rotation.x = -0.9; v.armR.rotation.z = -0.25 + Math.sin(time * 6) * 0.35; break;
+        case 'camionero': lean = 0.05; v.armR.rotation.x = v.armL.rotation.x = -1.2 + Math.abs(k) * 0.9; v.body.position.y = Math.abs(k) * 0.05; break;
+      }
+    }
+    v.root.rotation.x += (lean - v.root.rotation.x) * 0.25;
   }
   syncWorkers() {
     const ws = this.sim.workers;
-    while (this.workerViews.length < ws.length) {
-      const w = ws[this.workerViews.length];
-      const shirt = { recolector: 0x6f8fa8, sembrador: 0xc9a34a, cocinero: 0xb8574a, camionero: 0x5f7f4f }[w.role];
-      this.workerViews.push(this.makePerson(shirt, w.role === 'cocinero' || w.role === 'sembrador' ? 0xe8d6a8 : M.P.hat, 5 + this.workerViews.length));
+    // vista por rol (se puede despedir y volver a contratar)
+    const roles = new Set(ws.map((w) => w.role));
+    for (const [role, v] of this.workerViewMap) if (!roles.has(role)) { this.scene.remove(v.root); this.workerViewMap.delete(role); }
+    for (const w of ws) {
+      if (this.workerViewMap.has(w.role)) continue;
+      const L = WORKERS[w.role].look;
+      const v = this.makePerson(L.shirt, L.hat, 5 + WORKER_ORDER.indexOf(w.role), L);
+      const tool = new THREE.Mesh(M.toolGeo(w.role), this.mat);
+      tool.position.set(0, -0.42, -0.02);
+      tool.castShadow = true;
+      v.armR.add(tool);
+      for (const m of [v.body, v.legL, v.legR, v.armL, v.armR]) m.userData.worker = w.role;
+      v.role = w.role;
+      this.workerViewMap.set(w.role, v);
+      this.puff(w.x, 0.5, w.z, 0xf2c14e, 6, 1.4);
     }
   }
+  workerView(role) { return this.workerViewMap.get(role); }
   puff(x, y, z, color, n = 3, spd = 1) {
     for (let k = 0; k < n; k++) {
       const p = this.puffs.find((q) => q.life <= 0);
@@ -498,7 +604,7 @@ export class World {
     this.posePerson(this.player, sim.player, time);
     this.basket.visible = Object.values(s.inv).some((v) => v > 0);
     this.syncWorkers();
-    sim.workers.forEach((w, i) => this.posePerson(this.workerViews[i], w, time));
+    for (const w of sim.workers) this.posePerson(this.workerViewMap.get(w.role), w, time);
     this.eggMesh.count = Math.min(16, s.eggs.length);
     for (let i = 0; i < this.eggMesh.count; i++) { const e = s.eggs[i]; setMat(this.eggMesh, i, e.x, 0, e.z, e.id); }
     this.eggMesh.instanceMatrix.needsUpdate = true;
@@ -571,9 +677,12 @@ export class World {
   }
   pick(ray) {
     const bodies = [...this.truckViews.values()].map((v) => v.body);
-    const hits = ray.intersectObjects([...this.pickers, ...bodies], false);
+    const people = [];
+    for (const v of this.workerViewMap.values()) people.push(v.body, v.legL, v.legR, v.armL, v.armR);
+    const hits = ray.intersectObjects([...people, ...this.pickers, ...bodies], false);
     if (!hits.length) return null;
     const o = hits[0].object;
+    if (o.userData.worker) return `worker:${o.userData.worker}`;
     if (o.userData.truckId !== undefined) return o.userData.front ? 'truck' : 'truckq';
     return o.userData.kind;
   }

@@ -25,4 +25,26 @@ export const ICON = {
   music: svg('<path d="M12 24V7l14-3v17" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="9" cy="24" r="3.5" fill="currentColor"/><circle cx="23" cy="21" r="3.5" fill="currentColor"/>'),
   sound: svg('<path d="M5 12h5l7-6v20l-7-6H5z" fill="currentColor"/><path d="M21 11q4 5 0 10M24 8q7 8 0 16" stroke="currentColor" stroke-width="2.5" fill="none"/>'),
   flag: svg('<rect width="32" height="16" fill="#1d3f86"/><rect y="3.2" width="32" height="3.2" fill="#f3ecdc"/><rect y="9.6" width="32" height="3.2" fill="#f3ecdc"/><path d="M0 0 L13.86 8 L0 16 Z" fill="#c0392b"/><polygon points="4.80,5.50 6.27,10.02 2.42,7.23 7.18,7.23 3.33,10.02" fill="#f3ecdc"/>', '0 0 32 16'),
+  ff: svg('<path d="M3 7l12 9-12 9zM16 7l12 9-12 9z" fill="currentColor"/>'),
+  play: svg('<path d="M9 6l17 10-17 10z" fill="currentColor"/>'),
+  clock: svg('<circle cx="16" cy="16" r="12" fill="#f6ecd6" stroke="#6b4a24" stroke-width="2.5"/><path d="M16 9v7l5 3" stroke="#6b4a24" stroke-width="2.5" fill="none" stroke-linecap="round"/>'),
+  moon: svg('<path d="M20 4a12 12 0 1 0 8 19A10 10 0 0 1 20 4z" fill="#e8e2c8" stroke="#6b6a5a" stroke-width="1.5"/>'),
+  sun: svg('<circle cx="16" cy="16" r="7" fill="#f2c14e" stroke="#8a5a14" stroke-width="2"/><path d="M16 2v5M16 25v5M2 16h5M25 16h5M6 6l3 3M23 23l3 3M6 26l3-3M23 9l3-3" stroke="#d99a2a" stroke-width="2.5" stroke-linecap="round"/>'),
+  fire: svg('<path d="M16 3c2 6 9 9 9 17a9 9 0 0 1-18 0c0-5 3-7 4-11 1 3 2 4 3 4 0-4 0-7 2-10z" fill="#e0703a" stroke="#8a3214" stroke-width="2"/>'),
 };
+
+// Retrato de un trabajador a partir de su ropa (sombrero de yarey, pañuelo, guayabera).
+const hex = (c) => '#' + c.toString(16).padStart(6, '0');
+export function portrait(look, seed = 0) {
+  const skin = hex(look.skin), shirt = hex(look.shirt);
+  const hat = look.hat != null ? `<ellipse cx="32" cy="22" rx="24" ry="6" fill="${hex(look.hat)}" stroke="#5a4020" stroke-width="2"/><path d="M20 21q1-12 12-12t12 12z" fill="${hex(look.hat)}" stroke="#5a4020" stroke-width="2"/><path d="M20.5 18h23" stroke="#6b4a2a" stroke-width="3"/>`
+    : `<path d="M18 26q0-16 14-16t14 16q-4-6-14-6t-14 6z" fill="${look.scarf != null ? hex(look.scarf) : '#3a2a1e'}" stroke="#5a2a1a" stroke-width="2"/>`;
+  const scarf = look.scarf != null && look.hat != null ? `<path d="M23 43l9 6 9-6-3 6h-12z" fill="${hex(look.scarf)}" stroke="#5a2a1a" stroke-width="1.5"/>` : '';
+  const hair = look.skirt ? `<path d="M19 30q-3 10 2 14M45 30q3 10-2 14" stroke="#2e2018" stroke-width="5" fill="none" stroke-linecap="round"/>` : '';
+  const moustache = !look.skirt && seed % 2 ? `<path d="M27 36q5-3 10 0" stroke="#3a2a1e" stroke-width="2.5" fill="none" stroke-linecap="round"/>` : '';
+  return `<svg viewBox="0 0 64 64" class="portrait" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#f3e3bf"/>
+    <path d="M10 64v-6q0-12 22-14 22 2 22 14v6z" fill="${shirt}" stroke="#4a3424" stroke-width="2"/><path d="M26 47v17M38 47v17" stroke="#00000022" stroke-width="2"/>
+    ${hair}<circle cx="32" cy="31" r="12" fill="${skin}" stroke="#4a3424" stroke-width="2"/>
+    <circle cx="27.5" cy="30" r="1.6" fill="#2a1e16"/><circle cx="36.5" cy="30" r="1.6" fill="#2a1e16"/><path d="M28 37q4 3 8 0" stroke="#5a2a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    ${moustache}${scarf}${hat}</svg>`;
+}

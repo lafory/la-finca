@@ -123,6 +123,13 @@ tierra en Terreno. Avanza por eventos; se guarda el progreso.
   palmas reales con pencas curvas, viento en vértices, viñeta CSS. Calidad Alta/Media/Baja/Auto (pixelRatio,
   sombras 2048/1024/512, densidad de hierba, entorno). Descarga total ≈ 0.75 MB.
 
+## 10c. v3 – trabajadores y adelantar el tiempo
+- 6 trabajadores (pago único, sin salario; mejora ★2 = precio×0.8+20, ★3 = precio×1.6+20): recolector 30 (N1),
+  regador 55 (N2), sembradora 70 (N2, compra semillas si se activa), cosechadora 90 (N3), cocinera 180 (N4), camionero 300 (N5).
+  Rapidez ★1/2/3: caminar 2.6/3.3/4.1, trabajar 1.4/0.9/0.55 s. Burbujas de estado, animación de trabajo, herramientas en la mano.
+- ⏩ x1/x5/x20: reloj de juego = Date.now + clockOffset (guardado). Simulación en subpasos de ≤0.1 s de juego; el guajiro
+  camina a velocidad real. Día = 240 s de juego al adelantar; a x1 la luz vuelve sola a la tarde.
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.

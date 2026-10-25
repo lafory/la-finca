@@ -21,6 +21,7 @@ npm run build
 npm run preview             # = vite preview --host 0.0.0.0 --port 4173 --strictPort
 
 # Prueba de humo headless (con el preview corriendo en :4173)
+node tests/v3.mjs           # v3: contratar, ⏩, noche → screenshots/v3-*.png
 npm run smoke               # escritorio, iPad, teléfono vertical y horizontal → screenshots/v2-*.png y smoke-report-v2.json
 node tests/showcase.mjs     # capturas de una finca avanzada
 ```
@@ -39,6 +40,12 @@ Alternativa sin Vite para servir `dist/`: `npx serve dist -l 4173` o `python3 -m
   paga al completar el pedido) o "No tenemos, siguiente" (sin penalización: se va y avanza la fila; llega otro al final).
   Al principio piden sobre todo huevos, así puedes vender huevos y comprar semillas mientras crecen los tomates.
   También hay "Venta suelta" a precio normal.
+- **Trabajadores** (botón en la barra inferior): Pancho (recolector, 30 pesos, nivel 1), Yoel (regador), María (sembradora,
+  puede comprar semillas sola), Cachita (cosechadora), Caridad (cocinera), Chucho (camionero). Pago único, mejora de rapidez ★1–3,
+  despedir con confirmación. Toca a un trabajador para ver qué hace.
+- **Adelantar el tiempo (⏩):** botón arriba: x1 → x5 → x20. Todo avanza (cultivos, huevos, fogón, trabajadores, camiones) en
+  subpasos fijos de 0.1 s de juego. Ciclo de día y noche con farol en el bohío y sombras de nubes. Al tocar una mata que crece
+  aparece "Adelantar" (x20 hasta que madura). El reloj adelantado se guarda (`clockOffset`), así que el progreso offline sigue igual.
 - **Calidad gráfica:** Ajustes → Auto / Alta / Media / Baja. En Auto baja sola si el cuadro tarda > 25 ms.
 - Pantalla completa: botón ⛶ arriba (Android/escritorio); en iPhone, "Añadir a pantalla de inicio" abre a pantalla completa.
 

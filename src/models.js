@@ -513,8 +513,9 @@ export function eggGeo() {
 
 // ---------------------------------------------------------------- Personas
 // Partes separadas para animar: cuerpo, piernas, brazos. Formas redondeadas (cápsulas).
-export function personParts(shirt = P.white, hatColor = P.hat, seed = 1) {
+export function personParts(shirt = P.white, hatColor = P.hat, seed = 1, o = {}) {
   const r = rng(seed);
+  const skin = o.skin ?? P.skin;
   const cap = (rad, len) => new THREE.CapsuleGeometry(rad, len, 4, 10);
   const body = new Builder();
   body.add(part(cap(0.15, 0.24), shirt, { y: 0.72, sz: 0.72 }));
@@ -522,12 +523,24 @@ export function personParts(shirt = P.white, hatColor = P.hat, seed = 1) {
   body.add(part(new THREE.CylinderGeometry(0.155, 0.155, 0.03, 12), 0x3a2a1e, { y: 0.565, sz: 0.75 }));
   for (let i = 0; i < 4; i++) body.add(part(sph(0.012, 5, 4), 0xe8e0d0, { y: 0.84 - i * 0.07, z: -0.115 }));
   body.add(part(new THREE.ConeGeometry(0.07, 0.1, 4), P.red, { y: 0.9, z: -0.1, rx: Math.PI, sz: 0.4 }));
-  body.add(part(sph(0.115, 12, 10), P.skin, { y: 1.0 }));
-  body.add(part(sph(0.03, 6, 5), new THREE.Color(P.skin).multiplyScalar(0.9).getHex(), { y: 0.99, z: -0.11 }));
+  body.add(part(sph(0.115, 12, 10), skin, { y: 1.0 }));
+  body.add(part(sph(0.03, 6, 5), new THREE.Color(skin).multiplyScalar(0.9).getHex(), { y: 0.99, z: -0.11 }));
   body.add(part(new THREE.BoxGeometry(0.12, 0.025, 0.02), 0x3a2a20, { y: 0.955, z: -0.1 }));
-  body.add(part(new THREE.CylinderGeometry(0.33, 0.34, 0.025, 20), hatColor, { y: 1.1 }));
-  body.add(part(new THREE.CylinderGeometry(0.12, 0.15, 0.15, 14), worn(hatColor, r, 0.08), { y: 1.18 }));
-  body.add(part(new THREE.CylinderGeometry(0.152, 0.152, 0.035, 14), 0x6b4a2a, { y: 1.13 }));
+  if (hatColor != null) {
+    // sombrero de yarey: ala ancha, copa y cinta
+    body.add(part(new THREE.CylinderGeometry(0.33, 0.34, 0.025, 20), hatColor, { y: 1.1, m: 2 }));
+    body.add(part(new THREE.CylinderGeometry(0.12, 0.15, 0.15, 14), worn(hatColor, r, 0.08), { y: 1.18, m: 2 }));
+    body.add(part(new THREE.CylinderGeometry(0.152, 0.152, 0.035, 14), 0x6b4a2a, { y: 1.13 }));
+  } else {
+    // pañuelo amarrado en la cabeza
+    body.add(part(sph(0.125, 12, 8), o.scarf ?? P.red, { y: 1.04, z: 0.01, sy: 0.85 }));
+    body.add(part(sph(0.05, 8, 6), o.scarf ?? P.red, { y: 1.02, z: 0.13 }));
+  }
+  if (o.scarf != null && hatColor != null) body.add(part(new THREE.ConeGeometry(0.11, 0.14, 4), o.scarf, { y: 0.84, z: -0.06, rx: Math.PI, sz: 0.5 }));
+  if (o.skirt != null) {
+    body.add(part(new THREE.CylinderGeometry(0.15, 0.24, 0.36, 14), o.skirt, { y: 0.4, sz: 0.85 }));
+    body.add(part(sph(0.07, 8, 6), 0x2e2018, { y: 1.02, z: 0.12 })); // moño
+  }
   const leg = new Builder();
   leg.add(part(cap(0.062, 0.34), P.pants, { y: -0.24 }));
   leg.add(part(sph(0.07, 8, 6), 0x3a2a1e, { y: -0.47, z: -0.03, sy: 0.6, sz: 1.4 }));
@@ -535,6 +548,33 @@ export function personParts(shirt = P.white, hatColor = P.hat, seed = 1) {
   arm.add(part(cap(0.052, 0.26), shirt, { y: -0.17 }));
   arm.add(part(sph(0.045, 8, 6), P.skin, { y: -0.36 }));
   return { body: body.build(), leg: leg.build(), arm: arm.build() };
+}
+// Herramienta en la mano de cada trabajador
+export function toolGeo(role) {
+  const b = new Builder();
+  switch (role) {
+    case 'recolector': case 'cosechador':
+      b.cyl(0.11, 0.08, 0.1, 10, 0xb08850, { m: 1 });
+      b.box(0.2, 0.015, 0.015, 0x8a6a3a, { y: 0.12 });
+      if (role === 'recolector') { b.ico(0.04, 0xf4ead2, { y: 0.07, x: -0.03 }); b.ico(0.04, 0xf4ead2, { y: 0.07, x: 0.03 }); }
+      else { b.ico(0.045, 0xd2402c, { y: 0.07 }); }
+      break;
+    case 'regador':
+      b.cyl(0.07, 0.08, 0.14, 12, 0x8a9aa0, { m: 4 });
+      b.add(part(new THREE.CylinderGeometry(0.012, 0.02, 0.18, 6), 0x8a9aa0, { y: 0.05, z: -0.1, rx: -0.9, m: 4 }));
+      break;
+    case 'sembrador':
+      b.box(0.12, 0.14, 0.08, 0xd9c49a, { m: 2 });
+      b.box(0.13, 0.03, 0.09, 0x8a6a3a, { y: 0.07 });
+      break;
+    case 'cocinera':
+      b.add(part(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), 0x8a6a3a, { y: 0.05, m: 1 }));
+      b.add(part(sph(0.035, 8, 6), 0x8a6a3a, { y: -0.1, sy: 0.5 }));
+      break;
+    default:
+      b.box(0.18, 0.12, 0.14, 0xa07848, { m: 1 });
+  }
+  return b.build();
 }
 export function basketGeo() {
   const b = new Builder();

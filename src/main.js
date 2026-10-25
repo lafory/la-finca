@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount } from './state.js';
+import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK } from './state.js';
 import { Sim } from './sim.js';
 import { World } from './world.js';
 import { CameraRig } from './camera.js';
@@ -8,7 +8,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { UI } from './ui.js';
 import { ICON } from './icons.js';
-import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT } from './data.js';
+import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT, FF_SPEEDS, FF_STEP, CROPS } from './data.js';
 
 class Game {
   constructor() {
@@ -18,6 +18,9 @@ class Game {
     const state = saved || newGame();
     this.sound = new Sound();
     this.started = false;
+    this.ffSpeed = 1;
+    this.ffPlot = null;
+    this.lastSfx = {};
     this.offline = saved ? this.offlineBefore(state) : null;
     this.sim = new Sim(state, this.hooks());
     this.sim.update(0); // pone al día huevos/cultivos del tiempo fuera
@@ -50,7 +53,11 @@ class Game {
     return {
       toast: (t) => this.ui?.toast(t),
       float: (x, z, t, c) => this.ui?.float(x, z, t, c),
-      sfx: (n) => this.sound.play(n),
+      sfx: (n) => {
+        // al adelantar, no repetir el mismo sonido muchas veces seguidas
+        if (this.ffSpeed > 1) { const t = performance.now(); if (t - (this.lastSfx[n] || 0) < 400) return; this.lastSfx[n] = t; }
+        this.sound.play(n);
+      },
       levelUp: (l) => { this.sound.play('level'); this.ui?.levelUp(l); },
       changed: (k) => { this.ui?.refreshHud(); if (k === 'plots') this.world && (this.world.plotsDirty = true); },
       openTruck: () => this.ui.openTruck(),
@@ -157,6 +164,30 @@ class Game {
     this.resize();
   }
 
+  // ------------------------------------------------------------ adelantar el tiempo
+  setSpeed(sp) {
+    if (sp === this.ffSpeed) return;
+    this.ffSpeed = sp;
+    if (sp === 1) this.ffPlot = null;
+    else { this.sim.s.ffUsed = true; this.ui.focusPlot = null; }
+    this.sound.play(sp > 1 ? 'level' : 'tap');
+  }
+  cycleSpeed() {
+    const i = FF_SPEEDS.indexOf(this.ffSpeed);
+    this.setSpeed(FF_SPEEDS[(i + 1) % FF_SPEEDS.length]);
+  }
+  fastForwardPlot(p) {
+    if (!p || !p.crop || this.sim.plotState(p) !== 'growing') return;
+    this.setSpeed(20);
+    this.ffPlot = p;
+  }
+  focusWorker(role) {
+    const w = this.sim.workers.find((x) => x.role === role);
+    if (!w) return;
+    this.rig.goal.set(w.x, 0, w.z);
+    this.rig.manualUntil = performance.now() + 5000;
+  }
+
   commandTarget(t) { this.sim.command(t); this.ui.closeSheet(); }
 
   // Toque en el mundo: decide qué tocaste y manda al guajiro.
@@ -168,6 +199,7 @@ class Game {
     const kind = this.world.pick(ray);
     const s = this.sim.s;
     const go = (t, mx, mz) => { if (this.sim.command(t)) { this.world.showMarker(mx, mz); this.sound.play('tap'); } };
+    if (kind && kind.startsWith('worker:')) return this.ui.openWorker(kind.slice(7));
     if (kind === 'truck' || (kind && kind.startsWith('truckq'))) {
       if (kind !== 'truck') return this.ui.toast('Ese camión está esperando en la fila. Atiende primero al de adelante.');
       if (this.sim.truckParked()) return go({ kind: 'truck' }, 14.5, 9.5);
@@ -204,12 +236,25 @@ class Game {
       const dir = this.input.moveDir();
       this.sim.freeMoving = !!dir;
       if (dir) this.sim.moveFree(dir, dt);
-      this.sim.update(dt);
+      // simulación en subpasos fijos: a x20 todo avanza 20 veces más rápido sin saltarse nada
+      const sp = this.ffSpeed, gameDt = dt * sp;
+      const n = Math.max(1, Math.ceil(gameDt / FF_STEP - 1e-6));
+      for (let i = 0; i < n; i++) {
+        CLOCK.offset += (gameDt - dt) / n;
+        this.sim.update(gameDt / n, dt / n);
+      }
+      this.gameDt = gameDt;
+      if (this.ffPlot && (!this.ffPlot.crop || this.sim.plotState(this.ffPlot) !== 'growing')) {
+        const c = this.ffPlot.crop;
+        this.setSpeed(1);
+        if (c) this.ui.toast(`¡${CROPS[c].name} listo para cosechar!`);
+      }
       this.saveTimer += dt;
       if (this.saveTimer > 8 && !this.resetting) { this.saveTimer = 0; save(this.sim.s); }
     }
     this.rig.update(dt);
     this.world.update(dt, time);
+    this.world.updateSky(dt, this.started ? (this.gameDt || dt) : 0, this.started ? this.ffSpeed : 1);
     this.world.render(this.rig.camera);
     this.ui.update(dt);
     this.autoQuality(dt);

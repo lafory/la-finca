@@ -1,7 +1,7 @@
 // Lógica del juego: jugador, gallinas, huevos, canteros, camión, fogón, trabajadores, progresión.
 import {
   W, H, ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, EGG_INTERVAL, MAX_GROUND_EGGS, TRUCK_SLOTS, TRUCK_SPEED, TRUCK_RESPAWN, TRUCK_MODELS, TRUCK_COLORS,
-  WORKERS, PARCELS, BUILDINGS, PEN, TRUCK_TILES, TRUCK_SPOT, WATER_BOOST, ABONO_FACTOR, ORDER_BONUS,
+  WORKERS, WORKER_SPEED, workerUpgradePrice, PARCELS, BUILDINGS, PEN, TRUCK_TILES, TRUCK_SPOT, WATER_BOOST, ABONO_FACTOR, ORDER_BONUS,
   xpForLevel, SELLABLE, FLAGPOLE,
 } from './data.js';
 import { now, buildGrid, walkable, isOwned, storageCap, invCount, chickenCap, addChicken, parcelAt } from './state.js';
@@ -302,16 +302,16 @@ export class Sim {
     s.seeds[crop]--;
     p.crop = crop; p.at = now(); p.dur = this.plotDur(crop); p.watered = false;
     this.addXp(CROPS[crop].xpPlant);
-    this.h.sfx('plant');
+    if (!byWorker) this.h.sfx('plant');
     this.h.changed('plots');
     return true;
   }
-  water(p) {
+  water(p, byWorker) {
     if (this.plotState(p) !== 'growing' || p.watered) return false;
     const rem = p.at + p.dur - now();
     p.at -= rem * WATER_BOOST;
     p.watered = true;
-    this.h.sfx('water');
+    if (!byWorker) this.h.sfx('water');
     this.h.float(p.x + 0.5, p.z + 0.5, '¡Regado!', 'item');
     this.h.changed('plots');
     return true;
@@ -323,7 +323,7 @@ export class Sim {
     this.addXp(ITEMS[item].xp);
     p.crop = null; p.watered = false;
     this.s.stats.harvests++;
-    this.h.sfx('harvest');
+    if (!byWorker) this.h.sfx('harvest');
     this.h.burst?.(p.x + 0.5, p.z + 0.5, item);
     this.h.changed('plots');
     return true;
@@ -384,19 +384,48 @@ export class Sim {
       s.upgrades.storage++; this.h.sfx('buy'); this.h.changed('inv');
       return true;
     }
-    if (WORKERS[id]) {
-      const w = WORKERS[id];
-      if (s.workers.some((x) => x.role === id) || s.level < w.level || !this.spend(w.price)) return false;
-      const rec = { role: id, x: 13.5, z: 11.5 };
-      s.workers.push(rec);
-      this.workers.push(this.makeWorker(rec));
-      this.h.sfx('buy');
-      this.h.toast(`${w.name}: ¡ya está trabajando en la finca!`);
-      this.h.changed('workers');
-      return true;
-    }
+    if (WORKERS[id]) return this.hire(id);
     return false;
   }
+  // ------------------------------------------------------------ contratar / mejorar / despedir
+  hire(id) {
+    const s = this.s, w = WORKERS[id];
+    if (s.workers.some((x) => x.role === id) || s.level < w.level || !this.spend(w.price)) return false;
+    const rec = { role: id, x: 13.5, z: 11.5, lvl: 1, autobuy: id === 'sembrador' };
+    s.workers.push(rec);
+    this.workers.push(this.makeWorker(rec));
+    this.h.sfx('level');
+    this.h.toast(`¡${w.who} ya trabaja en la finca! ${w.name}.`);
+    this.h.float(rec.x, rec.z, `¡${w.who} contratado${w.look.skirt ? 'a' : ''}!`, 'xp');
+    this.h.changed('workers');
+    return true;
+  }
+  upgradeWorker(role) {
+    const w = this.workers.find((x) => x.role === role);
+    if (!w || w.rec.lvl >= 3 || !this.spend(workerUpgradePrice(role, w.rec.lvl))) return false;
+    w.rec.lvl++;
+    w.speed = WORKER_SPEED[w.rec.lvl].walk;
+    this.h.sfx('buy');
+    this.h.float(w.x, w.z, '¡Más rápido!', 'xp');
+    this.h.changed('workers');
+    return true;
+  }
+  fireWorker(role) {
+    const i = this.workers.findIndex((x) => x.role === role);
+    if (i < 0) return false;
+    const w = this.workers[i];
+    if (w.task) this.reserved.delete(w.task.key);
+    this.workers.splice(i, 1);
+    this.s.workers = this.s.workers.filter((x) => x.role !== role);
+    this.h.toast(`${WORKERS[role].who} se despidió. Puedes volver a contratarlo cuando quieras.`);
+    this.h.changed('workers');
+    return true;
+  }
+  toggleAutobuy(role) {
+    const w = this.workers.find((x) => x.role === role);
+    if (w) w.rec.autobuy = !w.rec.autobuy;
+  }
+
   buyParcel(id) {
     const s = this.s, p = PARCELS.find((x) => x.id === id);
     if (!p || s.parcels.includes(id)) return false;
@@ -494,28 +523,60 @@ export class Sim {
   }
 
   // ------------------------------------------------------------ trabajadores
-  makeWorker(rec) { return { rec, role: rec.role, x: rec.x, z: rec.z, path: null, task: null, wait: 1 + Math.random(), face: 0, walk: 0, moving: false, speed: 3.2 }; }
+  makeWorker(rec) {
+    rec.lvl = rec.lvl || 1;
+    return { rec, role: rec.role, x: rec.x, z: rec.z, path: null, task: null, wait: 1 + Math.random(), face: 0, walk: 0, moving: false,
+      speed: WORKER_SPEED[rec.lvl].walk, work: 0, workDur: 1, status: 'Llegando a la finca', busy: false };
+  }
+  seedFor(w) {
+    const s = this.s;
+    const have = s.seeds[s.selectedSeed] > 0 ? s.selectedSeed : CROP_ORDER.find((c) => s.seeds[c] > 0);
+    if (have) return { crop: have, buy: false };
+    if (w.rec.autobuy) {
+      const c = CROPS[s.selectedSeed] && s.level >= CROPS[s.selectedSeed].level ? s.selectedSeed : 'tomato';
+      if (s.money >= CROPS[c].seed) return { crop: c, buy: true };
+    }
+    return null;
+  }
   workerPick(w) {
     const s = this.s, t = now();
     const free = (key) => !this.reserved.has(key);
-    const near = (list) => list.sort((a, b) => Math.hypot(a.x - w.x, a.z - w.z) - Math.hypot(b.x - w.x, b.z - w.z))[0];
-    if (w.role === 'recolector' && this.space() > 0) {
-      const eggs = s.eggs.filter((e) => free(`e${e.id}`)).map((e) => ({ x: e.x, z: e.z, t: { kind: 'egg', id: e.id }, key: `e${e.id}` }));
-      const ripe = s.plots.filter((p) => this.plotState(p, t) === 'ripe' && free(`p${p.x},${p.z}`)).map((p) => ({ x: p.x + 0.5, z: p.z + 0.5, t: { kind: 'plot', p }, key: `p${p.x},${p.z}` }));
-      return near([...eggs, ...ripe]);
-    }
-    if (w.role === 'sembrador' && CROP_ORDER.some((c) => s.seeds[c] > 0)) {
-      return near(s.plots.filter((p) => !p.crop && free(`p${p.x},${p.z}`)).map((p) => ({ x: p.x + 0.5, z: p.z + 0.5, t: { kind: 'plot', p }, key: `p${p.x},${p.z}` })));
-    }
-    if (w.role === 'cocinero' && this.kitchenOpen() && free('kitchen')) {
-      const k = s.kitchen;
-      const canCook = !k.recipe && !k.ready && Object.values(RECIPES).some((r) => s.level >= r.level && Object.entries(r.needs).every(([i, q]) => s.inv[i] >= q));
-      if (k.ready || canCook) return { x: 13, z: 5, t: { kind: 'kitchen' }, key: 'kitchen' };
-    }
-    if (w.role === 'camionero' && free('truck') && this.truckParked()) {
-      const f = this.front();
-      const stale = now() - (s.skippedAt || 0) > 40 && now() - (f.parkedSince || now()) > 40;
-      if (this.canDeliver() || (stale && !this.canLoadSome())) return { x: 15, z: 9, t: { kind: 'truck' }, key: 'truck' };
+    const near = (list) => list.sort((a, b) => Math.hypot(a.x - w.x, a.z - w.z) - Math.hypot(b.x - w.x, b.z - w.z))[0] || null;
+    const plots = (fn, verb) => near(s.plots.filter((p) => fn(p) && free(`p${p.x},${p.z}`)).map((p) => ({ x: p.x + 0.5, z: p.z + 0.5, t: { kind: 'plot', p }, key: `p${p.x},${p.z}`, verb: verb(p) })));
+    const cname = (p) => (p.crop ? CROPS[p.crop].name.toLowerCase() : '');
+    switch (w.role) {
+      case 'recolector':
+        if (this.space() <= 0) { w.status = 'La canasta está llena: vende algo'; return null; }
+        w.status = 'Esperando que pongan las gallinas';
+        return near(s.eggs.filter((e) => free(`e${e.id}`)).map((e) => ({ x: e.x, z: e.z, t: { kind: 'egg', id: e.id }, key: `e${e.id}`, verb: 'recoger un huevo' })));
+      case 'regador':
+        w.status = 'Nada que regar ahora';
+        return plots((p) => this.plotState(p, t) === 'growing' && !p.watered, (p) => `regar el ${cname(p)}`);
+      case 'sembrador':
+        if (!this.seedFor(w)) { w.status = w.rec.autobuy ? 'No alcanza el dinero para semillas' : 'Sin semillas: cómpralas o activa “Comprar semillas”'; return null; }
+        w.status = 'No hay canteros vacíos';
+        return plots((p) => !p.crop, () => 'sembrar');
+      case 'cosechador':
+        if (this.space() <= 0) { w.status = 'La canasta está llena: vende algo'; return null; }
+        w.status = 'Esperando que madure algo';
+        return plots((p) => this.plotState(p, t) === 'ripe', (p) => `cosechar el ${cname(p)}`);
+      case 'cocinera': {
+        if (!this.kitchenOpen()) { w.status = 'El fogón se arregla en el nivel 2'; return null; }
+        const k = s.kitchen;
+        const canCook = !k.recipe && !k.ready && Object.values(RECIPES).some((r) => s.level >= r.level && Object.entries(r.needs).every(([i, q]) => s.inv[i] >= q));
+        w.status = k.recipe ? 'Cuidando el fogón' : 'Le faltan tomates o caña';
+        if (free('kitchen') && (k.ready || canCook)) return { x: 13, z: 5, t: { kind: 'kitchen' }, key: 'kitchen', verb: k.ready ? 'recoger del fogón' : 'prender el fogón' };
+        return null;
+      }
+      case 'camionero': {
+        w.status = 'Esperando un pedido que podamos llenar';
+        if (!free('truck') || !this.truckParked()) return null;
+        const f = this.front();
+        const stale = t - (f.parkedSince || t) > 25;
+        if (this.canDeliver()) return { x: 15, z: 9, t: { kind: 'truck' }, key: 'truck', verb: 'cargar el camión' };
+        if (stale && !this.canLoadSome()) return { x: 15, z: 9, t: { kind: 'truck' }, key: 'truck', verb: 'despedir al camión' };
+        return null;
+      }
     }
     return null;
   }
@@ -523,10 +584,14 @@ export class Sim {
     const s = this.s;
     if (t.kind === 'egg') { const i = s.eggs.findIndex((e) => e.id === t.id); if (i >= 0) this.collectEgg(i, true); }
     else if (t.kind === 'plot') {
-      if (w.role === 'recolector') this.harvest(t.p, true);
-      else if (w.role === 'sembrador') {
-        const c = s.seeds[s.selectedSeed] > 0 ? s.selectedSeed : CROP_ORDER.find((x) => s.seeds[x] > 0);
-        if (c) this.plant(t.p, c, true);
+      if (w.role === 'cosechador') this.harvest(t.p, true);
+      else if (w.role === 'regador') this.water(t.p, true);
+      else if (w.role === 'sembrador' && !t.p.crop) {
+        const sd = this.seedFor(w);
+        if (sd) {
+          if (sd.buy) { if (!this.spend(CROPS[sd.crop].seed)) return; s.seeds[sd.crop]++; this.h.float(w.x, w.z, `−${CROPS[sd.crop].seed} semilla`, 'coin'); }
+          this.plant(t.p, sd.crop, true);
+        }
       }
     } else if (t.kind === 'kitchen') {
       if (s.kitchen.ready) this.collectKitchen(true);
@@ -537,19 +602,26 @@ export class Sim {
     } else if (t.kind === 'truck') { if (this.canDeliver()) this.loadTruck(); else if (!this.canLoadSome()) this.skipTruck(); }
   }
   updateWorker(w, dt) {
+    const sp = WORKER_SPEED[w.rec.lvl];
     if (w.path) { this.stepAlong(w, dt); if (w.path) return; }
     if (w.task) {
+      if (w.work <= 0) { w.work = sp.work; w.workDur = sp.work; w.status = w.task.doing; w.busy = true; if (Math.hypot(w.task.x - w.x, w.task.z - w.z) > 0.05) w.face = Math.atan2(w.task.x - w.x, w.task.z - w.z); }
+      w.work -= dt;
+      if (w.work > 0) return;
+      w.work = 0;
       this.workerDo(w, w.task.t);
+      w.rec.jobs = (w.rec.jobs || 0) + 1;
       this.reserved.delete(w.task.key);
-      w.task = null; w.wait = 0.8;
+      w.task = null; w.wait = sp.rest; w.busy = false;
       return;
     }
     w.wait -= dt;
     if (w.wait > 0) return;
     const pick = this.workerPick(w);
     if (!pick) {
-      // pasea tranquilo cerca del bohío
-      w.wait = 2.5 + Math.random() * 3;
+      // descansa o pasea tranquilo cerca del bohío
+      w.wait = (2.5 + Math.random() * 3) * (sp.rest / 1.6 + 0.5);
+      if (Math.random() < 0.5) return;
       const gx = 5 + Math.floor(Math.random() * 9), gz = 7 + Math.floor(Math.random() * 5);
       const path = this.pathTo(w, this.can(gx, gz) ? [[gx, gz]] : []);
       if (path && path.length > 1) { path.shift(); w.path = path.map(([x, z]) => ({ x: x + 0.5, z: z + 0.5 })); }
@@ -559,10 +631,15 @@ export class Sim {
     const path = this.pathTo(w, goals);
     if (!path) { w.wait = 2; return; }
     this.reserved.add(pick.key);
+    const DOING = { recolector: 'Recogiendo huevos', regador: 'Regando', sembrador: 'Sembrando', cosechador: 'Cosechando', cocinera: 'En el fogón', camionero: 'Atendiendo el camión' };
+    pick.doing = DOING[w.role];
     w.task = pick;
+    w.status = `Va a ${pick.verb}`;
+    w.busy = true;
     w.path = path.map(([x, z]) => ({ x: x + 0.5, z: z + 0.5 }));
     if (pick.t.kind === 'egg') w.path[w.path.length - 1] = this.eggPos(pick.t.id);
     if (w.path.length > 1) w.path.shift();
+    else if (Math.hypot(w.path[0].x - w.x, w.path[0].z - w.z) < 0.05) w.path = null;
   }
 
   // ------------------------------------------------------------ movimiento
@@ -606,12 +683,13 @@ export class Sim {
   }
 
   // ------------------------------------------------------------ tick
-  update(dt) {
+  // dt = segundos de juego (más grandes al adelantar); pdt = segundos reales para el guajiro.
+  update(dt, pdt = dt) {
     const s = this.s, t = now();
     // jugador
     const p = this.player;
     if (p.path) {
-      this.stepAlong(p, dt);
+      this.stepAlong(p, pdt);
       if (!p.path && p.task) { const tk = p.task; p.task = null; this.perform(tk); }
     } else if (!this.freeMoving) p.moving = false;
     s.player.x = p.x; s.player.z = p.z;

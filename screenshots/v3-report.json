@@ -1,0 +1,202 @@
+{
+  "desktop": {
+    "errors": [],
+    "afterTruck": {
+      "money": 35,
+      "sold": 1
+    },
+    "workerCards": 6,
+    "hired": [
+      "recolector"
+    ],
+    "worker": {
+      "sawWork": true,
+      "eggsByWorker": 1,
+      "status": "Recogiendo huevos"
+    },
+    "plantDebug": {
+      "seeds": {
+        "tomato": 1,
+        "cane": 0,
+        "tobacco": 0
+      },
+      "modal": false,
+      "player": "7.5,9.5",
+      "level": 1
+    },
+    "ff": {
+      "ffSpeed": 20,
+      "usedPill": true,
+      "ripe": true,
+      "autoStop": true,
+      "realSec": 8,
+      "growLeftAtStart": 59.9
+    },
+    "night": {
+      "reached": true,
+      "tod": 0.8905838095238253,
+      "banner": true,
+      "speed": 20
+    },
+    "clockOffset": 59.7,
+    "jobs": 20,
+    "reload": {
+      "offsetKept": true,
+      "workers": [
+        "recolector:1"
+      ],
+      "harvestable": 1
+    },
+    "fps": 60
+  },
+  "phone": {
+    "errors": [],
+    "afterTruck": {
+      "money": 35,
+      "sold": 1
+    },
+    "workerCards": 6,
+    "hired": [
+      "recolector"
+    ],
+    "worker": {
+      "sawWork": true,
+      "eggsByWorker": 1,
+      "status": "Recogiendo huevos"
+    },
+    "plantDebug": {
+      "seeds": {
+        "tomato": 1,
+        "cane": 0,
+        "tobacco": 0
+      },
+      "modal": false,
+      "player": "7.5,9.5",
+      "level": 1
+    },
+    "ff": {
+      "ffSpeed": 20,
+      "usedPill": true,
+      "ripe": true,
+      "autoStop": true,
+      "realSec": 4,
+      "growLeftAtStart": 59.8
+    },
+    "night": {
+      "reached": true,
+      "tod": 0.8990639285717635,
+      "banner": true,
+      "speed": 20
+    },
+    "clockOffset": 38,
+    "jobs": 18,
+    "reload": {
+      "offsetKept": true,
+      "workers": [
+        "recolector:1"
+      ],
+      "harvestable": 1
+    },
+    "fps": 60
+  },
+  "ipad": {
+    "errors": [],
+    "afterTruck": {
+      "money": 35,
+      "sold": 1
+    },
+    "workerCards": 6,
+    "hired": [
+      "recolector"
+    ],
+    "worker": {
+      "sawWork": true,
+      "eggsByWorker": 1,
+      "status": "Recogiendo huevos"
+    },
+    "plantDebug": {
+      "seeds": {
+        "tomato": 1,
+        "cane": 0,
+        "tobacco": 0
+      },
+      "modal": false,
+      "player": "7.5,9.5",
+      "level": 1
+    },
+    "ff": {
+      "ffSpeed": 20,
+      "usedPill": true,
+      "ripe": true,
+      "autoStop": true,
+      "realSec": 8.2,
+      "growLeftAtStart": 59.8
+    },
+    "night": {
+      "reached": true,
+      "tod": 0.8949476190476787,
+      "banner": true,
+      "speed": 20
+    },
+    "clockOffset": 165.4,
+    "jobs": 19,
+    "reload": {
+      "offsetKept": true,
+      "workers": [
+        "recolector:1"
+      ],
+      "harvestable": 1
+    },
+    "fps": 60
+  },
+  "phone-landscape": {
+    "errors": [],
+    "afterTruck": {
+      "money": 35,
+      "sold": 1
+    },
+    "workerCards": 6,
+    "hired": [
+      "recolector"
+    ],
+    "worker": {
+      "sawWork": true,
+      "eggsByWorker": 1,
+      "status": "Recogiendo huevos"
+    },
+    "plantDebug": {
+      "seeds": {
+        "tomato": 1,
+        "cane": 0,
+        "tobacco": 0
+      },
+      "modal": false,
+      "player": "7.5,9.5",
+      "level": 1
+    },
+    "ff": {
+      "ffSpeed": 20,
+      "usedPill": true,
+      "ripe": true,
+      "autoStop": true,
+      "realSec": 3.8,
+      "growLeftAtStart": 59.8
+    },
+    "night": {
+      "reached": true,
+      "tod": 0.8970391666668658,
+      "banner": true,
+      "speed": 20
+    },
+    "clockOffset": 37.8,
+    "jobs": 18,
+    "reload": {
+      "offsetKept": true,
+      "workers": [
+        "recolector:1"
+      ],
+      "harvestable": 1
+    },
+    "fps": 11.9
+  }
+}

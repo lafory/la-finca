@@ -3,7 +3,9 @@ import {
   EGG_INTERVAL, START_PALMS, FLAGPOLE,
 } from './data.js';
 
-export const now = () => Date.now() / 1000;
+// Reloj del juego: tiempo real + lo que se ha adelantado con ⏩ (se guarda en la partida).
+export const CLOCK = { offset: 0 };
+export const now = () => Date.now() / 1000 + CLOCK.offset;
 
 export function newGame() {
   const t = now();
@@ -28,7 +30,10 @@ export function newGame() {
     player: { x: 13.5, z: 8.5 },
     tutorial: 0,
     tutorialDone: false,
-    settings: { music: true, sfx: true, joystick: false },
+    settings: { music: true, sfx: true, joystick: false, quality: 'auto' },
+    tod: 0.4, // hora del día (0 = medianoche, 0.5 = mediodía)
+    ffUsed: false,
+    hireHint: false,
     stats: { eggs: 0, harvests: 0, sold: 0, earned: 0 },
     nextId: 1,
     savedAt: t,
@@ -116,6 +121,7 @@ export function walkable(s, grid, x, z) {
 export function save(s) {
   try {
     s.savedAt = now();
+    s.clockOffset = CLOCK.offset;
     localStorage.setItem(SAVE_KEY, JSON.stringify(s));
     return true;
   } catch {
@@ -129,6 +135,7 @@ export function load() {
     if (!raw) return null;
     const d = JSON.parse(raw);
     if (!d || d.v !== 2) return null;
+    CLOCK.offset = +d.clockOffset || 0;
     const base = newGame();
     // Fusiona con valores por defecto para tolerar saves viejos.
     const s = { ...base, ...d };
@@ -141,6 +148,8 @@ export function load() {
     if (!Array.isArray(d.trucks)) { s.trucks = null; s.truck = d.truck; }
     for (const k of Object.keys(s.inv)) s.inv[k] = Math.max(0, Math.floor(+s.inv[k] || 0));
     s.money = Math.max(0, Math.floor(+s.money || 0));
+    // trabajadores de saves viejos
+    s.workers = (d.workers || []).map((w) => ({ ...w, role: w.role === 'cocinero' ? 'cocinera' : w.role, lvl: w.lvl || 1 }));
     return s;
   } catch {
     return null;
