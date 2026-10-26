@@ -170,6 +170,7 @@ export class MambiScenes {
     this.ring.visible = !!nx;
     if (nx) { const p = this.cityPos[nx.id]; this.ring.position.set(p.x, p.y + 0.05, p.z); }
   }
+  ensure() { if (!this.built) { this.buildMap(); this.built = true; } }
   focus(id, dist) {
     const p = this.cityPos?.[id];
     if (!p) return;
@@ -193,7 +194,7 @@ export class MambiScenes {
     return { x: (tmpV.x * 0.5 + 0.5) * size.x, y: (-tmpV.y * 0.5 + 0.5) * size.y, vis: tmpV.z < 1 };
   }
   renderMap(dt, time) {
-    if (!this.built) { this.buildMap(); this.built = true; }
+    this.ensure();
     this.placeCam(dt);
     for (const F of Object.values(this.flags)) { F.cu.rotation.y = Math.sin(time * 2 + F.grp.position.x) * 0.25; F.gr.rotation.y = F.cu.rotation.y; }
     this.ring.scale.setScalar(1 + Math.sin(time * 3) * 0.08);
@@ -249,7 +250,7 @@ export class MambiScenes {
     this.bt = 0;
     this.res = result;
     const b = result.before;
-    this.counts = { inf: Math.min(24, Math.max(b.inf ? 2 : 0, Math.round(b.inf / 2))), cab: Math.min(14, Math.max(b.cab ? 1 : 0, Math.round(b.cab / 2))), cart: Math.min(5, b.cart), foe: Math.min(18, Math.max(4, Math.round(result.guards / 20))) };
+    this.counts = { inf: Math.min(24, b.inf), cab: Math.min(14, b.cab), cart: Math.min(5, b.cart), foe: Math.min(18, Math.max(4, Math.round(result.guards / 20))) };
     this.seed = Object.entries(this.counts).flatMap(([k, n]) => Array.from({ length: n }, (_, i) => ({ k, i, r: hash(i, k.length), r2: hash(k.length, i + 3) })));
   }
   renderBattle(dt) {
@@ -257,9 +258,14 @@ export class MambiScenes {
     const size = new THREE.Vector2(); this.renderer.getSize(size);
     this.bCam.aspect = size.x / Math.max(1, size.y); this.bCam.updateProjectionMatrix();
     const portrait = this.bCam.aspect < 1;
-    const d = portrait ? 34 : 21;
-    this.bCam.position.set(-3 + t * 0.4, d * 0.72, d * 0.78);
-    this.bCam.lookAt(1 + t * 0.4, 0.5, 0);
+    if (portrait) { // en vertical: se mira a lo largo del camino, la columna avanza hacia arriba de la pantalla
+      this.bCam.position.set(-27 + t * 0.6, 15, 9);
+      this.bCam.lookAt(3 + t * 0.4, 0, -0.5);
+    } else {
+      const d = 21 / Math.min(1, this.bCam.aspect / 1.5);
+      this.bCam.position.set(-3 + t * 0.4, d * 0.72, d * 0.78);
+      this.bCam.lookAt(1 + t * 0.4, 0.5, 0);
+    }
     const adv = Math.min(1, t / 3.2), back = !win && t > 3.6 ? Math.min(1, (t - 3.6) / 2.2) : 0;
     const used = { inf: 0, cab: 0, cart: 0, foe: 0 };
     for (const u of this.seed) {

@@ -110,10 +110,12 @@ export class MambiUI {
     this.ui.root.classList.add('mambi-on');
     this.el.classList.remove('hidden');
     const nx = this.sim.mbNext();
+    this.scenes.ensure();
+    this.scenes.placeCam(0);
     this.scenes.fitAll();
     if (nx) this.scenes.focus(nx.id, Math.min(this.scenes.goal.dist, 55));
     Object.assign(this.scenes.view, this.scenes.goal);
-    if (this.scenes.built) this.scenes.recolor();
+    this.scenes.recolor();
     this.ver = -1;
     this.clock = performance.now();
     this.saveT = 0;

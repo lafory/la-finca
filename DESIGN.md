@@ -203,6 +203,19 @@ Módulo aparte registrado en `src/extensions.js`; estado en `s.ext.central` (par
 ## 10h. Granja grande (`src/granja/`)
 Gallinero 1–4 (el corral `PEN` cambia de tamaño; nidales, sombra de zinc y segunda caseta), surcos (`plotGeo` en lomos; «Arar surcos» en bloques de hasta 4×4), potrero 1–3 (`STRUCTURES.vacas` crece; vacas nuevas más grandes) y batey más grande (casas 9–12, dominó, consultorio, panadería, calles, casas de mampostería = `tier 3` con `st.upgrade2`). Estado en `s.ext.granja`.
 
+## 10h. v6 – La Campaña Mambisa (`src/mambi/`, plan en `docs/PLAN-MAMBI.md`)
+Extensión registrada en `src/extensions.js`. Estado en `s.ext.mambi` y víveres en `s.res.viveres`.
+- Se abre en el nivel 35 con el central completo; aparece el botón **Campaña** (con `?dev=1`: trucos en el campamento).
+- **Mapa low-poly de Cuba** (terreno facetado, 6 provincias de la época, sierras, palmas instanciadas) dibujado con el
+  mismo `WebGLRenderer`: mientras está abierto la finca no se dibuja, pero la simulación sigue.
+- 13 ciudades de oriente a occidente. Tropas: infantería, caballería al machete y carretas de avituallamiento (azúcar
+  del central). Víveres desde la canasta.
+- Tácticas (carga, emboscada, asedio) con su probabilidad a la vista y una escena corta animada que se puede saltar.
+  Tono alegórico: los guardias grises se retiran y los propios "se dispersan".
+- Cada ciudad libre deja fundar una **finca regional** (arroz, ganado, cacao, café, maíz, caña, tabaco, pesca, cítricos,
+  ron) con renta por minuto, también con la app cerrada (hasta 8 h), y 3 niveles.
+- Prueba: `tests/mambi.mjs` (4 pantallas).
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
