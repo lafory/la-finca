@@ -1,6 +1,7 @@
 // Escena 3D: suelo pintado, edificios, decorado, entidades, fila de camiones.
 // Estilizado-realista: PBR (MeshStandard), texturas procedurales, viento, sombras suaves y de contacto.
 import * as THREE from 'three';
+import { viewSize } from './viewport.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, WORKERS, WORKER_ORDER,
@@ -29,7 +30,7 @@ export class World {
   constructor(canvas, sim, quality = 'alta') {
     this.sim = sim;
     this.s = sim.s;
-    this.isSmall = Math.min(window.innerWidth, window.innerHeight) < 600;
+    this.isSmall = Math.min(viewSize().w, viewSize().h) < 600;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;

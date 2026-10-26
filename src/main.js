@@ -1,4 +1,5 @@
 import './style.css';
+import { viewSize, watchViewport, CAN_FULLSCREEN } from './viewport.js';
 import * as THREE from 'three';
 import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK } from './state.js';
 import { Sim } from './sim.js';
@@ -24,8 +25,8 @@ class Game {
     this.offline = saved ? this.offlineBefore(state) : null;
     this.sim = new Sim(state, this.hooks());
     this.sim.update(0); // pone al día huevos/cultivos del tiempo fuera
-    this.rig = new CameraRig(window.innerWidth / window.innerHeight);
-    this.isPhone = Math.min(window.innerWidth, window.innerHeight) < 600 || matchMedia('(pointer: coarse)').matches;
+    this.rig = new CameraRig(viewSize().w / viewSize().h);
+    this.isPhone = Math.min(viewSize().w, viewSize().h) < 600 || matchMedia('(pointer: coarse)').matches;
     const q = state.settings.quality || 'auto';
     this.world = new World(this.canvas, this.sim, q === 'auto' ? (this.isPhone ? 'media' : 'alta') : q);
     this.perf = { sum: 0, n: 0, checks: 0 };
@@ -35,9 +36,7 @@ class Game {
     this.resize();
     this.fitFarm(true);
     this.updateBounds(true);
-    window.addEventListener('resize', () => this.resize());
-    window.visualViewport?.addEventListener('resize', () => this.resize());
-    window.addEventListener('orientationchange', () => setTimeout(() => this.resize(), 250));
+    watchViewport(() => this.resize());
     document.addEventListener('visibilitychange', () => { if (document.hidden && !this.resetting) save(this.sim.s); });
     window.addEventListener('pagehide', () => { if (!this.resetting) save(this.sim.s); });
     this.saveTimer = 0;
@@ -101,7 +100,7 @@ class Game {
     document.getElementById('flag').innerHTML = ICON.flag;
     btn.addEventListener('click', () => {
       this.sound.unlock();
-      if (this.ui.isTouch && this.ui.fsSupported()) this.ui.toggleFullscreen(true);
+      if (this.ui.isTouch && CAN_FULLSCREEN) this.ui.toggleFullscreen(true); // nunca en Safari de iPhone/iPad
       t.classList.add('gone');
       setTimeout(() => t.remove(), 600);
       this.started = true;
@@ -113,7 +112,7 @@ class Game {
 
   project(x, y, z) {
     const v = new THREE.Vector3(x, y, z).project(this.rig.camera);
-    return { x: (v.x * 0.5 + 0.5) * window.innerWidth, y: (-v.y * 0.5 + 0.5) * window.innerHeight, ok: v.z < 1 };
+    return { x: (v.x * 0.5 + 0.5) * this.vw, y: (-v.y * 0.5 + 0.5) * this.vh, ok: v.z < 1 };
   }
 
   ownedRect() {
@@ -132,7 +131,7 @@ class Game {
   fitFarm(snap) {
     const r = { x0: START_AREA.x0, z0: START_AREA.z0, x1: START_AREA.x1 + 3, z1: START_AREA.z1 + 1 };
     this.rig.fit(r.x0, r.z0, r.x1, r.z1, snap);
-    if (Math.min(window.innerWidth, window.innerHeight) < 500) this.rig.goalDist = Math.max(this.rig.minDist, this.rig.goalDist * 0.8);
+    if (Math.min(viewSize().w, viewSize().h) < 500) this.rig.goalDist = Math.max(this.rig.minDist, this.rig.goalDist * 0.8);
     if (snap) this.rig.dist = this.rig.goalDist;
     this.closeDist = this.rig.goalDist;
     this.rig.manualUntil = performance.now() + 1500;
@@ -160,7 +159,8 @@ class Game {
     save(this.sim.s);
   }
   resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const { w, h } = viewSize();
+    this.vw = w; this.vh = h;
     this.world.resize(w, h);
     this.rig.setAspect(w / h);
     if (this.sim) this.updateBounds(true);

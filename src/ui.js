@@ -1,5 +1,6 @@
 // Interfaz DOM: HUD, barra inferior, hojas (Tienda, Terreno, Canasta, Camión, Fogón, Ajustes), tutorial, etiquetas del mundo.
 import { ICON, portrait } from './icons.js';
+import { CAN_FULLSCREEN, viewSize } from './viewport.js';
 import {
   ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, WORKERS, WORKER_ORDER, PARCELS, BUILDINGS, TRUCK_SPOT,
   SELLABLE, xpForLevel, EGG_INTERVAL, LEVEL_XP, WORKER_SPEED, workerUpgradePrice, FF_SPEEDS,
@@ -103,8 +104,7 @@ export class UI {
   }
 
   fsSupported() {
-    const d = document.documentElement;
-    return !!(d.requestFullscreen || d.webkitRequestFullscreen) && !(window.navigator.standalone);
+    return CAN_FULLSCREEN;
   }
   isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
   toggleFullscreen(force) {
@@ -527,7 +527,7 @@ export class UI {
       if (rem > 0) this.label('focus', p.x + 0.5, 1.1, p.z + 0.5, `${ICON[p.crop]} ${fmtClock(rem)}${p.watered ? ` ${ICON.water}` : ''}`);
     }
     const cam = this.g.rig.camera;
-    const W = window.innerWidth, H = window.innerHeight;
+    const { w: W, h: H } = viewSize();
     for (const [k, L] of this.labels) {
       if (!L.seen) { L.el.remove(); this.labels.delete(k); continue; }
       const p = this.g.project(L.x, L.y, L.z);
