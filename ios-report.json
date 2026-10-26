@@ -20,6 +20,11 @@
   "fullscreen": false,
   "fsBtnVisible": false,
   "ios": true,
+  "hint": {
+   "text": "Para pantalla completa: Compartir → Añadir a pantalla de inicio✕",
+   "fits": true
+  },
+  "hintClosed": true,
   "sheetFits": true,
   "errors": [],
   "titleFits": true,
@@ -46,6 +51,11 @@
   "fullscreen": false,
   "fsBtnVisible": false,
   "ios": true,
+  "hint": {
+   "text": "Para pantalla completa: Compartir → Añadir a pantalla de inicio✕",
+   "fits": true
+  },
+  "hintClosed": true,
   "sheetFits": true,
   "errors": [],
   "titleFits": true,
@@ -72,6 +82,11 @@
   "fullscreen": false,
   "fsBtnVisible": false,
   "ios": true,
+  "hint": {
+   "text": "Para pantalla completa: Compartir → Añadir a pantalla de inicio✕",
+   "fits": true
+  },
+  "hintClosed": true,
   "sheetFits": true,
   "errors": [],
   "titleFits": true,
@@ -98,6 +113,11 @@
   "fullscreen": false,
   "fsBtnVisible": false,
   "ios": true,
+  "hint": {
+   "text": "Para pantalla completa: Compartir → Añadir a pantalla de inicio✕",
+   "fits": true
+  },
+  "hintClosed": true,
   "sheetFits": true,
   "errors": [],
   "titleFits": true,
@@ -124,6 +144,11 @@
   "fullscreen": false,
   "fsBtnVisible": false,
   "ios": true,
+  "hint": {
+   "text": "Para pantalla completa: Compartir → Añadir a pantalla de inicio✕",
+   "fits": true
+  },
+  "hintClosed": true,
   "sheetFits": true,
   "errors": [],
   "titleFits": true,
@@ -150,9 +175,21 @@
   "fullscreen": false,
   "fsBtnVisible": false,
   "ios": true,
+  "hint": {
+   "text": "Para pantalla completa: Compartir → Añadir a pantalla de inicio✕",
+   "fits": true
+  },
+  "hintClosed": true,
   "sheetFits": true,
   "errors": [],
   "titleFits": true,
+  "ok": true
+ },
+ "ipad": {
+  "fsCalls": 1,
+  "fsBtnVisible": true,
+  "hint": false,
+  "ios": true,
   "ok": true
  }
 }

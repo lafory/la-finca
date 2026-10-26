@@ -266,8 +266,12 @@ button:disabled { cursor: default; }
 .wtag { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: 11px; font-weight: 800; color: #5a3a10; background: #f2c14e; border-radius: 8px; padding: 1px 7px; margin-bottom: 2px; }
 .wtag svg { width: 12px; height: 12px; }
 
-/* iOS: sin pantalla completa en Safari normal */
-html.ios #btn-full { display: none !important; }
+/* Pantalla completa: botón solo donde existe la API (no en iPhone Safari ni abierto desde inicio) */
+html.nofs #btn-full, html.standalone #btn-full { display: none !important; }
+.a2hs { position: absolute; left: calc(8px + var(--sal)); bottom: calc(84px + var(--sab)); width: max-content; z-index: 7; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 100px - var(--sal) - var(--sar)); padding: 6px 6px 6px 10px; border-radius: 14px; background: rgba(42, 31, 21, 0.92); color: #fbf1da; font-size: 13px; line-height: 1.25; box-shadow: 0 4px 14px rgba(0,0,0,.3); animation: a2hsIn .3s ease-out; }
+.a2hs .ico { width: 18px; height: 18px; }
+.a2hs b { font-weight: 600; }
+.a2hs-x { flex: none; width: 30px; height: 30px; border-radius: 15px; background: rgba(255,255,255,.12); color: #fbf1da; font-size: 14px; }
 /* teléfonos muy estrechos (iPhone SE 320 px) */
 @media (max-width: 360px) {
   .hud-top { gap: 3px; left: calc(5px + var(--sal)); right: calc(5px + var(--sar)); }
@@ -302,3 +306,6 @@ html.ios #btn-full { display: none !important; }
 .wchip .stars { color: #c98a14; font-style: normal; font-size: 10px; }
 .wcard .cnt { font-style: normal; font-size: 12px; background: var(--red); color: #fff; border-radius: 8px; padding: 0 5px; }
 .wcard { flex-wrap: wrap; } .wcard .wmain { flex: 1; min-width: 0; }
+
+@media (max-height: 500px) { .a2hs { left: 50%; transform: translateX(-50%); bottom: calc(10px + var(--sab)); max-width: min(420px, calc(100% - 220px)); } }
+@keyframes a2hsIn { from { opacity: 0; } }

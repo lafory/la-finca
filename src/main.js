@@ -1,6 +1,6 @@
 import './style.css';
 import './extensions.js'; // primero: los módulos se registran antes de crear la partida
-import { viewSize, watchViewport, CAN_FULLSCREEN } from './viewport.js';
+import { viewSize, watchViewport, CAN_FULLSCREEN, NEEDS_A2HS_HINT } from './viewport.js';
 import * as THREE from 'three';
 import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK, structOpen } from './state.js';
 import { TAP_HANDLERS } from './registry.js';
@@ -109,7 +109,8 @@ class Game {
     document.getElementById('flag').innerHTML = ICON.flag;
     btn.addEventListener('click', () => {
       this.sound.unlock();
-      if (this.ui.isTouch && CAN_FULLSCREEN) this.ui.toggleFullscreen(true); // nunca en Safari de iPhone/iPad
+      if (this.ui.isTouch && CAN_FULLSCREEN) this.ui.toggleFullscreen(true); // Android, iPad: pantalla completa al entrar
+      else if (NEEDS_A2HS_HINT) setTimeout(() => this.ui.showA2hsHint(), 1200); // iPhone Safari
       t.classList.add('gone');
       setTimeout(() => t.remove(), 600);
       this.started = true;

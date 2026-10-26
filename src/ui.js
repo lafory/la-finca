@@ -119,6 +119,18 @@ export class UI {
   fsSupported() {
     return CAN_FULLSCREEN;
   }
+  showA2hsHint() {
+    const K = 'lafinca.a2hsHint';
+    try { if (localStorage.getItem(K)) return; } catch { /* sin almacenamiento */ }
+    if (document.getElementById('a2hs')) return;
+    const el = document.createElement('div');
+    el.className = 'a2hs'; el.id = 'a2hs'; el.setAttribute('role', 'status');
+    el.innerHTML = `<span>${ICON.full}</span><b>Para pantalla completa: Compartir → Añadir a pantalla de inicio</b><button class="a2hs-x" aria-label="Cerrar">✕</button>`;
+    const close = () => { try { localStorage.setItem(K, '1'); } catch { /* */ } el.remove(); };
+    el.querySelector('.a2hs-x').addEventListener('click', (e) => { e.stopPropagation(); close(); });
+    this.root.appendChild(el);
+    setTimeout(() => { if (el.isConnected) close(); }, 12000);
+  }
   isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
   toggleFullscreen(force) {
     const d = document.documentElement;

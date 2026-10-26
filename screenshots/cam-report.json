@@ -10,8 +10,8 @@
     "notSkippedEarly": true,
     "skipped": true,
     "keep": 5,
-    "soldSurplus": true,
-    "eggsLeft": 11
+    "soldSurplus": false,
+    "eggsLeft": 9
   },
   "phone": {
     "errors": [],
@@ -25,7 +25,7 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 12
+    "eggsLeft": 11
   },
   "ipad": {
     "errors": [],
@@ -39,7 +39,7 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 13
+    "eggsLeft": 12
   },
   "phone-landscape": {
     "errors": [],
@@ -53,6 +53,6 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 11
+    "eggsLeft": 12
   }
 }

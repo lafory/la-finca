@@ -4,9 +4,14 @@ const ua = navigator.userAgent || '';
 export const IS_IOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 export const STANDALONE = navigator.standalone === true
   || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
-// En iOS solo hay pantalla completa abriendo desde la pantalla de inicio.
-export const CAN_FULLSCREEN = !IS_IOS && !STANDALONE
-  && !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+// Pantalla completa donde exista la API (Android, computadora, iPad Safari).
+// El iPhone no la tiene: ahí solo se logra abriendo desde la pantalla de inicio.
+const de0 = document.documentElement;
+export const CAN_FULLSCREEN = !STANDALONE
+  && !!(de0.requestFullscreen || de0.webkitRequestFullscreen)
+  && (document.fullscreenEnabled !== false || document.webkitFullscreenEnabled === true);
+// iPhone/iPod en Safari normal (sin API de pantalla completa): mostrar la pista de «Añadir a pantalla de inicio».
+export const NEEDS_A2HS_HINT = IS_IOS && !STANDALONE && !CAN_FULLSCREEN;
 
 export function viewSize() {
   const vv = window.visualViewport;
@@ -35,6 +40,7 @@ export function watchViewport(cb) {
   window.addEventListener('orientationchange', () => { run(); setTimeout(run, 250); setTimeout(run, 700); });
   window.visualViewport?.addEventListener('resize', run);
   window.visualViewport?.addEventListener('scroll', run);
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { run(); setTimeout(run, 250); });
   // Safari ignora user-scalable=no: bloquear el zoom de página con gestos
   for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
   document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
@@ -42,4 +48,5 @@ export function watchViewport(cb) {
 }
 if (STANDALONE) document.documentElement.classList.add('standalone');
 if (IS_IOS) document.documentElement.classList.add('ios');
+if (!CAN_FULLSCREEN) document.documentElement.classList.add('nofs');
 applyViewport();

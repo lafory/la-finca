@@ -1,0 +1,80 @@
+{
+ "android-pixel7": {
+  "fsCalls": 1,
+  "fullscreen": true,
+  "fsBtnVisible": true,
+  "hint": false,
+  "canvas": [
+   412,
+   839
+  ],
+  "view": [
+   412,
+   839
+  ],
+  "scroll": [
+   412,
+   839
+  ],
+  "errors": [],
+  "ok": true
+ },
+ "android-pixel7-land": {
+  "fsCalls": 1,
+  "fullscreen": true,
+  "fsBtnVisible": true,
+  "hint": false,
+  "canvas": [
+   863,
+   360
+  ],
+  "view": [
+   863,
+   360
+  ],
+  "scroll": [
+   863,
+   360
+  ],
+  "errors": [],
+  "ok": true
+ },
+ "desktop": {
+  "fsCalls": 1,
+  "fullscreen": true,
+  "fsBtnVisible": true,
+  "hint": false,
+  "canvas": [
+   1366,
+   800
+  ],
+  "view": [
+   1366,
+   800
+  ],
+  "scroll": [
+   1366,
+   800
+  ],
+  "before": {
+   "fsCalls": 0,
+   "fullscreen": false,
+   "fsBtnVisible": true,
+   "hint": false,
+   "canvas": [
+    1366,
+    800
+   ],
+   "view": [
+    1366,
+    800
+   ],
+   "scroll": [
+    1366,
+    800
+   ]
+  },
+  "errors": [],
+  "ok": true
+ }
+}

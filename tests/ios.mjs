@@ -1,4 +1,6 @@
-// iPhone Safari (WebKit): nada se sale de la pantalla visible, sin pantalla completa, HUD y barra inferior visibles.
+// iPhone Safari (WebKit): nada se sale de la pantalla visible, HUD y barra inferior visibles.
+// iPhone real no tiene la API de pantalla completa: se quita con un init script para simularlo.
+// Sin API: sin botón, pista «Añadir a pantalla de inicio» una sola vez. iPad (con API): botón visible.
 import { webkit, devices } from 'playwright';
 import fs from 'node:fs';
 const BASE = process.env.URL || 'http://localhost:4173/';
@@ -14,6 +16,10 @@ const report = {};
 let fail = 0;
 for (const [name, dev] of cases) {
   const ctx = await browser.newContext({ ...dev });
+  await ctx.addInitScript(() => {
+    for (const k of ['requestFullscreen', 'webkitRequestFullscreen']) { delete Element.prototype[k]; delete HTMLElement.prototype[k]; }
+    Object.defineProperty(Document.prototype, 'fullscreenEnabled', { get: () => undefined, configurable: true });
+  });
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -39,8 +45,10 @@ for (const [name, dev] of cases) {
       fullscreen: !!(document.fullscreenElement || document.webkitFullscreenElement),
       fsBtnVisible: !!full && getComputedStyle(full).display !== 'none' && full.getBoundingClientRect().width > 0,
       ios: document.documentElement.classList.contains('ios'),
+      hint: (() => { const h = document.getElementById('a2hs'); if (!h) return null; const b = h.getBoundingClientRect(); return { text: h.textContent, fits: b.left >= 0 && b.top >= 0 && b.right <= W + 0.5 && b.bottom <= H + 0.5 }; })(),
     };
   });
+  if (r.hint) { await page.tap('#a2hs .a2hs-x'); await sleep(200); r.hintClosed = await page.evaluate(() => !document.getElementById('a2hs') && localStorage.getItem('lafinca.a2hsHint') === '1'); }
   // abrir y cerrar una hoja: cabe en pantalla
   await page.evaluate(() => window.__finca.ui.openShop()); await sleep(600);
   r.sheetFits = await page.evaluate(() => { const b = document.querySelector('.sheet').getBoundingClientRect(); const H = window.visualViewport?.height || innerHeight; return b.top >= 0 && b.bottom <= H + 1; });
@@ -48,10 +56,26 @@ for (const [name, dev] of cases) {
   await page.evaluate(() => window.__finca.ui.closeSheet()); await sleep(300);
   await page.screenshot({ path: OUT + `ios-${name}.png` });
   r.errors = errors; r.titleFits = titleFits;
-  const ok = !r.outside.length && r.scroll[0] <= r.W + 1 && r.scroll[1] <= r.H + 1 && r.canvas[0] === Math.round(r.W) && r.canvas[1] === Math.round(r.H) && !r.fullscreen && !r.fsBtnVisible && r.ios && r.sheetFits && titleFits && !errors.length;
+  const ok = !r.outside.length && r.scroll[0] <= r.W + 1 && r.scroll[1] <= r.H + 1 && r.canvas[0] === Math.round(r.W) && r.canvas[1] === Math.round(r.H) && !r.fullscreen && !r.fsBtnVisible && r.ios && r.hint?.fits && /Añadir a pantalla de inicio/.test(r.hint.text) && r.hintClosed && r.sheetFits && titleFits && !errors.length;
   r.ok = ok; if (!ok) fail++;
   report[name] = r;
   console.log(name, JSON.stringify(r));
+  await ctx.close();
+}
+// iPad Safari: tiene webkitRequestFullscreen (el WebKit de Playwright no la trae: se simula)
+// → al entrar pide pantalla completa, botón visible, sin pista
+{
+  const ctx = await browser.newContext({ ...devices['iPad (gen 7)'] });
+  await ctx.addInitScript(() => {
+    window.__fsCalls = 0;
+    Element.prototype.webkitRequestFullscreen = function () { window.__fsCalls++; };
+    Object.defineProperty(Document.prototype, 'webkitFullscreenEnabled', { get: () => true, configurable: true });
+  });
+  const page = await ctx.newPage();
+  await page.goto(BASE); await sleep(2000); await page.tap('#start'); await sleep(2000);
+  const r = await page.evaluate(() => { const f = document.getElementById('btn-full'); return { fsCalls: window.__fsCalls, fsBtnVisible: getComputedStyle(f).display !== 'none' && f.getBoundingClientRect().width > 0, hint: !!document.getElementById('a2hs'), ios: document.documentElement.classList.contains('ios') }; });
+  r.ok = r.fsCalls === 1 && r.fsBtnVisible && !r.hint && r.ios; if (!r.ok) fail++;
+  report.ipad = r; console.log('ipad', JSON.stringify(r));
   await ctx.close();
 }
 fs.writeFileSync(new globalThis.URL('../ios-report.json', import.meta.url).pathname, JSON.stringify(report, null, 1));
