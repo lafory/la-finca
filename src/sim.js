@@ -3,7 +3,10 @@ import {
   W, H, ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, EGG_INTERVAL, MAX_GROUND_EGGS, TRUCK_SLOTS, TRUCK_SPEED, TRUCK_RESPAWN, TRUCK_MODELS, TRUCK_COLORS,
   WORKERS, WORKER_SPEED, workerUpgradePrice, PARCELS, BUILDINGS, PEN, TRUCK_TILES, TRUCK_SPOT, WATER_BOOST, ABONO_FACTOR, ORDER_BONUS,
   xpForLevel, SELLABLE, FLAGPOLE, STRUCTURES, OBSTACLES, OBSTACLE_LIST, STORAGE_LEVELS, CAM_WAIT, CAM_KEEP } from './data.js';
-import { parcelReachable, now, buildGrid, walkable, isOwned, storageCap, invCount, chickenCap, addChicken, parcelAt } from './state.js';
+import { parcelReachable, now, buildGrid, walkable, isOwned, storageCap, invCount, chickenCap, addChicken, parcelAt, structOpen, workerCap } from './state.js';
+import { installV4 } from './sim-v4.js';
+import { MANIGUA, PLANT_BY_ID, WILD_PLANTS, ZONES, zoneOpen, inFarm } from './zones.js';
+import { GW, GH } from './data.js';
 import { findPath } from './path.js';
 
 export const fmtTime = (sec) => {
@@ -22,7 +25,11 @@ export class Sim {
     this.s = state;
     this.h = hooks; // { toast, float(x,z,text,cls), sfx(name), levelUp(level), changed(kind) }
     this.grid = buildGrid(state);
+    this.gridGen = 0;
+    this.xpFrac = 0;
+    this.v4init();
     this.player = { x: state.player.x, z: state.player.z, path: null, task: null, moving: false, face: 0, walk: 0, speed: 4.6 };
+    this.player.speed = this.playerSpeed();
     this.workers = state.workers.map((w) => this.makeWorker(w));
     this.chickRT = new Map();
     this.reserved = new Set();
@@ -50,9 +57,12 @@ export class Sim {
     }
     return false;
   }
-  rebuildGrid() { this.grid = buildGrid(this.s); }
+  rebuildGrid() { this.grid = buildGrid(this.s); this.gridGen++; }
   addXp(n) {
     const s = this.s;
+    // escuelita del batey: +10 % (se acumula la fracción)
+    const b = this.civic ? this.civic('xp') : 0;
+    if (b) { this.xpFrac += n * b; const extra = Math.floor(this.xpFrac); this.xpFrac -= extra; n += extra; }
     s.xp += n;
     while (s.xp >= xpForLevel(s.level + 1)) {
       s.level++;
@@ -145,6 +155,8 @@ export class Sim {
       if (st.kind === 'animal' && st.produce.item !== 'egg') weights[st.produce.item] = 2 + (s.inv[st.produce.item] > 0 ? 4 : 0);
       if (st.kind === 'proc') for (const [rid, r] of Object.entries(RECIPES)) if (r.where.includes(id) && rid !== 'ketchup' && rid !== 'guarapo' && s.level >= r.level) weights[r.out] = 1.5 + (s.inv[r.out] > 0 ? 4 : 0) + (this.proc(id)?.recipe === rid ? 2 : 0);
     }
+    // lo de la manigua, si tienes
+    for (const k of ['mango', 'guayaba', 'coco', 'jutia', 'jibaro']) if (s.inv[k] > 0) weights[k] = 3;
     // un poco de variedad: baja el peso de lo que ya piden los demás camiones
     for (const k of pending) if (weights[k]) weights[k] *= 0.6;
     const pick = (exclude) => {
@@ -161,14 +173,14 @@ export class Sim {
       const k = pick(used);
       if (!k) break;
       used.add(k);
-      const base = { egg: 3, tomato: 2, ketchup: 1, cane: 2, tobacco: 1, guarapo: 1, leche: 2, queso: 1, carne: 1, melao: 1, azucar: 1, puros: 1 }[k] || 1;
+      const base = { egg: 3, tomato: 2, ketchup: 1, cane: 2, tobacco: 1, guarapo: 1, leche: 2, queso: 1, carne: 1, melao: 1, azucar: 1, puros: 1, mango: 3, guayaba: 3, coco: 2 }[k] || 1;
       let q = base + Math.floor(Math.random() * (1 + Math.min(4, s.level * 0.5)));
       if (s.inv[k] > 0 && Math.random() < 0.6) q = Math.max(1, Math.min(q, s.inv[k] + 1));
       items[k] = q;
     }
     let value = 0, xp = 0;
     for (const [k, q] of Object.entries(items)) { value += ITEMS[k].sell * q; xp += ITEMS[k].xp * q; }
-    return { items, reward: Math.round(value * ORDER_BONUS + 3 + s.level), xp: Math.round(xp * 1.5 + 2) };
+    return { items, reward: Math.round((value * ORDER_BONUS + 3 + s.level) * (1 + (this.civic ? this.civic('pay') : 0))), xp: Math.round(xp * 1.5 + 2) };
   }
   missing(tr = this.front()) {
     if (!tr) return {};
@@ -398,13 +410,14 @@ export class Sim {
   }
 
   // ------------------------------------------------------------ compras
-  chickenPrice() { return Math.round(PRICES.chicken * Math.pow(PRICES.chickenStep, Math.max(0, this.s.chickens.length - 3))); }
+  chickenPrice() { return Math.round(PRICES.chicken * Math.pow(PRICES.chickenStep, Math.max(0, this.s.chickens.length - 3)) * this.discount()); }
+  seedPrice(id) { return Math.max(1, Math.round(CROPS[id].seed * this.discount())); }
   buy(id, qty = 1) {
     const s = this.s;
     if (CROPS[id]) {
       const c = CROPS[id];
       if (s.level < c.level) return false;
-      if (!this.spend(c.seed * qty)) return false;
+      if (!this.spend(this.seedPrice(id) * qty)) return false;
       s.seeds[id] += qty; s.selectedSeed = id;
       this.h.sfx('buy'); this.h.changed('inv');
       return true;
@@ -420,7 +433,10 @@ export class Sim {
     if (id === 'storage') {
       const lvl = s.upgrades.storage;
       const need = STORAGE_LEVELS[lvl];
-      if (lvl >= PRICES.storage.length || s.level < need || !this.spend(PRICES.storage[lvl])) return false;
+      if (lvl >= PRICES.storage.length || s.level < need) return false;
+      if (this.storageWood() > s.wood) return this.spendWood(this.storageWood());
+      if (!this.spend(PRICES.storage[lvl])) return false;
+      this.spendWood(this.storageWood());
       s.upgrades.storage++; this.h.sfx('buy'); this.h.changed('inv');
       return true;
     }
@@ -430,7 +446,9 @@ export class Sim {
   // ------------------------------------------------------------ contratar / mejorar / despedir
   hire(id) {
     const s = this.s, w = WORKERS[id];
-    if (s.workers.some((x) => x.role === id) || s.level < w.level || !this.spend(w.price)) return false;
+    if (s.workers.some((x) => x.role === id) || s.level < w.level) return false;
+    if (s.workers.length >= this.workerCap()) { this.h.toast(`No hay dónde vivan más trabajadores (${s.workers.length}/${this.workerCap()}). Construye casas en el batey.`); this.h.sfx('error'); return false; }
+    if (!this.spend(w.price)) return false;
     const rec = { role: id, x: 13.5, z: 11.5, lvl: 1, autobuy: id === 'sembrador', ...(id === 'camionero' ? { sell: false, keep: 10 } : {}) };
     s.workers.push(rec);
     this.workers.push(this.makeWorker(rec));
@@ -513,18 +531,20 @@ export class Sim {
   build(id) {
     const s = this.s, st = STRUCTURES[id];
     if (!st || s.built[id]) return false;
-    if (!s.parcels.includes(st.parcel)) { this.h.toast(`Primero compra “${PARCELS.find((p) => p.id === st.parcel).name}”.`); return false; }
+    if (!structOpen(s, st)) { this.h.toast(st.zone ? `${ZONES[st.zone].name} se abre en el nivel ${ZONES[st.zone].level}.` : `Primero compra “${PARCELS.find((p) => p.id === st.parcel).name}”.`); return false; }
     if (s.level < st.level) { this.h.toast(`Se construye en el nivel ${st.level}.`); return false; }
+    if ((st.wood || 0) > s.wood) return this.spendWood(st.wood);
     // el solar tiene que estar libre de obstáculos
     for (let z = st.z; z < st.z + st.h; z++) for (let x = st.x; x < st.x + st.w; x++) if (this.obstacleAt(x, z)) { this.h.toast('Limpia el solar primero.'); return false; }
     if (!this.spend(st.price)) return false;
-    s.built[id] = { at: now(), ready: st.kind === 'proc' ? null : false, recipe: null };
+    this.spendWood(st.wood || 0);
+    s.built[id] = { at: now(), ready: st.kind === 'proc' ? null : false, recipe: null, ...(st.kind === 'house' ? { tier: 1 } : {}) };
     // quita al guajiro o a un trabajador si está parado en el solar
     this.rebuildGrid();
     for (const e of [this.player, ...this.workers]) if (!this.can(Math.floor(e.x), Math.floor(e.z))) { e.x = st.x + st.w + 0.5; e.z = st.z + st.h + 0.5; e.path = null; }
     this.addXp(15 + st.level);
     this.h.sfx('level');
-    this.h.toast(`¡${st.name} construido!`);
+    this.h.toast(st.kind === 'house' ? `¡Bohío listo en el batey! Tope de trabajadores: ${this.workerCap()}.` : `¡${st.name} construid${/^La /.test(st.name) ? 'a' : 'o'}!`);
     this.h.changed('land');
     return true;
   }
@@ -532,8 +552,9 @@ export class Sim {
   collectAnimal(id, byWorker) {
     const st = STRUCTURES[id], b = this.s.built[id];
     if (!b || !b.ready) return false;
-    if (!this.addItem(st.produce.item, st.produce.qty, st.x + st.w / 2, st.z + st.h / 2)) return false;
-    this.addXp(ITEMS[st.produce.item].xp * st.produce.qty);
+    const qty = st.produce.qty + (b.extra || 0); // jíbaros traídos de la manigua
+    if (!this.addItem(st.produce.item, qty, st.x + st.w / 2, st.z + st.h / 2)) return false;
+    this.addXp(ITEMS[st.produce.item].xp * qty);
     b.ready = false; b.at = now();
     if (!byWorker) this.h.sfx('harvest');
     this.h.changed('built');
@@ -556,7 +577,7 @@ export class Sim {
   footprintGoals(x0, z0, w, h, reach = 1) {
     const goals = [];
     for (let z = z0 - reach; z < z0 + h + reach; z++) for (let x = x0 - reach; x < x0 + w + reach; x++) {
-      if (x >= 0 && z >= 0 && x < W && z < H && this.can(x, z)) goals.push([x, z]);
+      if (x >= 0 && z >= 0 && x < GW && z < GH && this.can(x, z)) goals.push([x, z]);
     }
     return goals;
   }
@@ -576,6 +597,9 @@ export class Sim {
       case 'coop': return this.footprintGoals(B.coop.x, B.coop.z, B.coop.w, B.coop.h);
       case 'house': case 'fetch': return this.footprintGoals(B.house.x, B.house.z, B.house.w, B.house.h);
       case 'tank': return this.footprintGoals(B.tank.x, B.tank.z, 1, 1);
+      case 'wplant': { const pl = PLANT_BY_ID.get(t.id); return pl ? this.footprintGoals(pl.x, pl.z, 1, 1) : []; }
+      case 'wild': { const a = this.wildById(t.id); if (!a) return []; const g = this.footprintGoals(Math.floor(a.x), Math.floor(a.z), 1, 1); return g.length ? g : this.footprintGoals(Math.floor(a.x) - 1, Math.floor(a.z) - 1, 3, 3); }
+      case 'woodhome': return this.footprintGoals(B.house.x, B.house.z, B.house.w, B.house.h);
       case 'ground': return this.can(t.x, t.z) ? [[t.x, t.z]] : this.footprintGoals(t.x, t.z, 1, 1);
       default: return [];
     }
@@ -583,7 +607,10 @@ export class Sim {
   pathTo(ent, goals) {
     const sx = Math.floor(ent.x), sz = Math.floor(ent.z);
     if (!goals.length) return null;
-    return findPath(sx, sz, goals, (x, z) => this.can(x, z) || (x === sx && z === sz), (a, b, c, d) => this.edge(a, b, c, d));
+    // viajes fuera de la finca: se pasa por el lado de la fila de camiones (el camino es la única salida)
+    const far = !inFarm(sx, sz) || goals.some(([x, z]) => !inFarm(x, z));
+    const can = far ? (x, z) => walkable(this.s, this.grid, x, z) : (x, z) => this.can(x, z);
+    return findPath(sx, sz, goals, (x, z) => can(x, z) || (x === sx && z === sz), (a, b, c, d) => this.edge(a, b, c, d));
   }
   // El jugador va hacia algo y actúa al llegar.
   command(t) {
@@ -604,6 +631,8 @@ export class Sim {
       case 'egg': { const i = this.s.eggs.findIndex((e) => e.id === t.id); return i >= 0 && this.collectEgg(i); }
       case 'truck': this.h.openTruck(t.i || 0); return true;
       case 'obstacle': return this.clearObstacle(t.id);
+      case 'wplant': return this.usePlantTarget(t.id);
+      case 'wild': return this.catchWild(t.id);
       case 'struct': return this.useStructure(t.id);
       case 'kitchen':
         if (!this.kitchenOpen()) { this.h.toast('El fogón se arregla en el nivel 2.'); return false; }
@@ -653,7 +682,7 @@ export class Sim {
     if (have) return { crop: have, buy: false };
     if (w.rec.autobuy) {
       const c = CROPS[s.selectedSeed] && s.level >= CROPS[s.selectedSeed].level ? s.selectedSeed : 'tomato';
-      if (s.money >= CROPS[c].seed) return { crop: c, buy: true };
+      if (s.money >= this.seedPrice(c)) return { crop: c, buy: true };
     }
     return null;
   }
@@ -697,6 +726,7 @@ export class Sim {
         }
         return near(jobs);
       }
+      case 'lenador': return this.lenadorPick(w, free);
       case 'camionero': {
         // Totalmente automático: espera en el andén, trae del bohío lo que piden, carga, cobra y despide.
         const truckJob = (i, verb) => ({ x: 14.5, z: TRUCK_SLOTS[i], t: { kind: 'truck', i }, key: `truck${i}`, verb });
@@ -736,7 +766,7 @@ export class Sim {
       else if (w.role === 'sembrador' && !t.p.crop) {
         const sd = this.seedFor(w);
         if (sd) {
-          if (sd.buy) { if (!this.spend(CROPS[sd.crop].seed)) return; s.seeds[sd.crop]++; this.h.float(w.x, w.z, `−${CROPS[sd.crop].seed} semilla`, 'coin'); }
+          if (sd.buy) { const pr = this.seedPrice(sd.crop); if (!this.spend(pr)) return; s.seeds[sd.crop]++; this.h.float(w.x, w.z, `−${pr} semilla`, 'coin'); }
           this.plant(t.p, sd.crop, true);
         }
       }
@@ -748,6 +778,7 @@ export class Sim {
         if (r) this.startRecipe(r, key);
       }
     } else if (t.kind === 'struct') { this.collectAnimal(t.id, true); }
+    else if (t.kind === 'wplant' || t.kind === 'woodhome') this.lenadorDo(w, t);
     else if (t.kind === 'fetch') {
       const tr = s.trucks[t.i];
       const items = t.sell ? this.surplus(w.rec) : tr ? this.loadable(tr) : {};
@@ -793,19 +824,30 @@ export class Sim {
       return;
     }
     if (!pick) {
-      // descansa o pasea tranquilo cerca del bohío
+      // descansa o pasea tranquilo cerca del bohío; si lleva rato sin trabajo y tiene casa, se va al batey
       w.wait = (2.5 + Math.random() * 3) * (sp.rest / 1.6 + 0.5);
+      w.idleFor = (w.idleFor || 0) + w.wait;
+      const home = w.idleFor > 12 ? this.homeOf(w) : null;
+      if (home) {
+        const door = [home.x + 1, home.z + home.h];
+        if (Math.floor(w.x) !== door[0] || Math.floor(w.z) !== door[1]) {
+          const path = this.pathTo(w, this.footprintGoals(door[0], door[1], 1, 1, 0).length ? [door] : this.footprintGoals(home.x, home.z, home.w, home.h));
+          if (path && path.length > 1) { path.shift(); w.path = path.map(([x, z]) => ({ x: x + 0.5, z: z + 0.5 })); w.status = 'Va a descansar a su casa del batey'; }
+        } else w.status = 'Descansando en el batey';
+        return;
+      }
       if (Math.random() < 0.5) return;
       const gx = 5 + Math.floor(Math.random() * 9), gz = 7 + Math.floor(Math.random() * 5);
       const path = this.pathTo(w, this.can(gx, gz) ? [[gx, gz]] : []);
       if (path && path.length > 1) { path.shift(); w.path = path.map(([x, z]) => ({ x: x + 0.5, z: z + 0.5 })); }
       return;
     }
+    w.idleFor = 0;
     const goals = this.goalsFor(pick.t);
     const path = this.pathTo(w, goals);
     if (!path) { w.wait = 2; return; }
     this.reserved.add(pick.key);
-    const DOING = { recolector: pick.t.kind === 'struct' ? 'Recogiendo' : 'Recogiendo huevos', regador: 'Regando', sembrador: 'Sembrando', cosechador: 'Cosechando', cocinera: 'En el fogón', camionero: pick.t.kind === 'fetch' ? 'Juntando la mercancía' : w.carry ? (w.carry.sell ? 'Vendiendo lo que sobra' : 'Cargando el camión') : 'Despidiendo el camión' };
+    const DOING = { recolector: pick.t.kind === 'struct' ? 'Recogiendo' : 'Recogiendo huevos', regador: 'Regando', sembrador: 'Sembrando', cosechador: 'Cosechando', cocinera: 'En el fogón', lenador: pick.t.kind === 'woodhome' ? 'Apilando la leña' : 'Tumbando con el machete', camionero: pick.t.kind === 'fetch' ? 'Juntando la mercancía' : w.carry ? (w.carry.sell ? 'Vendiendo lo que sobra' : 'Cargando el camión') : 'Despidiendo el camión' };
     pick.doing = DOING[w.role];
     w.task = pick;
     w.status = `Va a ${pick.verb}`;
@@ -905,6 +947,7 @@ export class Sim {
     }
     // trabajadores
     for (const w of this.workers) { this.updateWorker(w, dt); w.rec.x = w.x; w.rec.z = w.z; }
+    this.updateV4(dt);
     // gallinas deambulan (separadas entre sí)
     for (const c of s.chickens) {
       let rt = this.chickRT.get(c.id);
@@ -929,3 +972,4 @@ export class Sim {
   }
 }
 export { SELLABLE, FLAGPOLE, isOwned, parcelAt, storageCap, invCount, chickenCap };
+installV4(Sim);
