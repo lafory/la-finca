@@ -45,14 +45,14 @@ export const FIELDS = FIELD_LIST.map(([c, r, level, price], i) => ({ id: `f${i +
 export const FIELD_BY_ID = Object.fromEntries(FIELDS.map((f) => [f.id, f]));
 
 // ---------------------------------------------------------------- central azucarero (obra en 4 etapas)
-// wood = leña (s.wood, la misma que la manigua). dur = s de juego de obra.
+// wood = madera (s.res.madera, la misma de la manigua). dur = s de juego de obra.
 export const STAGES = [
   { id: 'cimientos', name: 'Cimientos y patio', detail: 'Se desbroza el terreno y se echan los cimientos de ladrillo.', level: 32, price: 15000, wood: 120, dur: 90 },
   { id: 'via', name: 'Vía estrecha y locomotora', detail: 'Vía de los campos al central y una locomotora de vapor con 4 vagones cañeros.', level: 33, price: 25000, wood: 150, dur: 120 },
   { id: 'calderas', name: 'Casa de calderas y chimenea', detail: 'El basculador, los molinos y las calderas: muele la caña en azúcar y melaza.', level: 34, price: 40000, wood: 200, dur: 150 },
   { id: 'estacion', name: 'Almacenes, estación y destilería', detail: 'Almacenes grandes, estación con pedidos del tren y destilería de ron.', level: 35, price: 60000, wood: 250, dur: 180 },
 ];
-export const WOOD_PRICE = 30; // aserrío: pesos por leña si no alcanza la de la manigua
+export const WOOD_PRICE = 30; // aserrío: pesos por madera si no alcanza la de la manigua
 
 // Molienda (etapa 3): cada tanda muele caña → azúcar + melaza. Destilería (etapa 4): melaza → ron.
 export const MILL = { cane: 20, azucar: 8, melaza: 3, time: 30, xp: 12 };

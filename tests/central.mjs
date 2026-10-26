@@ -22,7 +22,7 @@ async function run(name, opts) {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   const ev = (fn, a) => page.evaluate(fn, a);
-  const waitFor = async (fn, ms) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await page.evaluate(fn)) return true; await sleep(250); } return false; };
+  const waitFor = async (fn, ms, arg) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await page.evaluate(fn, arg)) return true; await sleep(250); } return false; };
   const closeAll = () => ev(() => { document.querySelectorAll('[data-act="modal-close"]').forEach((b) => b.click()); window.__finca.ui.closeSheet(); });
   const tag = WK ? 'wk-' : '';
   const shot = (n) => page.screenshot({ path: OUT + `central-${tag}${name}-${n}.png`, timeout: 120000 });
@@ -57,37 +57,37 @@ async function run(name, opts) {
   await sleep(6000);
   await shot('4-cortando');
   res.harvested = await waitFor(() => window.__finca.sim.fieldState('f1') === 'empty', 25000);
-  res.yard = await ev(() => window.__finca.sim.s.cen.yard);
+  res.yard = await ev(() => window.__finca.sim.s.ext.central.yard);
   // 2) central: nivel 32+, obra real de la etapa 1 por la hoja, luego el truco para terminar
   await ev(() => window.__finca.sim.cenCheat('l32')); await closeAll();
   await ev(() => window.__finca.sim.cenCheat('rich'));
   await look(22, 69, 26);
   await ev(() => { window.__finca.centralUI.openCentral(); document.querySelector('[data-act="censtage"]')?.click(); });
   await sleep(1500);
-  res.building = await ev(() => !!window.__finca.sim.s.cen.building);
+  res.building = await ev(() => !!window.__finca.sim.s.ext.central.building);
   await shot('5-obra');
   await ev(() => window.__finca.sim.cenCheat('central')); await closeAll();
-  await ev(() => { const sim = window.__finca.sim; sim.cenCheat('fields'); for (const id of sim.s.cen.owned) sim.plantField(id, ['cane', 'tobacco', 'tomato'][id.length % 3 === 0 ? 0 : (+id.slice(1)) % 3]); });
-  res.stage = await ev(() => window.__finca.sim.s.cen.stage);
+  await ev(() => { const sim = window.__finca.sim; sim.cenCheat('fields'); for (const id of sim.s.ext.central.owned) sim.plantField(id, ['cane', 'tobacco', 'tomato'][id.length % 3 === 0 ? 0 : (+id.slice(1)) % 3]); });
+  res.stage = await ev(() => window.__finca.sim.s.ext.central.stage);
   // 3) tren: debe moverse y pasar por el acopio y el basculador
-  const s0 = await ev(() => window.__finca.sim.s.cen.train.s);
+  const s0 = await ev(() => window.__finca.sim.s.ext.central.train.s);
   await look(30, 66, 30);
   await sleep(3000);
   await shot('6-central-tren');
-  res.trainMoved = (await ev(() => window.__finca.sim.s.cen.train.s)) !== s0;
+  res.trainMoved = await waitFor((s0) => window.__finca.sim.s.ext.central.train.s !== s0, 20000, s0);
   await ev(() => window.__finca.setSpeed(20));
-  res.trainDelivered = await waitFor(() => window.__finca.sim.s.cen.stats.trips > 0, 40000);
-  res.milled = await waitFor(() => window.__finca.sim.s.cen.stock.azucar > 0, 30000);
+  res.trainDelivered = await waitFor(() => window.__finca.sim.s.ext.central.stats.trips > 0, 40000);
+  res.milled = await waitFor(() => window.__finca.sim.s.ext.central.stock.azucar > 0, 30000);
   await ev(() => window.__finca.setSpeed(1));
   // 4) pedido del tren
-  await ev(() => { const c = window.__finca.sim.s.cen; if (!c.order) window.__finca.sim.newTrainOrder(); for (const k of Object.keys(c.order.items)) c.stock[k] = Math.max(c.stock[k], c.order.items[k]); });
+  await ev(() => { const c = window.__finca.sim.s.ext.central; if (!c.order) window.__finca.sim.newTrainOrder(); for (const k of Object.keys(c.order.items)) c.stock[k] = Math.max(c.stock[k], c.order.items[k]); });
   const m0 = await ev(() => window.__finca.sim.s.money);
   await ev(() => { window.__finca.centralUI.openStation(); document.querySelector('[data-act="cenload"]')?.click(); });
   await sleep(500);
   await shot('7-estacion');
   await closeAll();
   await ev(() => window.__finca.setSpeed(20));
-  res.orderPaid = await waitFor(() => window.__finca.sim.s.cen.stats.orders > 0, 40000);
+  res.orderPaid = await waitFor(() => window.__finca.sim.s.ext.central.stats.orders > 0, 40000);
   await ev(() => window.__finca.setSpeed(1));
   res.moneyGain = (await ev(() => window.__finca.sim.s.money)) - m0;
   await look(16, 68, 24); await sleep(1500);
@@ -101,7 +101,7 @@ async function run(name, opts) {
   await ev(() => window.__finca.sim && (window.__finca.saveNow ? window.__finca.saveNow() : null));
   await page.evaluate(() => { const g = window.__finca; localStorage.setItem('lafinca-v2', JSON.stringify({ ...g.sim.s, savedAt: Date.now() / 1000 })); });
   await page.reload(); await sleep(1500);
-  res.afterReload = await ev(() => ({ stage: window.__finca.sim.s.cen.stage, owned: window.__finca.sim.s.cen.owned.length, level: window.__finca.sim.s.level }));
+  res.afterReload = await ev(() => ({ stage: window.__finca.sim.s.ext.central.stage, owned: window.__finca.sim.s.ext.central.owned.length, level: window.__finca.sim.s.level }));
   report[name] = res;
   console.log(name, JSON.stringify(res));
   await ctx.close();

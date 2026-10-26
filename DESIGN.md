@@ -187,6 +187,19 @@ pathfinding con montículo binario sobre 88×80.
 
 Entregas: **v4a** manigua + batey + leña + leñero; **v4b** campos grandes + central + tren.
 
+## 10g. v5 – campos grandes, central azucarero y tren cañero (`src/central/`)
+Módulo aparte registrado en `src/extensions.js`; estado en `s.ext.central` (partidas viejas: valores por defecto).
+- **Campos grandes** (zona `campos`, nivel 25): bloques de 6×6 que se compran, siembran y cortan enteros. Caña (25), tabaco (27), tomate (29).
+  Siembra con tractor Belarus y cuadrilla; corte con cuadrilla de macheteros y carretas de bueyes que llevan la caña al **acopio**.
+  Lo cosechado va a un almacén industrial aparte (no ocupa la canasta) y se vende al por mayor desde el acopio.
+- **Central azucarero** (zona `central`, nivel 32): 4 etapas de obra con pesos + **madera** (la de la manigua; si falta, el aserrío la vende):
+  cimientos (32) → vía estrecha y locomotora (33) → casa de calderas y chimenea con humo (34) → almacenes, estación y destilería (35).
+  El central muele caña en azúcar y melaza; la destilería convierte melaza en ron.
+- **Tren cañero**: locomotora de vapor + 4 vagones en un lazo de vía estrecha; carga en el acopio, vuelca en el basculador del central
+  y para en la estación. **Pedidos del tren** (más grandes que los de camión, con prima) se cargan en la estación y se cobran al salir.
+- Rendimiento: estáticos fusionados (vía, central, acopio), cultivos/cuadrilla/carretas/humo instanciados con LOD, tren = 3 draw calls.
+- Pruebas: `tests/central.mjs` (4 pantallas, `?dev=1` con trucos de nivel/pesos/campos/central).
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
@@ -211,5 +224,6 @@ registros ya están cuando se hace `newGame()`/`load()`. No hace falta tocar `da
 | `registerUISection('land', fn(ui) → html)` / `registerAct(nombre, fn(ui, dataset))` | Filas en "Terreno y obras" y botones `data-act`. |
 | `registerUnlock(nivel, texto)` | Línea en el aviso de subir de nivel. |
 | `registerMigration(fn(s, d))` | Migrar partidas viejas (corre en `load()`). |
+| `registerGameModule({ attach(game), frame(game, dt, time) })` | Acceso al `Game` (vistas propias, botones, cámara, ⏩). `attach` al crear la partida, `frame` después de `world.update`. |
 
 Costes genéricos: `sim.canPay({ pesos, madera, res:{}, items:{} })` / `sim.pay(...)` (todo o nada).

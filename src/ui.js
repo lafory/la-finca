@@ -9,7 +9,6 @@ import {
 import { ZONES, ZONE_ORDER, zoneOpen, inFarm, CARRY_MAX, WILD_ANIMALS } from './zones.js';
 import { storageCap, invCount, chickenCap, now, parcelReachable, structOpen, workerCap } from './state.js';
 import { fmtTime, fmtClock } from './sim.js';
-import { centralUnlocks } from './central/data.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
@@ -32,7 +31,6 @@ export function unlocksAt(level) {
   if (level === 3) out.push('Ampliar gallinero');
   if (level === 4) out.push('Abono');
   STORAGE_LEVELS.forEach((l, i) => { if (l === level && i >= 1) out.push(`Almacén de ${STORAGE_CAPS[i + 1]}`); });
-  out.push(...centralUnlocks(level));
   return out;
 }
 

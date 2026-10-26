@@ -32,9 +32,6 @@ export class CentralUI {
       ex.appendChild(b);
       this.btn = b;
     }
-    // las acciones "cen*" las atiende este módulo
-    const orig = this.ui.act.bind(this.ui);
-    this.ui.act = (a, d) => (a && a.startsWith('cen') ? this.act(a, d) : orig(a, d));
   }
   get s() { return this.g.sim.s; }
   get sim() { return this.g.sim; }
@@ -65,23 +62,23 @@ export class CentralUI {
   tapPick(kind) {
     if (kind.startsWith('field:')) return this.openField(kind.slice(6));
     if (kind === 'acopio') return this.openAcopio();
-    if (kind === 'station' || kind === 'train') return this.s.cen.stage >= 4 ? this.openStation() : this.openTrain();
+    if (kind === 'station' || kind === 'train') return this.s.ext.central.stage >= 4 ? this.openStation() : this.openTrain();
     if (kind === 'central') return this.openCentral();
   }
   btnPrice(price, act, attrs = '', label = '', wood = 0) {
-    const poor = this.s.money < price || (wood && (this.s.wood || 0) < wood);
+    const poor = this.s.money < price || (wood && (this.s.res.madera || 0) < wood);
     return `<button class="btn ${poor ? 'poor' : ''}" data-act="${act}" ${attrs} ${poor ? 'disabled' : ''}>${label}${ICON.coin}${k1(price)}${wood ? `<span class="wd">${ICON.wood}${wood}</span>` : ''}</button>`;
   }
   cheats() {
     if (!this.dev()) return '';
     const b = (id, l) => `<button class="btn" data-act="cencheat" data-id="${id}">${l}</button>`;
-    return `<h3>Trucos (desarrollo)</h3><div class="seg">${b('l25', 'Nivel 25')}${b('l32', 'Nivel 32')}${b('l35', 'Nivel 35')}${b('rich', '+250k y leña')}</div><div class="seg">${b('fields', 'Campos')}${b('central', 'Central listo')}${b('ripe', 'Madurar')}${b('cane', '+300 caña')}</div>`;
+    return `<h3>Trucos (desarrollo)</h3><div class="seg">${b('l25', 'Nivel 25')}${b('l32', 'Nivel 32')}${b('l35', 'Nivel 35')}${b('rich', '+250k y madera')}</div><div class="seg">${b('fields', 'Campos')}${b('central', 'Central listo')}${b('ripe', 'Madurar')}${b('cane', '+300 caña')}</div>`;
   }
   // ---------------------------------------------------------------- campo
   openField(id) {
     const f = FIELD_BY_ID[id];
     this.ui.openSheet(`Campo ${f.n} · 6×6`, () => {
-      const s = this.s, sim = this.sim, c = s.cen, st = sim.fieldState(id), fs = c.fields[id];
+      const s = this.s, sim = this.sim, c = s.ext.central, st = sim.fieldState(id), fs = c.fields[id];
       let out = '';
       if (st === 'locked' || st === 'forsale') {
         out += `<p class="note">Un bloque grande de 36 canteros que se siembra y se cosecha de una vez, con tractor y cuadrilla. La cosecha va al acopio${c.stage >= 2 ? ' y el tren lleva la caña al central' : ''}.</p>`;
@@ -113,7 +110,7 @@ export class CentralUI {
   }
   // ---------------------------------------------------------------- acopio y almacenes
   stockRows(keys) {
-    const c = this.s.cen;
+    const c = this.s.ext.central;
     return keys.map((k) => {
       const have = k === 'cane' ? c.yard : c.stock[k];
       const pay = Math.round(IND[k].sell * WHOLESALE);
@@ -122,7 +119,7 @@ export class CentralUI {
   }
   openAcopio() {
     this.ui.openSheet('Acopio · campos grandes', () => {
-      const s = this.s, sim = this.sim, c = s.cen;
+      const s = this.s, sim = this.sim, c = s.ext.central;
       let out = `<p class="note">Aquí llega la cosecha de los campos en carretas de bueyes. ${c.stage >= 2 ? 'El tren cañero carga la caña y la lleva al central.' : `Hasta que levantes el central (nivel ${CENTRAL_LEVEL}) la caña se vende al por mayor.`}</p>`;
       out += `<div class="capbar">${ICON.basket}<b>Ocupado: ${sim.indTotal()}/${sim.indCap()}</b><small>${c.stage >= 4 ? 'Almacenes del central' : 'Sube a 4000 con los almacenes del central'}</small></div>`;
       out += this.stockRows(['cane', 'tobacco', 'tomato']);
@@ -133,12 +130,12 @@ export class CentralUI {
   // ---------------------------------------------------------------- central
   openCentral() {
     this.ui.openSheet('Central azucarero · obra', () => {
-      const s = this.s, sim = this.sim, c = s.cen;
+      const s = this.s, sim = this.sim, c = s.ext.central;
       let out = '';
       if (c.stage < STAGES.length) {
-        out += `<p class="note">El central se levanta en ${STAGES.length} etapas con pesos y leña${s.level < CENTRAL_LEVEL ? `. Empieza en el nivel ${CENTRAL_LEVEL}` : ''}.</p>`;
-        out += `<div class="capbar">${ICON.wood}<b>Leña: ${s.wood || 0}</b><small>La de la manigua sirve. Si falta, el aserrío vende a ${WOOD_PRICE} pesos.</small></div>`;
-        out += `<div class="seg">${[10, 50].map((q) => this.btnPrice(q * WOOD_PRICE, 'cenwood', `data-qty="${q}"`, `+${q} leña · `)).join('')}</div>`;
+        out += `<p class="note">El central se levanta en ${STAGES.length} etapas con pesos y madera${s.level < CENTRAL_LEVEL ? `. Empieza en el nivel ${CENTRAL_LEVEL}` : ''}.</p>`;
+        out += `<div class="capbar">${ICON.wood}<b>Madera: ${s.res.madera || 0}</b><small>La de la manigua sirve. Si falta, el aserrío vende a ${WOOD_PRICE} pesos.</small></div>`;
+        out += `<div class="seg">${[10, 50].map((q) => this.btnPrice(q * WOOD_PRICE, 'cenwood', `data-qty="${q}"`, `+${q} madera · `)).join('')}</div>`;
       }
       STAGES.forEach((st, i) => {
         const done = c.stage > i, cur = c.stage === i, lock = s.level < st.level;
@@ -163,19 +160,19 @@ export class CentralUI {
     });
   }
   trainStatus() {
-    const tr = this.s.cen.train;
+    const tr = this.s.ext.central.train;
     const where = tr.wait > 0 ? `Parado en ${STOPS[tr.at].name.toLowerCase()}` : `Va hacia ${STOPS[tr.next].name.toLowerCase()}`;
-    return `${where} · lleva ${tr.load}/${TRAIN.cap * TRAIN.wagons} de caña · ${this.s.cen.stats.trips} viajes`;
+    return `${where} · lleva ${tr.load}/${TRAIN.cap * TRAIN.wagons} de caña · ${this.s.ext.central.stats.trips} viajes`;
   }
   openTrain() {
     this.ui.openSheet('Tren cañero · vía estrecha', () => `<p class="note">Locomotora de vapor y ${TRAIN.wagons} vagones: carga la caña en el acopio y la descarga en el basculador del central. Da la vuelta solo.</p>
       <div class="row"><div class="row-ico">${ICON.train}</div><div class="row-main"><b>Ahora</b><small>${this.trainStatus()}</small></div></div>
-      <div class="row"><div class="row-ico">${ICON.cane}</div><div class="row-main"><b>Acopio: ${this.s.cen.yard} · central: ${this.s.cen.mill}</b><small>${this.s.cen.stage >= 3 ? 'El central muele lo que llega.' : 'Falta la casa de calderas para moler.'}</small></div><button class="btn" data-act="cencentral">Central</button></div>`);
+      <div class="row"><div class="row-ico">${ICON.cane}</div><div class="row-main"><b>Acopio: ${this.s.ext.central.yard} · central: ${this.s.ext.central.mill}</b><small>${this.s.ext.central.stage >= 3 ? 'El central muele lo que llega.' : 'Falta la casa de calderas para moler.'}</small></div><button class="btn" data-act="cencentral">Central</button></div>`);
   }
   // ---------------------------------------------------------------- estación: pedidos del tren
   openStation() {
     this.ui.openSheet('Estación · pedidos del tren', () => {
-      const s = this.s, sim = this.sim, c = s.cen, o = c.order;
+      const s = this.s, sim = this.sim, c = s.ext.central, o = c.order;
       let out = `<p class="note">Los pedidos del tren son grandes y pagan mucho más que los camiones. Carga el pedido en el andén y se cobra cuando el tren pare en la estación.</p>`;
       if (!o) out += `<div class="row dim"><div class="row-ico">${ICON.train}</div><div class="row-main"><b>Sin pedido</b><small>El próximo llega en ${fmtClock(Math.max(0, c.orderAt - now()))}.</small></div></div>`;
       else {
@@ -191,7 +188,7 @@ export class CentralUI {
   }
   // ---------------------------------------------------------------- etiquetas del mundo
   labels(v) {
-    const s = this.s, sim = this.sim, c = s.cen, t = now(), far = this.g.rig.dist > 70;
+    const s = this.s, sim = this.sim, c = s.ext.central, t = now(), far = this.g.rig.dist > 70;
     if (s.level >= CAMPOS_LEVEL) {
       for (const f of FIELDS) {
         const st = sim.fieldState(f.id, t), x = f.x + 3, z = f.z + 3, fs = c.fields[f.id];
@@ -226,7 +223,7 @@ export class CentralUI {
   }
   refreshButton() {
     if (!this.btn) return;
-    const show = this.s.level >= CAMPOS_LEVEL - 1 || this.s.cen?.owned.length > 0;
+    const show = this.s.level >= CAMPOS_LEVEL - 1 || this.s.ext.central?.owned.length > 0;
     this.btn.classList.toggle('hidden', !show);
   }
 }

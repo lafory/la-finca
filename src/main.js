@@ -3,7 +3,7 @@ import './extensions.js'; // primero: los módulos se registran antes de crear l
 import { viewSize, watchViewport, CAN_FULLSCREEN, NEEDS_A2HS_HINT } from './viewport.js';
 import * as THREE from 'three';
 import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK, structOpen } from './state.js';
-import { TAP_HANDLERS } from './registry.js';
+import { TAP_HANDLERS, GAME_MODULES } from './registry.js';
 import { ZONES, zoneOpen, zoneAt, isAnyRoad, PLANT_BY_ID, inFarm } from './zones.js';
 import { Sim } from './sim.js';
 import { World } from './world.js';
@@ -12,10 +12,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { UI } from './ui.js';
 import { ICON } from './icons.js';
-import { installCentral, attachCentral, updateCentral, tapCentral } from './central/index.js';
 import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT, FF_SPEEDS, FF_STEP, CROPS, STRUCTURES, TRUCK_SLOTS, GW, GH, xpForLevel } from './data.js';
-
-installCentral(Sim); // campos grandes, central azucarero y tren cañero (src/central/)
 
 class Game {
   constructor() {
@@ -49,7 +46,7 @@ class Game {
     this.clock = new THREE.Timer();
     this.fps = { frames: 0, t: 0, value: 60 };
     this.setupTitle();
-    attachCentral(this);
+    for (const m of GAME_MODULES) m.attach?.(this);
     window.__finca = this; // ganchos para pruebas automatizadas
     this.renderer = this.world.renderer;
     this.renderer.setAnimationLoop(() => this.frame());
@@ -273,7 +270,6 @@ class Game {
     this.sound.unlock();
     const ray = new THREE.Raycaster();
     ray.setFromCamera(this.input.ndc(cx, cy), this.rig.camera);
-    if (tapCentral(this, ray)) return;
     const kind = this.world.pick(ray);
     const s = this.sim.s;
     const go = (t, mx, mz) => { if (this.sim.command(t)) { this.world.showMarker(mx, mz); this.sound.play('tap'); } };
@@ -374,7 +370,7 @@ class Game {
     }
     this.rig.update(dt);
     this.world.update(dt, time);
-    updateCentral(this, dt, time);
+    for (const m of GAME_MODULES) m.frame?.(this, dt, time);
     this.world.updateSky(dt, this.started ? (this.gameDt || dt) : 0, this.started ? this.ffSpeed : 1);
     this.world.ffSpeed = this.ffSpeed;
     this.world.render(this.rig.camera, this.rig);

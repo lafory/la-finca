@@ -137,7 +137,7 @@ export class CentralView {
   }
   // reconstruye lo estático cuando cambia la tierra o la obra
   refresh(force) {
-    const s = this.s, c = s.cen;
+    const s = this.s, c = s.ext.central;
     const key = `${c.owned.join(',')}|${s.level >= CAMPOS_LEVEL}|${s.level >= CENTRAL_LEVEL - 3}`;
     if (force || key !== this.groundKey) { this.groundKey = key; this.buildCampos(); }
     const sk = `${c.stage}|${c.building ? c.building.stage : '-'}|${s.level >= CENTRAL_LEVEL - 3}`;
@@ -147,7 +147,7 @@ export class CentralView {
   dispose(m) { if (!m) return; this.scene.remove(m); m.geometry?.dispose(); if (m.material?.map) m.material.map.dispose(); }
   // ---------------------------------------------------------------- suelo y estáticos de los campos
   buildCampos() {
-    const s = this.s, c = s.cen, R = CAMPOS_RECT, wt = R.x1 - R.x0 + 1, ht = R.z1 - R.z0 + 1;
+    const s = this.s, c = s.ext.central, R = CAMPOS_RECT, wt = R.x1 - R.x0 + 1, ht = R.z1 - R.z0 + 1;
     const r = M.rng(77);
     const px = this.isSmall ? 8 : 12;
     const own = new Set(c.owned);
@@ -200,7 +200,7 @@ export class CentralView {
   }
   // ---------------------------------------------------------------- central (según la etapa) y vía
   buildCentral() {
-    const s = this.s, c = s.cen, R = CENTRAL_RECT, wt = R.x1 - R.x0 + 1, ht = R.z1 - R.z0 + 1;
+    const s = this.s, c = s.ext.central, R = CENTRAL_RECT, wt = R.x1 - R.x0 + 1, ht = R.z1 - R.z0 + 1;
     const r = M.rng(55);
     const px = this.isSmall ? 8 : 12;
     const near = s.level >= CENTRAL_LEVEL - 3 || c.stage > 0;
@@ -263,7 +263,7 @@ export class CentralView {
   }
   buildPickers() {
     for (const m of [...this.pickGroup.children]) { this.pickGroup.remove(m); m.geometry.dispose(); }
-    const s = this.s, c = s.cen;
+    const s = this.s, c = s.ext.central;
     const mk = (cen, x, z, w, d, h) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), this.inv); m.position.set(x, h / 2, z); m.userData.cen = cen; this.pickGroup.add(m); };
     if (s.level >= CAMPOS_LEVEL) {
       for (const f of FIELDS) if (f.level <= s.level + 4 || c.owned.includes(f.id)) mk(`field:${f.id}`, f.x + 3, f.z + 3, 6, 6, 1.2);
@@ -292,10 +292,10 @@ export class CentralView {
   update(dt, time) {
     const rig = this.g.rig;
     if (!this.built) {
-      if (this.s.level >= CAMPOS_LEVEL - 2 || this.s.cen?.owned.length || this.s.cen?.stage || this.near(rig)) this.build();
+      if (this.s.level >= CAMPOS_LEVEL - 2 || this.s.ext.central?.owned.length || this.s.ext.central?.stage || this.near(rig)) this.build();
       else return;
     }
-    const s = this.s, c = s.cen, sim = this.sim;
+    const s = this.s, c = s.ext.central, sim = this.sim;
     if (sim.cenVer !== this.ver) { this.ver = sim.cenVer; this.refresh(false); this.cropsDirty = true; }
     // LOD de cultivos por distancia de la cámara
     const lod = rig.dist > LOD_FAR ? 'lo' : 'hi';
@@ -314,7 +314,7 @@ export class CentralView {
     this.updateLabels();
   }
   updateCrops(time) {
-    const c = this.s.cen, t = now();
+    const c = this.s.ext.central, t = now();
     const cnt = { cane: 0, tobacco: 0, tomato: 0 };
     for (const id of c.owned) {
       const st = c.fields[id];
@@ -337,7 +337,7 @@ export class CentralView {
     for (const [k, m] of Object.entries(this.crops)) { m.count = cnt[k]; m.instanceMatrix.needsUpdate = true; }
   }
   updateWork(dt, time) {
-    const c = this.s.cen, t = now();
+    const c = this.s.ext.central, t = now();
     let nt = 0, nc = 0;
     for (const id of c.owned) {
       const st = c.fields[id];
@@ -386,7 +386,7 @@ export class CentralView {
     this.carts.count = n; this.carts.instanceMatrix.needsUpdate = true;
   }
   updateTrain(dt, time) {
-    const c = this.s.cen;
+    const c = this.s.ext.central;
     if (c.stage < 2) return;
     const tr = c.train;
     const pf = {}, pb = {};
@@ -443,7 +443,7 @@ export class CentralView {
     p.size = size; p.shade = shade;
   }
   updateSmoke(dt, time) {
-    const c = this.s.cen;
+    const c = this.s.ext.central;
     if (c.stage >= 3) {
       const busy = this.sim.millBusy();
       this.chimT = (this.chimT || 0) - dt;
@@ -493,7 +493,7 @@ export class CentralView {
     }
   }
   blobs(add) {
-    if (!this.built || this.s.cen.stage < 2) return;
+    if (!this.built || this.s.ext.central.stage < 2) return;
     // sombras de contacto del tren: ya proyecta sombra real; nada extra
   }
 }

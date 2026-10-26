@@ -1,6 +1,7 @@
 // Lógica de los campos grandes, el central azucarero y el tren cañero. Se instala sobre Sim (como installV4).
 import { now } from '../state.js';
-import { xpForLevel, WOOD_CAP } from '../data.js';
+import { xpForLevel } from '../data.js';
+import { RESOURCES } from '../registry.js';
 import {
   IND, IND_ORDER, WHOLESALE, ACOPIO_CAP, ALMACEN_CAP, FIELD_CROPS, FIELDS, FIELD_BY_ID, PLANT_WORK, HARVEST_WORK,
   STAGES, WOOD_PRICE, MILL, STILL, TRAIN, STOPS, STOP_ORDER, TRAIN_ORDER, BLOCKS, STAGE_BLOCKS, CAMPOS_LEVEL, CENTRAL_LEVEL,
@@ -13,12 +14,13 @@ const GW_ = 88;
 
 // Estado guardado (clave nueva `cen`, con valores por defecto: los saves viejos no se tocan)
 export function ensureCen(s) {
-  const d = obj(s.cen);
+  s.ext ||= {};
+  const d = obj(s.ext.central);
   const tr = obj(d.train);
   const fields = {};
   for (const [id, f] of Object.entries(obj(d.fields))) if (FIELD_BY_ID[id] && f && (!f.crop || FIELD_CROPS[f.crop])) fields[id] = { crop: f.crop || null, at: +f.at || 0, dur: +f.dur || 0, work: f.work && f.work.kind ? { kind: f.work.kind, at: +f.work.at || 0, dur: +f.work.dur || 1 } : null };
   const stage = Math.min(STAGES.length, int(d.stage));
-  s.cen = {
+  s.ext.central = {
     owned: Array.isArray(d.owned) ? d.owned.filter((id) => FIELD_BY_ID[id]) : [],
     fields,
     stage,
@@ -34,23 +36,18 @@ export function ensureCen(s) {
     orderAt: +d.orderAt || 0,
     stats: { trips: int(obj(d.stats).trips), orders: int(obj(d.stats).orders), sugar: int(obj(d.stats).sugar), earned: int(obj(d.stats).earned), harvests: int(obj(d.stats).harvests) },
   };
-  return s.cen;
+  return s.ext.central;
 }
 
 export function installCentral(Sim) {
   const P = Sim.prototype;
-  const origUpdate = P.update;
   const origRebuild = P.rebuildGrid;
 
-  P.update = function (dt, pdt) {
-    origUpdate.call(this, dt, pdt);
-    this.updateCentral(dt);
-  };
   // Los edificios del central bloquean el paso del guajiro
   P.rebuildGrid = function () {
     origRebuild.call(this);
-    if (!this.s.cen) return;
-    const c = this.s.cen, gw = this.grid.blocked.length >= GW_ * 80 ? GW_ : 0;
+    if (!this.s.ext.central) return;
+    const c = this.s.ext.central, gw = this.grid.blocked.length >= GW_ * 80 ? GW_ : 0;
     if (!gw) return;
     const done = new Set();
     STAGES.forEach((st, i) => { if (c.stage > i) for (const b of STAGE_BLOCKS[st.id] || []) done.add(b); });
@@ -67,11 +64,11 @@ export function installCentral(Sim) {
   P.cenBump = function () { this.cenVer = (this.cenVer || 0) + 1; this.h.changed('central'); };
 
   // ------------------------------------------------------------ almacén industrial
-  P.indTotal = function () { const c = this.s.cen; return c.yard + c.mill + IND_ORDER.reduce((a, k) => a + c.stock[k], 0); };
-  P.indCap = function () { return this.s.cen.stage >= 4 ? ALMACEN_CAP : ACOPIO_CAP; };
+  P.indTotal = function () { const c = this.s.ext.central; return c.yard + c.mill + IND_ORDER.reduce((a, k) => a + c.stock[k], 0); };
+  P.indCap = function () { return this.s.ext.central.stage >= 4 ? ALMACEN_CAP : ACOPIO_CAP; };
   P.indSpace = function () { return Math.max(0, this.indCap() - this.indTotal()); };
   P.sellInd = function (k, qty) {
-    const c = this.s.cen;
+    const c = this.s.ext.central;
     const have = k === 'cane' ? c.yard : c.stock[k];
     const n = Math.min(have, qty);
     if (n <= 0) { this.h.toast('No hay de eso en el acopio.'); this.h.sfx('error'); return false; }
@@ -88,7 +85,7 @@ export function installCentral(Sim) {
 
   // ------------------------------------------------------------ campos grandes
   P.fieldState = function (id, t = now()) {
-    const s = this.s, c = s.cen, f = FIELD_BY_ID[id];
+    const s = this.s, c = s.ext.central, f = FIELD_BY_ID[id];
     if (!c.owned.includes(id)) return s.level < f.level ? 'locked' : 'forsale';
     const st = c.fields[id];
     if (!st) return 'empty';
@@ -97,7 +94,7 @@ export function installCentral(Sim) {
     return t >= st.at + st.dur ? 'ripe' : 'growing';
   };
   P.fieldProgress = function (id, t = now()) {
-    const st = this.s.cen.fields[id];
+    const st = this.s.ext.central.fields[id];
     if (!st) return 0;
     if (st.work) return Math.min(1, (t - st.work.at) / st.work.dur);
     if (!st.crop) return 0;
@@ -105,7 +102,7 @@ export function installCentral(Sim) {
   };
   P.fieldGrow = function (crop) { return FIELD_CROPS[crop].grow * (this.s.upgrades.abono ? 0.85 : 1); };
   P.buyField = function (id) {
-    const s = this.s, c = s.cen, f = FIELD_BY_ID[id];
+    const s = this.s, c = s.ext.central, f = FIELD_BY_ID[id];
     if (!f || c.owned.includes(id)) return false;
     if (s.level < CAMPOS_LEVEL) { this.h.toast(`Los campos grandes se abren en el nivel ${CAMPOS_LEVEL}.`); return false; }
     if (s.level < f.level) { this.h.toast(`Ese campo se compra en el nivel ${f.level}.`); this.h.sfx('error'); return false; }
@@ -119,7 +116,7 @@ export function installCentral(Sim) {
     return true;
   };
   P.plantField = function (id, crop) {
-    const s = this.s, c = s.cen, cr = FIELD_CROPS[crop];
+    const s = this.s, c = s.ext.central, cr = FIELD_CROPS[crop];
     if (!cr || this.fieldState(id) !== 'empty') return false;
     if (s.level < cr.level) { this.h.toast(`${cr.name} en grande: nivel ${cr.level}.`); this.h.sfx('error'); return false; }
     if (!this.spend(cr.seed)) return false;
@@ -129,7 +126,7 @@ export function installCentral(Sim) {
     return true;
   };
   P.harvestField = function (id) {
-    const c = this.s.cen, st = c.fields[id];
+    const c = this.s.ext.central, st = c.fields[id];
     if (this.fieldState(id) !== 'ripe') return false;
     const cr = FIELD_CROPS[st.crop];
     if (this.indSpace() < cr.yield) { this.h.toast(`No cabe la cosecha (${cr.yield}). Vende en el acopio${c.stage >= 2 ? ' o espera al tren' : ''}.`); this.h.sfx('error'); return false; }
@@ -139,7 +136,7 @@ export function installCentral(Sim) {
     return true;
   };
   P.fieldWorkDone = function (id, st) {
-    const f = FIELD_BY_ID[id], c = this.s.cen;
+    const f = FIELD_BY_ID[id], c = this.s.ext.central;
     const cx = f.x + 3, cz = f.z + 3;
     if (st.work.kind === 'plant') {
       st.work = null;
@@ -160,14 +157,13 @@ export function installCentral(Sim) {
   };
 
   // ------------------------------------------------------------ central azucarero
-  P.stageNext = function () { const c = this.s.cen; return c.stage < STAGES.length ? STAGES[c.stage] : null; };
+  P.stageNext = function () { const c = this.s.ext.central; return c.stage < STAGES.length ? STAGES[c.stage] : null; };
   P.startStage = function () {
-    const s = this.s, c = s.cen, st = this.stageNext();
+    const s = this.s, c = s.ext.central, st = this.stageNext();
     if (!st || c.building) return false;
     if (s.level < st.level) { this.h.toast(`${st.name}: nivel ${st.level}.`); this.h.sfx('error'); return false; }
-    if ((s.wood || 0) < st.wood) { this.h.toast(`Hace falta ${st.wood} de leña (tienes ${s.wood || 0}). Búscala en la manigua o cómprala en el aserrío.`); this.h.sfx('error'); return false; }
-    if (!this.spend(st.price)) return false;
-    s.wood -= st.wood; this.h.changed('wood');
+    if (!this.hasRes('madera', st.wood)) { this.h.toast(`Hace falta ${st.wood} de madera (tienes ${s.res.madera || 0}). Búscala en la manigua o cómprala en el aserrío.`); this.h.sfx('error'); return false; }
+    if (!this.pay({ pesos: st.price, madera: st.wood })) return false;
     c.building = { stage: c.stage, at: now(), dur: st.dur };
     this.h.sfx('buy');
     this.h.toast(`¡Empezó la obra: ${st.name.toLowerCase()}!`);
@@ -175,7 +171,7 @@ export function installCentral(Sim) {
     return true;
   };
   P.stageDone = function () {
-    const c = this.s.cen, st = STAGES[c.stage];
+    const c = this.s.ext.central, st = STAGES[c.stage];
     c.stage++; c.building = null;
     this.addXp(200 + c.stage * 100);
     this.h.sfx('level');
@@ -187,21 +183,20 @@ export function installCentral(Sim) {
     this.cenBump();
   };
   P.buyWood = function (n) {
-    const s = this.s, cap = WOOD_CAP || 500;
-    n = Math.min(n, cap - (s.wood || 0));
-    if (n <= 0) { this.h.toast('Ya no cabe más leña.'); return false; }
+    const s = this.s, cap = RESOURCES.madera?.cap ?? 500;
+    n = Math.min(n, cap - (s.res.madera || 0));
+    if (n <= 0) { this.h.toast('Ya no cabe más madera.'); return false; }
     if (!this.spend(n * WOOD_PRICE)) return false;
-    s.wood = (s.wood || 0) + n;
+    this.addRes('madera', n);
     this.h.sfx('buy');
-    this.h.changed('wood');
     return true;
   };
-  P.toggleStill = function () { this.s.cen.still = !this.s.cen.still; this.cenBump(); };
-  P.millBusy = function () { const c = this.s.cen; return c.stage >= 3 && c.mill >= MILL.cane && this.indSpace() > 0; };
+  P.toggleStill = function () { this.s.ext.central.still = !this.s.ext.central.still; this.cenBump(); };
+  P.millBusy = function () { const c = this.s.ext.central; return c.stage >= 3 && c.mill >= MILL.cane && this.indSpace() > 0; };
 
   // ------------------------------------------------------------ pedidos del tren
   P.newTrainOrder = function () {
-    const s = this.s, c = s.cen;
+    const s = this.s, c = s.ext.central;
     const pool = [['azucar', 40, 120], ['melaza', 15, 45], ['ron', 9, 30]];
     if (s.level >= FIELD_CROPS.tobacco.level) pool.push(['tobacco', 30, 90]);
     if (s.level >= FIELD_CROPS.tomato.level) pool.push(['tomato', 60, 180]);
@@ -217,11 +212,11 @@ export function installCentral(Sim) {
     this.cenBump();
   };
   P.canFillOrder = function () {
-    const c = this.s.cen, o = c.order;
+    const c = this.s.ext.central, o = c.order;
     return !!o && !o.loaded && Object.entries(o.items).every(([k, q]) => c.stock[k] >= q);
   };
   P.loadOrder = function () {
-    const c = this.s.cen, o = c.order;
+    const c = this.s.ext.central, o = c.order;
     if (!this.canFillOrder()) { this.h.toast('Falta mercancía en los almacenes para este pedido.'); this.h.sfx('error'); return false; }
     for (const [k, q] of Object.entries(o.items)) c.stock[k] -= q;
     o.loaded = true;
@@ -233,7 +228,7 @@ export function installCentral(Sim) {
     return true;
   };
   P.payOrder = function () {
-    const c = this.s.cen, o = c.order;
+    const c = this.s.ext.central, o = c.order;
     if (!o || !o.loaded) return;
     this.addMoney(o.reward, 24.5, 61);
     this.addXp(o.xp);
@@ -244,7 +239,7 @@ export function installCentral(Sim) {
     this.cenBump();
   };
   P.skipOrder = function () {
-    const c = this.s.cen;
+    const c = this.s.ext.central;
     if (!c.order || c.order.loaded) return false;
     c.order = null; c.orderAt = now() + TRAIN_ORDER.cooldown / 2;
     this.cenBump();
@@ -253,7 +248,7 @@ export function installCentral(Sim) {
 
   // ------------------------------------------------------------ tren cañero
   P.trainArrive = function (stop) {
-    const c = this.s.cen, tr = c.train, cap = TRAIN.cap * TRAIN.wagons;
+    const c = this.s.ext.central, tr = c.train, cap = TRAIN.cap * TRAIN.wagons;
     tr.at = stop; tr.wait = STOPS[stop].dwell; tr.v = 0;
     if (stop === 'acopio' && tr.load < cap && c.yard > 0) {
       const n = Math.min(cap - tr.load, c.yard);
@@ -271,7 +266,7 @@ export function installCentral(Sim) {
     this.cenBump();
   };
   P.updateTrain = function (dt) {
-    const tr = this.s.cen.train;
+    const tr = this.s.ext.central.train;
     if (tr.wait > 0) {
       tr.wait -= dt;
       if (tr.wait <= 0) { tr.wait = 0; tr.next = STOP_ORDER[(STOP_ORDER.indexOf(tr.at) + 1) % STOP_ORDER.length]; this.trainFx = { kind: 'depart', t: performance.now() }; }
@@ -289,8 +284,8 @@ export function installCentral(Sim) {
 
   // ------------------------------------------------------------ tick
   P.updateCentral = function (dt) {
-    if (!this.s.cen || this.cenVer === undefined) this.cenInit();
-    const s = this.s, c = s.cen, t = now();
+    if (!this.s.ext.central || this.cenVer === undefined) this.cenInit();
+    const s = this.s, c = s.ext.central, t = now();
     if (s.level < CAMPOS_LEVEL - 1 && !c.owned.length && !c.stage) return;
     for (const id of c.owned) { const st = c.fields[id]; if (st?.work && t >= st.work.at + st.work.dur) this.fieldWorkDone(id, st); }
     if (c.building && t >= c.building.at + c.building.dur) this.stageDone();
@@ -325,13 +320,13 @@ export function installCentral(Sim) {
 
   // ------------------------------------------------------------ trucos de desarrollo (?dev=1)
   P.cenCheat = function (k) {
-    const s = this.s, c = s.cen;
+    const s = this.s, c = s.ext.central;
     const toLevel = (l) => { if (s.level < l) this.addXp(xpForLevel(l) - s.xp); };
     if (k === 'l25') toLevel(CAMPOS_LEVEL);
     if (k === 'l32') toLevel(CENTRAL_LEVEL);
     if (k === 'l35') toLevel(35);
     if (k === 'l40') toLevel(40);
-    if (k === 'rich') { this.addMoney(250000); s.wood = Math.max(s.wood || 0, WOOD_CAP || 500); this.h.changed('wood'); }
+    if (k === 'rich') { this.addMoney(250000); s.res.madera = Math.max(s.res.madera || 0, RESOURCES.madera?.cap ?? 500); this.h.changed('res'); }
     if (k === 'fields') for (const f of FIELDS) if (s.level >= f.level && !c.owned.includes(f.id)) { c.owned.push(f.id); c.fields[f.id] = { crop: null, at: 0, dur: 0, work: null }; }
     if (k === 'central') { toLevel(35); while (c.stage < STAGES.length) { c.building = null; this.stageDone(); } }
     if (k === 'ripe') for (const id of c.owned) { const st = c.fields[id]; if (st?.work) st.work.at -= st.work.dur; else if (st?.crop) st.at = now() - st.dur - 1; }
