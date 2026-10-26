@@ -192,3 +192,24 @@ Entregas: **v4a** manigua + batey + leña + leñero; **v4b** campos grandes + ce
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
 - v3 (hecho): trabajadores, ⏩ y día/noche. v3.1 (hecho): finca grande, obstáculos, vacas/chivos/cerdos, trapiche, tabaco.
 - v4: eventos (carnaval), logros, PWA offline, balance con telemetría local.
+
+## Extension hooks (para módulos aparte, p. ej. `src/central/*`)
+Todo vive en `src/registry.js`. Un módulo se registra al importarse; añade **una línea** en `src/extensions.js`
+(`import './central/index.js';`). `main.js` importa `extensions.js` antes de crear la partida, así que los
+registros ya están cuando se hace `newGame()`/`load()`. No hace falta tocar `data.js`, `state.js`, `sim.js`, `world.js` ni `ui.js`.
+
+| Hook | Qué hace |
+|---|---|
+| `registerZone(id, { name, blurb, level, rect:{x0,z0,x1,z1}, sign:[x,z] })` | Región nueva del mapa global 88×80 (caminable cuando `level` ≤ nivel). Libres: campos x32–87 × z42–79, central x0–30 × z58–79. Los caminos x15–16 y z40–41 ya llegan. |
+| `registerResource(id, { name, icon, cap, start })` | Recurso fuera de la canasta en `s.res[id]` (ya existe `madera`, tope 500). `sim.addRes / hasRes / spendRes`. |
+| `registerItem(id, def, { sellable })` | Cosa nueva de la canasta (aparece en `s.inv`, camiones, venta). |
+| `registerStructure(id, { name, detail, price, madera, cost:{res,items}, level, kind, zone, x,z,w,h, model(M, built) })` | Obra en un solar; `sim.build(id)` cobra con `sim.pay(cost)`. `model` devuelve la geometría (API `Builder/part/place` de `models.js`). |
+| `registerWorker(id, def, { pick(sim,w,free), do(sim,w,t) })` | Rol nuevo de trabajador (sale en la hoja Trabajadores; reserva tareas con claves `free(key)`). |
+| `registerSimModule({ init, update(sim,dt), goals(sim,t), perform(sim,t) })` | Lógica por tick y objetivos nuevos para `sim.command({ kind, ... })`. Guarda estado en `s.ext[id]`. |
+| `registerZoneView(zoneId, factory(world) → { update, pick(ray), blobs(add), grassCounts(f) })` | Vista 3D perezosa (se crea al abrirse la zona o acercarse la cámara). `pick` devuelve `'prefijo:id'`. |
+| `registerTap(prefijo, fn(game, id))` | Qué pasa al tocar algo que tu vista devolvió en `pick`. |
+| `registerUISection('land', fn(ui) → html)` / `registerAct(nombre, fn(ui, dataset))` | Filas en "Terreno y obras" y botones `data-act`. |
+| `registerUnlock(nivel, texto)` | Línea en el aviso de subir de nivel. |
+| `registerMigration(fn(s, d))` | Migrar partidas viejas (corre en `load()`). |
+
+Costes genéricos: `sim.canPay({ pesos, madera, res:{}, items:{} })` / `sim.pay(...)` (todo o nada).
