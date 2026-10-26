@@ -1,0 +1,92 @@
+{
+ "desktop": {
+  "errors": [],
+  "cap1": 4,
+  "cap8": 6,
+  "prices": [
+   30,
+   55,
+   75,
+   45,
+   80
+  ],
+  "workers": [
+   "recolector:recolector:0",
+   "recolector-2:recolector:1",
+   "recolector-3:recolector:2",
+   "camionero:camionero:0",
+   "camionero-4:camionero:1"
+  ],
+  "names": [
+   0,
+   1,
+   2,
+   0,
+   1
+  ],
+  "capText": "Trabajadores 5/6",
+  "chips": [
+   "Chucho",
+   "Reinaldo",
+   "Pancho",
+   "Lázaro",
+   "Ramón"
+  ],
+  "overCap": false,
+  "count": 6,
+  "dupSamples": 0,
+  "samples": 40,
+  "camStatus": [
+   "Cargando el camión",
+   "Cargando el camión"
+  ],
+  "sold": 0,
+  "afterReload": 6,
+  "ok": true
+ },
+ "phone": {
+  "errors": [],
+  "cap1": 4,
+  "cap8": 6,
+  "prices": [
+   30,
+   55,
+   75,
+   45,
+   80
+  ],
+  "workers": [
+   "recolector:recolector:0",
+   "recolector-2:recolector:1",
+   "recolector-3:recolector:2",
+   "camionero:camionero:0",
+   "camionero-4:camionero:1"
+  ],
+  "names": [
+   0,
+   1,
+   2,
+   0,
+   1
+  ],
+  "capText": "Trabajadores 5/6",
+  "chips": [
+   "Chucho",
+   "Reinaldo",
+   "Pancho",
+   "Lázaro",
+   "Ramón"
+  ],
+  "overCap": false,
+  "count": 6,
+  "dupSamples": 0,
+  "samples": 40,
+  "camStatus": [
+   "Va a buscar en el bohío lo que pide el camión",
+   "Va a buscar en el bohío lo que pide el camión"
+  ],
+  "sold": 1,
+  "afterReload": 6,
+  "ok": true
+ }
+}

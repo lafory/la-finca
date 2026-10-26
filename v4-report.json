@@ -1,0 +1,133 @@
+{
+ "desktop": {
+  "errors": [],
+  "manBtnBefore": false,
+  "level3": 3,
+  "manBtn": true,
+  "inManigua": true,
+  "homeBtn": false,
+  "tree": {
+   "id": "m213",
+   "x": 51,
+   "z": 36
+  },
+  "tapKind": "wplant:m213 → wplant",
+  "chopped": true,
+  "madera": 3,
+  "stump": true,
+  "fruitKind": "mango",
+  "fruitPicked": true,
+  "wildCount": 11,
+  "carry": [
+   "gallina"
+  ],
+  "backInFarm": true,
+  "delivered": true,
+  "caught": 1,
+  "inBatey": true,
+  "buildBtn": true,
+  "house": true,
+  "capUp": true,
+  "lenadorHired": true,
+  "lenadorWood": true,
+  "lenadorStatus": "Apilando la madera",
+  "fps": 10.856691669964556,
+  "persist": true
+ },
+ "phone": {
+  "errors": [],
+  "manBtnBefore": false,
+  "level3": 3,
+  "manBtn": true,
+  "inManigua": true,
+  "homeBtn": true,
+  "tree": {
+   "id": "m213",
+   "x": 51,
+   "z": 36
+  },
+  "tapKind": "wplant:m213 → wplant",
+  "chopped": true,
+  "wood": 3,
+  "stump": true,
+  "fruitKind": "mango",
+  "fruitPicked": true,
+  "wildCount": 11,
+  "carry": [
+   "jutia"
+  ],
+  "backInFarm": true,
+  "delivered": true,
+  "caught": 1,
+  "inBatey": true,
+  "buildBtn": true,
+  "house": true,
+  "capUp": true,
+  "fps": 12.660693416430236,
+  "persist": true
+ },
+ "ipad": {
+  "errors": [],
+  "manBtnBefore": false,
+  "level3": 3,
+  "manBtn": false,
+  "inManigua": true,
+  "homeBtn": true,
+  "tree": {
+   "id": "m213",
+   "x": 51,
+   "z": 36
+  },
+  "tapKind": "wplant:m213 → wplant",
+  "chopped": true,
+  "wood": 3,
+  "stump": true,
+  "fruitKind": "mango",
+  "fruitPicked": true,
+  "wildCount": 11,
+  "carry": [
+   "jutia"
+  ],
+  "backInFarm": true,
+  "delivered": true,
+  "caught": 1,
+  "inBatey": true,
+  "buildBtn": true,
+  "house": true,
+  "capUp": true,
+  "fps": 15.552099533468814,
+  "persist": true
+ },
+ "phone-landscape": {
+  "errors": [],
+  "manBtnBefore": false,
+  "level3": 3,
+  "manBtn": true,
+  "inManigua": true,
+  "homeBtn": true,
+  "tree": {
+   "id": "m213",
+   "x": 51,
+   "z": 36
+  },
+  "tapKind": "wplant:m213 → wplant",
+  "chopped": true,
+  "wood": 3,
+  "stump": true,
+  "fruitKind": "mango",
+  "fruitPicked": true,
+  "wildCount": 11,
+  "carry": [
+   "jibaro"
+  ],
+  "backInFarm": true,
+  "delivered": true,
+  "caught": 1,
+  "inBatey": true,
+  "buildBtn": true,
+  "house": true,
+  "capUp": true,
+  "fps": 12.44257274122998,
+  "persist": true
+ }
+}

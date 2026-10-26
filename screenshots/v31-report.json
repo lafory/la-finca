@@ -9,16 +9,16 @@
       },
       "afterLand": {
         "dist": 93.89067222936673,
-        "max": 98.04438086417379,
+        "max": 181.40068715613899,
         "bounds": {
           "x0": -3,
           "z0": -3,
-          "x1": 49,
-          "z1": 43
+          "x1": 91,
+          "z1": 61
         }
       }
     },
-    "builtFirstTry": 9,
+    "builtFirstTry": 1,
     "obstacle": {
       "id": "loma-0",
       "kind": "stump",
@@ -34,26 +34,26 @@
       ]
     },
     "obstacleCleared": true,
-    "builtTotal": 9,
-    "animalReady": true,
+    "builtTotal": 1,
+    "animalReady": false,
     "viewFarm": {
-      "dist": 89.9,
-      "max": 112.7
+      "dist": 84.1,
+      "max": 183.3
     },
     "perfWhole": {
       "fps": 10,
-      "calls": 118,
-      "tris": 364517
+      "calls": 243,
+      "tris": 382850
     },
     "zoomedIn": 9,
     "centered": {
-      "dist": 21.8,
+      "dist": 20.4,
       "close": 24
     },
     "perf": {
-      "fps": 11.7,
-      "calls": 70,
-      "tris": 344126,
+      "fps": 12.6,
+      "calls": 63,
+      "tris": 318935,
       "quality": "baja"
     }
   },
@@ -67,7 +67,7 @@
       },
       "afterLand": {
         "dist": 257.85059859512137,
-        "max": 269.25786869388344,
+        "max": 278.14185957950633,
         "bounds": {
           "x0": -3,
           "z0": -3,
@@ -91,17 +91,18 @@
         10.38
       ]
     },
+    "clearobsJsClick": true,
     "obstacleCleared": true,
     "builtTotal": 9,
     "animalReady": true,
     "viewFarm": {
-      "dist": 257.3,
+      "dist": 246.5,
       "max": 309.4
     },
     "perfWhole": {
-      "fps": 10.8,
+      "fps": 10.9,
       "calls": 121,
-      "tris": 358581
+      "tris": 359189
     },
     "zoomedIn": 9,
     "centered": {
@@ -109,9 +110,9 @@
       "close": 52.8
     },
     "perf": {
-      "fps": 11.8,
+      "fps": 11,
       "calls": 64,
-      "tris": 328761,
+      "tris": 329369,
       "quality": "baja"
     }
   },
@@ -150,33 +151,27 @@
       ]
     },
     "clearobsJsClick": true,
-    "obstacleCleared": false,
-    "obsDebug": {
-      "x": 19.150538238691624,
-      "z": 9.150538238691624,
-      "target": "null",
-      "money": 24680
-    },
+    "obstacleCleared": true,
     "builtTotal": 9,
     "animalReady": true,
     "viewFarm": {
-      "dist": 164.5,
+      "dist": 113.5,
       "max": 205.7
     },
     "perfWhole": {
-      "fps": 12.6,
+      "fps": 10,
       "calls": 120,
-      "tris": 358341
+      "tris": 358381
     },
     "zoomedIn": 9,
     "centered": {
-      "dist": 21.4,
+      "dist": 21.8,
       "close": 43.9
     },
     "perf": {
-      "fps": 10,
-      "calls": 66,
-      "tris": 330322,
+      "fps": 10.8,
+      "calls": 67,
+      "tris": 330344,
       "quality": "baja"
     }
   },
@@ -190,7 +185,7 @@
       },
       "afterLand": {
         "dist": 93.89067222936673,
-        "max": 101.27929240161198,
+        "max": 98.04438086417379,
         "bounds": {
           "x0": -3,
           "z0": -3,
@@ -214,6 +209,7 @@
         10.36
       ]
     },
+    "clearobsJsClick": true,
     "obstacleCleared": true,
     "builtTotal": 9,
     "animalReady": true,
@@ -222,19 +218,19 @@
       "max": 112.7
     },
     "perfWhole": {
-      "fps": 11.8,
+      "fps": 10.8,
       "calls": 121,
       "tris": 358621
     },
     "zoomedIn": 9,
     "centered": {
-      "dist": 19.2,
+      "dist": 18.7,
       "close": 19.2
     },
     "perf": {
-      "fps": 10.7,
-      "calls": 75,
-      "tris": 346214,
+      "fps": 12.5,
+      "calls": 76,
+      "tris": 347142,
       "quality": "baja"
     }
   }

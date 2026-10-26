@@ -1,0 +1,158 @@
+{
+ "iphone13": {
+  "W": 390,
+  "H": 664,
+  "outside": [],
+  "scroll": [
+   390,
+   664,
+   390,
+   664
+  ],
+  "canvas": [
+   390,
+   664
+  ],
+  "appVars": [
+   "390px",
+   "664px"
+  ],
+  "fullscreen": false,
+  "fsBtnVisible": false,
+  "ios": true,
+  "sheetFits": true,
+  "errors": [],
+  "titleFits": true,
+  "ok": true
+ },
+ "iphone13-land": {
+  "W": 750,
+  "H": 342,
+  "outside": [],
+  "scroll": [
+   750,
+   342,
+   750,
+   342
+  ],
+  "canvas": [
+   750,
+   342
+  ],
+  "appVars": [
+   "750px",
+   "342px"
+  ],
+  "fullscreen": false,
+  "fsBtnVisible": false,
+  "ios": true,
+  "sheetFits": true,
+  "errors": [],
+  "titleFits": true,
+  "ok": true
+ },
+ "iphone14": {
+  "W": 390,
+  "H": 664,
+  "outside": [],
+  "scroll": [
+   390,
+   664,
+   390,
+   664
+  ],
+  "canvas": [
+   390,
+   664
+  ],
+  "appVars": [
+   "390px",
+   "664px"
+  ],
+  "fullscreen": false,
+  "fsBtnVisible": false,
+  "ios": true,
+  "sheetFits": true,
+  "errors": [],
+  "titleFits": true,
+  "ok": true
+ },
+ "iphone14-land": {
+  "W": 750,
+  "H": 340,
+  "outside": [],
+  "scroll": [
+   750,
+   340,
+   750,
+   340
+  ],
+  "canvas": [
+   750,
+   340
+  ],
+  "appVars": [
+   "750px",
+   "340px"
+  ],
+  "fullscreen": false,
+  "fsBtnVisible": false,
+  "ios": true,
+  "sheetFits": true,
+  "errors": [],
+  "titleFits": true,
+  "ok": true
+ },
+ "iphone14pro-max": {
+  "W": 430,
+  "H": 740,
+  "outside": [],
+  "scroll": [
+   430,
+   740,
+   430,
+   740
+  ],
+  "canvas": [
+   430,
+   740
+  ],
+  "appVars": [
+   "430px",
+   "740px"
+  ],
+  "fullscreen": false,
+  "fsBtnVisible": false,
+  "ios": true,
+  "sheetFits": true,
+  "errors": [],
+  "titleFits": true,
+  "ok": true
+ },
+ "iphone-se": {
+  "W": 320,
+  "H": 568,
+  "outside": [],
+  "scroll": [
+   320,
+   568,
+   320,
+   568
+  ],
+  "canvas": [
+   320,
+   568
+  ],
+  "appVars": [
+   "320px",
+   "568px"
+  ],
+  "fullscreen": false,
+  "fsBtnVisible": false,
+  "ios": true,
+  "sheetFits": true,
+  "errors": [],
+  "titleFits": true,
+  "ok": true
+ }
+}

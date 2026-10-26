@@ -48,14 +48,14 @@ async function run(name, opts) {
     return null;
   });
   res.tree = target;
-  const wood0 = await ev(() => window.__finca.sim.s.wood);
+  const wood0 = await ev(() => window.__finca.sim.s.res.madera);
   if (target) {
     await ev((t) => { const g = window.__finca; g.rig.goal.set(t.x + 0.5, 0, t.z + 0.5); g.rig.goalDist = 16; g.rig.manualUntil = performance.now() + 1e5; }, target);
     await sleep(1500);
     res.tapKind = await ev((t) => { const g = window.__finca, q = g.project(t.x + 0.5, 1.6, t.z + 0.5); const k = g.debugPick(q.x, q.y).kind; g.tap(q.x, q.y); return k + ' → ' + (g.sim.player.task?.kind || 'none'); }, target);
     if (!/wplant/.test(res.tapKind)) await ev((t) => window.__finca.sim.command({ kind: 'wplant', id: t.id }), target);
-    res.chopped = await waitFor(`window.__finca.sim.s.wood > ${wood0}`, 40000);
-    res.wood = await ev(() => window.__finca.sim.s.wood);
+    res.chopped = await waitFor(`window.__finca.sim.s.res.madera > ${wood0}`, 40000);
+    res.madera = await ev(() => window.__finca.sim.s.res.madera);
     res.stump = await ev((t) => !!window.__finca.sim.s.chopped[t.id], target);
   }
   // frutas
@@ -111,9 +111,9 @@ async function run(name, opts) {
     await ev(() => { const g = window.__finca; for (let i = 0; i < 6; i++) { g.cheat('money'); g.cheat('wood'); } for (const k of ['casa2', 'casa3', 'bodega', 'casa4', 'casa5']) g.sim.build(k); g.sim.upgradeHouse('casa1'); g.sim.hire('recolector'); g.sim.hire('lenador'); });
     await closeModals();
     res.lenadorHired = await ev(() => !!window.__finca.sim.workers.find((w) => w.role === 'lenador'));
-    const w0 = await ev(() => window.__finca.sim.s.stats.wood || 0);
+    const w0 = await ev(() => window.__finca.sim.s.stats.madera || 0);
     await ev(() => window.__finca.setSpeed(20));
-    res.lenadorWood = await waitFor(`(window.__finca.sim.s.stats.wood || 0) > ${w0}`, 90000);
+    res.lenadorWood = await waitFor(`(window.__finca.sim.s.stats.madera || 0) > ${w0}`, 90000);
     await ev(() => window.__finca.setSpeed(1));
     res.lenadorStatus = await ev(() => window.__finca.sim.workers.find((w) => w.role === 'lenador').status);
   }
@@ -124,15 +124,15 @@ async function run(name, opts) {
   // guardar y recargar: lo nuevo sobrevive
   await ev(() => window.__finca.sim.s && (window.__finca.saveTimer = 99));
   await sleep(600);
-  const before = await ev(() => { const s = window.__finca.sim.s; return { wood: s.wood, houses: Object.keys(s.built).filter((k) => k.startsWith('casa')).length, level: s.level }; });
+  const before = await ev(() => { const s = window.__finca.sim.s; return { wood: s.res.madera, houses: Object.keys(s.built).filter((k) => k.startsWith('casa')).length, level: s.level }; });
   await page.reload(); await sleep(1500); await page.click('#start'); await sleep(800);
-  const after = await ev(() => { const s = window.__finca.sim.s; return { wood: s.wood, houses: Object.keys(s.built).filter((k) => k.startsWith('casa')).length, level: s.level }; });
+  const after = await ev(() => { const s = window.__finca.sim.s; return { wood: s.res.madera, houses: Object.keys(s.built).filter((k) => k.startsWith('casa')).length, level: s.level }; });
   res.persist = JSON.stringify(before) === JSON.stringify(after) ? true : { before, after };
   await ctx.close();
   return res;
 }
 for (const name of ONLY) {
-  try { report[name] = await run(name, VPS[name]); } catch (e) { report[name] = { crash: String(e) }; }
+  try { report[name] = await run(name, VPS[name]); } catch (e) { report[name] = { crash: String(e.stack || e).slice(0, 600) }; }
   console.log(name, JSON.stringify(report[name]));
 }
 fs.writeFileSync(RP, JSON.stringify(report, null, 1));
