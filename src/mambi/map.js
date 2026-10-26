@@ -46,7 +46,7 @@ export class MambiScenes {
     scene.add(new THREE.HemisphereLight(0xfff1d6, 0x3b6a6a, 1.4));
     const sun = new THREE.DirectionalLight(0xffe2b0, 2.0); sun.position.set(-30, 60, 40); scene.add(sun);
     // mar con degradado (más hondo lejos de la costa) y olas facetadas
-    const sea = new THREE.PlaneGeometry(320, 200, 48, 30).toNonIndexed();
+    const sea = new THREE.PlaneGeometry(640, 420, 64, 40).toNonIndexed();
     sea.rotateX(-Math.PI / 2);
     const sp = sea.attributes.position, sc = new Float32Array(sp.count * 3), deep = new THREE.Color(0x1f6f8f), shallow = new THREE.Color(0x48b0b8), c = new THREE.Color();
     for (let i = 0; i < sp.count; i++) { sp.setY(i, (hash(sp.getX(i), sp.getZ(i)) - 0.5) * 0.25); }
@@ -177,8 +177,10 @@ export class MambiScenes {
     this.goal.x = p.x; this.goal.z = p.z; if (dist) this.goal.dist = dist;
   }
   pan(dx, dz) { this.goal.x = Math.max(-58, Math.min(56, this.goal.x + dx)); this.goal.z = Math.max(-20, Math.min(22, this.goal.z + dz)); }
-  zoom(f) { this.goal.dist = Math.max(14, Math.min(130, this.goal.dist * f)); }
-  fitAll() { this.goal.x = 0; this.goal.z = 1; const asp = this.aspect || 1; this.goal.dist = Math.min(130, Math.max(40, 125 / Math.max(0.5, asp))); }
+  zoom(f) { this.goal.dist = Math.max(14, Math.min(this.maxDist(), this.goal.dist * f)); }
+  // Distancia para ver la isla entera (≈112 de ancho) también en un teléfono vertical
+  maxDist() { const asp = this.aspect || 1; return Math.min(300, Math.max(130, 60 / (Math.tan((19 * Math.PI) / 180) * asp))); }
+  fitAll() { this.goal.x = 0; this.goal.z = 1; const asp = this.aspect || 1; this.goal.dist = Math.min(this.maxDist(), Math.max(40, 125 / Math.max(0.5, asp), 60 / (Math.tan((19 * Math.PI) / 180) * asp))); }
   placeCam(dt) {
     const v = this.view, gl = this.goal, k = 1 - Math.exp(-dt * 6);
     v.x += (gl.x - v.x) * k; v.z += (gl.z - v.z) * k; v.dist += (gl.dist - v.dist) * k;
@@ -186,6 +188,8 @@ export class MambiScenes {
     this.aspect = size.x / Math.max(1, size.y);
     this.cam.aspect = this.aspect; this.cam.updateProjectionMatrix();
     this.cam.position.set(v.x, v.dist * 0.82, v.z + v.dist * 0.58);
+    if (this.map?.fog) { this.map.fog.near = Math.max(90, v.dist * 0.9); this.map.fog.far = Math.max(230, v.dist * 1.9); }
+    if (this.cam.far < v.dist * 2.2) { this.cam.far = v.dist * 2.2; }
     this.cam.lookAt(v.x, 0, v.z);
   }
   project(p) {

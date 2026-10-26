@@ -20,6 +20,8 @@ export function ensureMambi(s) {
     farms,
     stats: { battles: int(st.battles), won: int(st.won), lost: int(st.lost), loot: int(st.loot), income: int(st.income) },
     intro: !!d.intro,
+    // Por ciudad (reservado para contraataques del Régimen): dueño y guarnición mambisa que la defiende.
+    garrison: Object.fromEntries(Object.entries(obj(d.garrison)).filter(([id]) => CITY_BY_ID[id]).map(([id, g]) => [id, { owner: obj(g).owner === 'regimen' ? 'regimen' : 'mambi', troops: int(obj(g).troops) }])),
   };
   if (!s.res) s.res = {};
   s.res.viveres = int(s.res.viveres);
@@ -131,10 +133,30 @@ export function installMambi(Sim) {
     const units = c.farm[2] * FARM_LEVELS[L].mult;
     return { pesos: units * g.value, viveres: units * g.viveres };
   };
+  // Por qué no se puede fundar la finca (null = se puede). Siempre en español y concreto.
+  P.mbCanFarm = function (id) {
+    const c = CITY_BY_ID[id];
+    if (!c) return 'Esa ciudad no existe.';
+    if (!this.mbFreed(id)) return `Primero hay que liberar ${c.name}: la finca se funda en una ciudad libre.`;
+    if (this.mb().farms[id]) return `${c.name} ya tiene su finca.`;
+    const falta = c.farm[1] - Math.floor(this.s.money);
+    if (falta > 0) return `Te faltan ${falta.toLocaleString('es')} pesos (cuesta ${c.farm[1].toLocaleString('es')}). Cobra la renta o vende en la finca.`;
+    return null;
+  };
+  P.mbCanUpgrade = function (id) {
+    const f = this.mb().farms[id];
+    if (!f) return 'Primero funda la finca.';
+    if (f.lvl >= 3) return 'La finca ya está en el nivel máximo.';
+    const falta = this.mbUpgradePrice(id) - Math.floor(this.s.money);
+    if (falta > 0) return `Te faltan ${falta.toLocaleString('es')} pesos para el nivel ${f.lvl + 1}.`;
+    return null;
+  };
+  // Ciudades libres que todavía no tienen finca
+  P.mbFarmless = function () { const M = this.mb(); return M.freed.filter((id) => !M.farms[id]); };
   P.mbBuyFarm = function (id) {
     const c = CITY_BY_ID[id], M = this.mb();
-    if (!this.mbFreed(id)) { this.h.toast('Primero hay que liberar la ciudad.'); return false; }
-    if (M.farms[id]) return false;
+    const why = this.mbCanFarm(id);
+    if (why) { this.h.toast(why); this.h.sfx('error'); return false; }
     if (!this.spend(c.farm[1])) return false;
     M.farms[id] = { lvl: 1, at: now(), bank: 0 };
     this.addXp(40 + c.n * 10);
@@ -146,12 +168,15 @@ export function installMambi(Sim) {
   P.mbUpgradePrice = function (id) { const f = this.mb().farms[id]; if (!f || f.lvl >= 3) return 0; return Math.round(CITY_BY_ID[id].farm[1] * FARM_LEVELS[f.lvl + 1].up); };
   P.mbUpgradeFarm = function (id) {
     const f = this.mb().farms[id], price = this.mbUpgradePrice(id);
+    const why = this.mbCanUpgrade(id);
+    if (why) { this.h.toast(why); this.h.sfx('error'); return false; }
     if (!f || !price) return false;
     this.mbAccrue();
     if (!this.spend(price)) return false;
     f.lvl++;
     this.addXp(60 + f.lvl * 30);
     this.h.sfx('buy');
+    this.h.toast(`Finca de ${CITY_BY_ID[id].name} al nivel ${f.lvl}: ahora rinde ×${FARM_LEVELS[f.lvl].mult}.`);
     this.mbChanged();
     return true;
   };

@@ -1,6 +1,6 @@
 // Prueba de la Campaña Mambisa: desbloqueo (?dev=1), mapa, campamento, víveres, batalla animada, ciudad libre,
 // finca regional y renta, volver a la finca, guardado. Uso: URL=http://127.0.0.1:4180/ node tests/mambi.mjs  · ONLY=desktop,phone
-import { chromium } from 'playwright';
+import { chromium, webkit, devices } from 'playwright';
 import fs from 'node:fs';
 const BASE = (process.env.URL || 'http://localhost:4173/') + '?dev=1';
 const OUT = new globalThis.URL('../screenshots/', import.meta.url).pathname;
@@ -11,11 +11,15 @@ const VPS = {
   ipad: { viewport: { width: 820, height: 1180 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 },
   phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 },
   'phone-land': { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 },
+  'iphone-webkit': { ...devices['iPhone 13'], webkit: true },
+  'ipad-webkit': { ...devices['iPad (gen 7)'], webkit: true },
 };
+let wk = null;
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : Object.keys(VPS);
 const report = {};
-async function run(name, opts) {
-  const ctx = await browser.newContext(opts);
+async function run(name, { webkit: useWk, ...opts }) {
+  if (useWk && !wk) wk = await webkit.launch();
+  const ctx = await (useWk ? wk : browser).newContext(opts);
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -26,7 +30,7 @@ async function run(name, opts) {
   const closeModals = () => ev(() => document.querySelectorAll('[data-act="modal-close"]').forEach((b) => b.click()));
   const shot = (n) => page.screenshot({ path: OUT + `mambi-${name}-${n}.png`, timeout: 120000 });
   const res = { errors };
-  await page.goto(BASE); await sleep(1200); await page.click('#start'); await sleep(800);
+  await page.goto(BASE); await sleep(1500); if (opts.hasTouch) await page.tap('#start'); else await page.click('#start'); await sleep(800);
   await ev(() => { window.__finca.sim.s.tutorialDone = true; });
   res.hiddenAtStart = await ev(() => document.getElementById('btn-mambi')?.classList.contains('hidden'));
   res.lockedAtStart = await ev(() => !window.__finca.sim.mbUnlocked());
@@ -67,24 +71,70 @@ async function run(name, opts) {
   await shot('5-resultado');
   res.freed = await ev(() => [...window.__finca.sim.mb().freed]);
   await closeModals(); await sleep(300);
-  // finca regional + renta
-  await click('.mb-city[data-id="manzanillo"]'); await sleep(400);
-  await click('[data-act="mbfarm"]'); await sleep(300);
-  res.farm = await ev(() => !!window.__finca.sim.mb().farms.manzanillo);
-  await ev(() => window.__finca.sim.mbCheat('rent'));
-  await ev(() => window.__finca.ui.refreshSheet()); await sleep(300);
+  // ---- fincas regionales con TOQUES reales (dedo en teléfono/iPad, ratón en escritorio)
+  const touch = !!opts.hasTouch;
+  const tap = async (sel) => {
+    const r = await ev((sel) => { const e = document.querySelector(sel); if (!e) return null; e.scrollIntoView?.({ block: 'nearest' }); const b = e.getBoundingClientRect(); const x = b.x + b.width / 2, y = b.y + b.height / 2; const h = document.elementFromPoint(x, y); return { x, y, inView: b.top >= 0 && b.bottom <= innerHeight && b.left >= 0 && b.right <= innerWidth, hitsIt: !!h && (h === e || e.contains(h)), disabled: !!e.disabled }; }, sel);
+    if (!r) return { missing: true };
+    if (touch) await page.touchscreen.tap(r.x, r.y); else await page.mouse.click(r.x, r.y);
+    await sleep(450);
+    return r;
+  };
+  const sheetTitle = () => ev(() => (document.getElementById('sheet-wrap').classList.contains('hidden') ? null : document.getElementById('sheet-title').textContent));
+  const farms = () => ev(() => Object.fromEntries(Object.entries(window.__finca.sim.mb().farms).map(([k, f]) => [k, f.lvl])));
+  res.taps = {};
+  // sin pesos: el botón está apagado y dice por qué
+  const richMoney = await ev(() => window.__finca.sim.s.money);
+  await ev(() => { window.__finca.sim.s.money = 100; });
+  res.taps.badge1 = await ev(() => document.getElementById('mb-nofarm').textContent);
+  res.taps.labelManz = await tap('.mb-city[data-id="manzanillo"]');
+  res.taps.sheetManz = await sheetTitle();
+  res.taps.poorWhy = await ev(() => document.querySelector('#sheet-body .mb-why')?.textContent || null);
+  res.taps.poorDisabled = await ev(() => !!document.querySelector('#sheet-body [data-act="mbfarm"]')?.disabled);
+  await shot('5a-ciudad-sin-pesos');
+  await ev((m) => { window.__finca.sim.s.money = m; }, richMoney); await sleep(700); // la hoja se refresca sola
+  res.taps.fundar1 = await tap('#sheet-body [data-act="mbfarm"]');
+  res.farm = (await farms()).manzanillo === 1;
   await shot('5b-finca-regional');
+  await ev(() => window.__finca.sim.mbCheat('rent')); await sleep(600);
   const m0 = await ev(() => window.__finca.sim.s.money);
-  await click('[data-act="mbrent"]'); await sleep(300);
+  await tap('#sheet-body [data-act="mbrent"]');
   res.rent = (await ev(() => window.__finca.sim.s.money)) - m0;
-  await ev(() => window.__finca.ui.closeSheet());
-  // segunda ciudad con más tropa (asedio)
+  await tap('#sheet-wrap [data-act="close"]');
+  // segunda ciudad: liberar y fundar desde el botón del cartel de victoria
   await ev(() => window.__finca.sim.mbCheat('army'));
-  await click('.mb-city[data-id="bayamo"]'); await sleep(300);
-  await click('[data-act="mbattack"]'); await sleep(300);
-  await click('[data-act="mbgo"][data-tactic="asedio"]'); await sleep(500);
-  await click('[data-act="mbskip"]');
-  await waitFor(() => !window.__finca.mambi.battle, 20000); await closeModals(); await sleep(1500);
+  await tap('.mb-city[data-id="bayamo"]');
+  await tap('#sheet-body [data-act="mbattack"]');
+  await tap('#sheet-body [data-act="mbgo"][data-tactic="asedio"]'); await sleep(600);
+  await tap('#mb-skip');
+  await waitFor(() => !window.__finca.mambi.battle && !document.getElementById('modal-wrap').classList.contains('hidden'), 20000);
+  res.taps.winBtn = await tap('#modal [data-act="mbfarmgo"]');
+  res.taps.sheetBay = await sheetTitle();
+  res.taps.fundar2 = await tap('#sheet-body [data-act="mbfarm"]');
+  await tap('#sheet-wrap [data-act="close"]');
+  // tercera ciudad: tocar «próxima: …» arriba para volar a ella, liberarla y fundar tocando su etiqueta
+  res.taps.title = await tap('#mb-title'); await sleep(900);
+  res.taps.sheetBar = await sheetTitle();
+  await tap('#sheet-body [data-act="mbattack"]');
+  await tap('#sheet-body [data-act="mbgo"][data-tactic="asedio"]'); await sleep(600);
+  await tap('#mb-skip');
+  await waitFor(() => !window.__finca.mambi.battle && !document.getElementById('modal-wrap').classList.contains('hidden'), 20000);
+  await tap('#modal [data-act="modal-close"]'); await sleep(1500);
+  res.taps.badge3 = await ev(() => document.getElementById('mb-nofarm').textContent);
+  res.taps.labelBar = await tap('.mb-city[data-id="baracoa"]');
+  res.taps.sheetBar2 = await sheetTitle();
+  await shot('5c-ciudad-libre');
+  res.taps.fundar3 = await tap('#sheet-body [data-act="mbfarm"]');
+  await tap('#sheet-wrap [data-act="close"]');
+  // lista de fincas y mejoras 1 → 2 → 3
+  res.taps.farmsBtn = await tap('#mb-farms-btn');
+  res.taps.farmsSheet = await sheetTitle();
+  await tap('#sheet-body [data-act="mbup"][data-id="manzanillo"]');
+  await tap('#sheet-body [data-act="mbup"][data-id="manzanillo"]');
+  res.taps.maxShown = await ev(() => /Nivel máximo/.test(document.querySelector('#sheet-body [data-farm="manzanillo"]')?.textContent || ''));
+  await shot('5d-fincas');
+  await tap('#sheet-wrap [data-act="close"]');
+  res.farmsAfter = await farms();
   res.freed2 = await ev(() => [...window.__finca.sim.mb().freed]);
   await click('[data-act="mbfit"]'); await sleep(1500);
   await shot('6-isla');
@@ -100,11 +150,16 @@ async function run(name, opts) {
   await page.evaluate(() => { const g = window.__finca; localStorage.setItem('lafinca-v2', JSON.stringify({ ...g.sim.s, savedAt: Date.now() / 1000 })); });
   await page.reload(); await sleep(1500);
   res.afterReload = await ev(() => { const m = window.__finca.sim.s.ext.mambi; return { freed: m.freed.length, farms: Object.keys(m.farms).length, army: m.army.inf + m.army.cab, viveres: window.__finca.sim.s.res.viveres }; });
-  res.ok = !errors.length && res.unlocked && res.btnVisible && res.mapOpen && res.army.inf === 5 && res.army.cab === 3 && res.army.cart === 1 && res.viveresGain > 0 && res.inBattle && res.battleDone && res.freed.includes('manzanillo') && res.farm && res.rent > 0 && res.freed2.length === 2 && res.backToFarm && res.farmLoopRunning && res.afterReload.freed === 2;
+  res.ok = !errors.length && res.unlocked && res.btnVisible && res.mapOpen && res.army.inf === 5 && res.army.cab === 3 && res.army.cart === 1 && res.viveresGain > 0 && res.inBattle && res.battleDone && res.freed.includes('manzanillo') && res.farm && res.rent > 0 && res.freed2.length === 3 && res.backToFarm && res.farmLoopRunning && res.afterReload.freed === 3 && res.afterReload.farms === 3
+    && res.taps.sheetManz?.startsWith('Manzanillo') && /Te faltan/.test(res.taps.poorWhy || '') && res.taps.poorDisabled && res.taps.badge1 === '1'
+    && res.taps.fundar1.hitsIt && res.taps.fundar2.hitsIt && res.taps.fundar3.hitsIt && res.taps.labelBar.hitsIt && res.taps.winBtn.hitsIt
+    && res.taps.sheetBay?.startsWith('Bayamo') && res.taps.sheetBar?.startsWith('Baracoa') && res.taps.sheetBar2?.startsWith('Baracoa') && res.taps.badge3 === '1'
+    && res.farmsAfter.manzanillo === 3 && res.farmsAfter.bayamo === 1 && res.farmsAfter.baracoa === 1 && res.taps.maxShown && res.taps.farmsSheet?.startsWith('Fincas');
+  if (!res.ok) process.exitCode = 1;
   report[name] = res;
   console.log(name, JSON.stringify(res));
   await ctx.close();
 }
 for (const n of ONLY) await run(n, VPS[n]);
 fs.writeFileSync(new globalThis.URL('../mambi-report.json', import.meta.url).pathname, JSON.stringify(report, null, 2));
-await browser.close();
+await browser.close(); if (wk) await wk.close();

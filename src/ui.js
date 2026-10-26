@@ -37,6 +37,27 @@ export function unlocksAt(level) {
 
 const STRUCT_ICON = { bodega: 'shop', escuela: 'xp', iglesia: 'house', anden: 'truck', vacas: 'leche', chivos: 'queso', pozo: 'water', cerdos: 'carne', trapiche: 'azucar', gallinero2: 'hen', fogon2: 'fire', casaTabaco: 'puros' };
 
+// Actualiza un contenedor con HTML nuevo SIN reemplazar los nodos que siguen iguales en estructura: así un botón
+// que se está tocando (touchstart → touchend) no desaparece cuando la hoja se refresca sola cada medio segundo.
+function patchNode(cur, nxt) {
+  if (cur.nodeType !== nxt.nodeType || cur.nodeName !== nxt.nodeName) { cur.replaceWith(nxt); return; }
+  if (cur.nodeType === 3 || cur.nodeType === 8) { if (cur.nodeValue !== nxt.nodeValue) cur.nodeValue = nxt.nodeValue; return; }
+  if (cur.nodeType !== 1) return;
+  for (const a of [...cur.attributes]) if (!nxt.hasAttribute(a.name)) cur.removeAttribute(a.name);
+  for (const a of [...nxt.attributes]) if (cur.getAttribute(a.name) !== a.value) cur.setAttribute(a.name, a.value);
+  if ('disabled' in cur && cur.disabled !== nxt.hasAttribute('disabled')) cur.disabled = nxt.hasAttribute('disabled');
+  patchChildren(cur, nxt);
+}
+function patchChildren(cur, nxt) {
+  const a = [...cur.childNodes], b = [...nxt.childNodes];
+  for (let i = 0; i < b.length; i++) { if (i < a.length) patchNode(a[i], b[i]); else cur.appendChild(b[i]); }
+  for (let i = b.length; i < a.length; i++) a[i].remove();
+}
+export function patchHtml(el, html) {
+  const t = document.createElement('template'); t.innerHTML = html;
+  patchChildren(el, t.content);
+}
+
 export class UI {
   constructor(game) {
     this.g = game;
@@ -230,7 +251,7 @@ export class UI {
   refreshSheet() {
     if (this.sheet) {
       const html = this.sheet.render();
-      if (html !== this.sheetHtml) { $('#sheet-body').innerHTML = html; this.sheetHtml = html; }
+      if (html !== this.sheetHtml) { patchHtml($('#sheet-body'), html); this.sheetHtml = html; }
     }
     this.refreshHud();
   }

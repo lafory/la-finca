@@ -21,14 +21,25 @@ const STYLE = `
 #mambi.hidden{display:none}
 #ui.mambi-on>*:not(#mambi):not(.sheet-wrap):not(.modal-wrap):not(.toasts){display:none!important}
 #mambi .mb-top{position:absolute;left:calc(8px + var(--sal,0px));right:calc(8px + var(--sar,0px));top:calc(8px + var(--sat,0px));display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-#mambi .mb-title{position:absolute;left:50%;transform:translateX(-50%);top:calc(56px + var(--sat,0px));font:700 15px/1.2 inherit;color:#fff7e0;text-shadow:0 2px 4px rgba(0,0,0,.45);white-space:nowrap;pointer-events:none}
+#mambi .mb-title{position:absolute;left:50%;transform:translateX(-50%);top:calc(104px + var(--sat,0px));font:700 14px/1.2 inherit;color:#fff7e0;background:rgba(42,31,21,.72);border:0;border-radius:14px;padding:6px 12px;white-space:nowrap;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+@media (min-width:700px){#mambi .mb-title{top:calc(60px + var(--sat,0px))}}
 #mambi .mb-bottom{position:absolute;left:0;right:0;bottom:calc(10px + var(--sab,0px));display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 8px}
 #mambi .mb-zoom{position:absolute;right:calc(10px + var(--sar,0px));bottom:calc(84px + var(--sab,0px));display:flex;flex-direction:column;gap:8px}
-#mambi .mb-city{position:absolute;transform:translate(-50%,-135%);padding:3px 8px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap;background:rgba(246,234,208,.95);border:2px solid #5a4636;color:#3a2a1e;box-shadow:0 2px 0 rgba(60,40,20,.3);display:flex;align-items:center;gap:4px;cursor:pointer}
+#mambi .mb-city{position:absolute;transform:translate(-50%,-135%);min-height:30px;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;white-space:nowrap;background:rgba(246,234,208,.95);border:2px solid #5a4636;color:#3a2a1e;box-shadow:0 2px 0 rgba(60,40,20,.3);display:flex;align-items:center;gap:4px;cursor:pointer}
 #mambi .mb-city .ico{width:16px;height:16px}
 #mambi .mb-city.free{background:#e7f2d2;border-color:#3f6a2a}
 #mambi .mb-city.next{background:#ffe08a;border-color:#a8601a;animation:mbPulse 1.2s ease-in-out infinite}
 #mambi .mb-city.locked{opacity:.72}
+#mambi .mb-city.nofarm{background:#fff3c4;border-color:#3f6a2a;box-shadow:0 0 0 3px rgba(255,210,90,.7),0 2px 0 rgba(60,40,20,.3)}
+#mambi .mb-city .nf{display:inline-flex;align-items:center;margin-left:2px;padding:1px 6px;border-radius:9px;background:#3f6a2a;color:#fff;font-size:11px}
+#mambi .mb-city.tiny{font-size:0;padding:0;min-height:0;width:14px;height:14px;border-radius:50%;gap:0;transform:translate(-50%,-150%)}
+#mambi .mb-city.tiny .ico,#mambi .mb-city.tiny .nf{display:none}
+#mambi .mb-bottom .big{position:relative}
+#mambi .mb-bottom .big em{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;background:#c8332b;color:#fff;font:700 12px/20px inherit;font-style:normal;text-align:center;padding:0 4px}
+#mambi .mb-bottom .big em.hidden{display:none}
+.mb-why{display:block;color:#a0503c;font-weight:700}
+#ui.mambi-on>.toasts{z-index:7;top:calc(150px + var(--sat,0px))}
+@media (max-width:520px){.sheet [data-farm]{flex-wrap:wrap}.sheet [data-farm] .row-main{flex:1 1 60%}.sheet [data-farm]>.btn{flex:1 1 100%}}
 @keyframes mbPulse{50%{transform:translate(-50%,-145%)}}
 #mambi .mb-skip{position:absolute;right:calc(12px + var(--sar,0px));bottom:calc(14px + var(--sab,0px))}
 #mambi .mb-banner{position:absolute;left:50%;top:calc(70px + var(--sat,0px));transform:translateX(-50%);background:rgba(42,31,21,.85);color:#fbf1da;padding:8px 14px;border-radius:14px;font-weight:700;white-space:nowrap}
@@ -62,11 +73,12 @@ export class MambiUI {
         <div class="chip">${ICON.azucar || ICON.cane}<b id="mb-sug">0</b><small>azúcar</small></div>
         <div class="chip">${ICON.soldier}<b id="mb-army">0</b></div>
       </div>
-      <div class="mb-title" id="mb-title">La Campaña Mambisa</div>
+      <button class="mb-title" id="mb-title" data-act="mbcity">La Campaña Mambisa</button>
       <div id="mb-cities"></div>
       <div class="mb-zoom"><button class="round" data-act="mbzoom" data-f="0.75" aria-label="Acercar">+</button><button class="round" data-act="mbzoom" data-f="1.33" aria-label="Alejar">−</button><button class="round cam" data-act="mbfit" aria-label="Ver toda la isla">${ICON.land}<span>Isla</span></button></div>
       <div class="mb-bottom" id="mb-bottom">
         <button class="big" data-act="mbcamp">${ICON.soldier}<span>Campamento</span></button>
+        <button class="big" data-act="mbfarms" id="mb-farms-btn">${ICON.field || ICON.land}<span>Fincas</span><em id="mb-nofarm" class="hidden">0</em></button>
         <button class="big" data-act="mbfood">${ICON.food}<span>Mandar víveres</span></button>
         <button class="big" data-act="mbrent">${ICON.coin}<span id="mb-rent">Renta</span></button>
       </div>
@@ -159,23 +171,51 @@ export class MambiUI {
     const p = sim.mbPending();
     set('#mb-rent', p.pesos >= 1 ? `Cobrar ${k1(p.pesos)}` : 'Renta');
     const M = sim.mb(), nx = sim.mbNext();
-    set('#mb-title', nx ? `Libres ${M.freed.length}/${CITIES.length} · próxima: ${nx.name}` : '¡Toda la isla es libre!');
+    set('#mb-title', nx ? `Libres ${M.freed.length}/${CITIES.length} · próxima: ${nx.name} ›` : '¡Toda la isla es libre!');
+    const tEl = this.el.querySelector('#mb-title'), tId = nx?.id || CITIES[CITIES.length - 1].id;
+    if (tEl.dataset.id !== tId) tEl.dataset.id = tId;
+    const nf = sim.mbFarmless().length, badge = this.el.querySelector('#mb-nofarm');
+    if (badge.textContent !== String(nf)) badge.textContent = nf;
+    if (badge.classList.contains('hidden') !== !nf) badge.classList.toggle('hidden', !nf);
     if (this.ver !== sim.mbVer) {
       this.ver = sim.mbVer;
       if (this.scenes.built) this.scenes.recolor();
       for (const c of CITIES) {
-        const b = this.cityEls[c.id], free = sim.mbFreed(c.id), isNext = nx?.id === c.id;
-        b.className = `mb-city ${free ? 'free' : isNext ? 'next' : 'locked'}`;
-        b.innerHTML = `${free ? ICON.flagcu : isNext ? ICON.machete : ''}${c.name}${M.farms[c.id] ? ` ${ICON[GOODS[c.farm[0]].icon] || ''}` : ''}`;
+        const b = this.cityEls[c.id], free = sim.mbFreed(c.id), isNext = nx?.id === c.id, farm = M.farms[c.id];
+        b.dataset.kind = free ? (farm ? 'free' : 'nofarm') : isNext ? 'next' : 'locked';
+        b.dataset.prio = { nofarm: 3, next: 2, free: 1, locked: 0 }[b.dataset.kind];
+        b.className = `mb-city ${free ? 'free' : isNext ? 'next' : 'locked'}${free && !farm ? ' nofarm' : ''}`;
+        b.setAttribute('aria-label', `${c.name}${free ? (farm ? ' · libre, con finca' : ' · libre, sin finca') : ''}`);
+        b.innerHTML = `${free ? ICON.flagcu : isNext ? ICON.machete : ''}${c.name}${farm ? ` ${ICON[GOODS[c.farm[0]].icon] || ''}` : free ? '<span class="nf">+ Finca</span>' : ''}`;
+        b.dataset.w = '';
       }
     }
   }
+  // Etiquetas de ciudad sin encimarse: primero las libres sin finca, luego la próxima, las libres y las demás. Si una
+  // choca con otra ya puesta se corre arriba/abajo; si no cabe, las de baja prioridad quedan como un puntico tocable.
   placeLabels() {
     if (!this.scenes.built) return;
-    for (const c of CITIES) {
-      const p = this.scenes.project(this.scenes.cityPos[c.id]), b = this.cityEls[c.id];
-      b.style.left = `${p.x.toFixed(1)}px`; b.style.top = `${p.y.toFixed(1)}px`;
-      b.style.display = p.vis ? '' : 'none';
+    const W = this.el.clientWidth, H = this.el.clientHeight, placed = [];
+    const list = CITIES.map((c) => ({ c, b: this.cityEls[c.id], p: this.scenes.project(this.scenes.cityPos[c.id]) }))
+      .sort((a, b) => (+b.b.dataset.prio || 0) - (+a.b.dataset.prio || 0));
+    const hit = (r) => placed.some((q) => r.l < q.r && r.r > q.l && r.t < q.b && r.b > q.t);
+    for (const { b, p } of list) {
+      const prio = +b.dataset.prio || 0;
+      if (!p.vis || p.x < -40 || p.x > W + 40 || p.y < -10 || p.y > H + 60) { if (b.style.display !== 'none') b.style.display = 'none'; continue; }
+      if (b.style.display === 'none') b.style.display = '';
+      b.classList.remove('tiny');
+      if (!b.dataset.w) b.dataset.w = `${b.offsetWidth}|${b.offsetHeight}`;
+      const [w, h] = b.dataset.w.split('|').map(Number);
+      let y = p.y, ok = false;
+      for (const dy of [0, -(h + 3), h + 3, -2 * (h + 3), 2 * (h + 3)]) {
+        const top = p.y + dy - h * 1.35;
+        const r = { l: p.x - w / 2, r: p.x + w / 2, t: top, b: top + h };
+        if (!hit(r)) { y = p.y + dy; placed.push(r); ok = true; break; }
+      }
+      if (!ok && prio <= 1) { b.classList.add('tiny'); y = p.y; }
+      else if (!ok) { const top = p.y - h * 1.35; placed.push({ l: p.x - w / 2, r: p.x + w / 2, t: top, b: top + h }); }
+      b.style.left = `${p.x.toFixed(1)}px`; b.style.top = `${y.toFixed(1)}px`;
+      b.style.zIndex = String(10 + prio);
     }
   }
 
@@ -195,6 +235,8 @@ export class MambiUI {
       case 'mbattack': return this.openTactics(d.id);
       case 'mbgo': return this.startBattle(d.id, d.tactic);
       case 'mbfarm': sim.mbBuyFarm(d.id); ui.refreshSheet(); return;
+      case 'mbfarms': return this.openFarms();
+      case 'mbfarmgo': ui.act('modal-close', {}); this.scenes.focus(d.id); return this.openCity(d.id);
       case 'mbup': sim.mbUpgradeFarm(d.id); ui.refreshSheet(); return;
       case 'mbskip': if (this.battle) this.scenes.bt = 6.7; return;
       case 'mbcheat': sim.mbCheat(d.id); ui.refreshSheet(); ui.refreshHud(); if (d.id === 'unlock') this.refreshButton(); return;
@@ -239,7 +281,8 @@ export class MambiUI {
       const g = GOODS[c.farm[0]];
       let out = '';
       if (!free) {
-        out += `<p class="note">Guardias del Régimen: <b>${c.guards}</b> · terreno: ${c.terrain}${c.terrain === 'monte' ? ' (bueno para emboscadas)' : ''}. Al liberarla: botín de ${k1(c.guards * 50)} pesos y una finca de ${g.name.toLowerCase()}.</p>`;
+        out += `<p class="note">Guardias del Régimen: <b>${c.guards}</b> · terreno: ${c.terrain}${c.terrain === 'monte' ? ' (bueno para emboscadas)' : ''}. Al liberarla: botín de ${k1(c.guards * 50)} pesos.</p>`;
+        out += this.farmRow(id);
         out += this.armyLine();
         if (nx?.id === id) {
           const best = Math.max(...TACTIC_ORDER.map((t) => sim.mbChance(t, id)));
@@ -248,15 +291,39 @@ export class MambiUI {
         return out + this.cheats();
       }
       out += `<p class="note">${ICON.flagcu} ¡${c.name} es libre! El pueblo celebra en la plaza.</p>`;
-      const f = M.farms[id];
-      if (!f) {
-        const r = sim.mbFarmRate(id, 1);
-        out += `<div class="row"><div class="row-ico">${ICON[g.icon] || ICON.field}</div><div class="row-main"><b>Fundar finca de ${g.name.toLowerCase()}</b><small>Renta ≈ ${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto, también con el juego cerrado (hasta 8 h).</small></div>${this.priceBtn(c.farm[1], 'mbfarm', `data-id="${id}"`, 'Fundar · ')}</div>`;
-      } else {
-        const r = sim.mbFarmRate(id), up = sim.mbUpgradePrice(id);
-        out += `<div class="row"><div class="row-ico">${ICON[g.icon] || ICON.field}</div><div class="row-main"><b>Finca de ${g.name.toLowerCase()} · nivel ${f.lvl}</b><small>${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto · por cobrar ${k1(f.bank)}</small></div>${up ? this.priceBtn(up, 'mbup', `data-id="${id}"`, `Nivel ${f.lvl + 1} (×${FARM_LEVELS[f.lvl + 1].mult}) · `) : '<button class="btn" disabled>Nivel máximo</button>'}</div>`;
+      out += this.farmRow(id);
+      if (M.farms[id]) out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Se junta sola, también con el juego cerrado (hasta 8 h).</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
+      const otras = sim.mbFarmless().filter((x) => x !== id);
+      if (otras.length) out += `<p class="note">Otras ciudades libres sin finca: ${otras.map((x) => `<b>${CITY_BY_ID[x].name}</b>`).join(', ')}. Toca «Fincas» abajo para verlas todas.</p>`;
+      return out + this.cheats();
+    });
+  }
+  // Fila de la finca regional de una ciudad: tipo, precio, renta y por qué no se puede (si no se puede).
+  farmRow(id) {
+    const sim = this.sim, c = CITY_BY_ID[id], g = GOODS[c.farm[0]], f = sim.mb().farms[id], ico = ICON[g.icon] || ICON.field;
+    if (!f) {
+      const r = sim.mbFarmRate(id, 1), why = sim.mbCanFarm(id);
+      return `<div class="row ${why ? '' : 'sel'}" data-farm="${id}"><div class="row-ico">${ico}</div><div class="row-main"><b>Fundar finca de ${g.name.toLowerCase()}${sim.mbFreed(id) ? '' : ` en ${c.name}`}</b><small>Cuesta ${c.farm[1].toLocaleString('es')} pesos · renta ≈ ${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto, también con el juego cerrado (hasta 8 h).${why ? `<span class="mb-why">${why}</span>` : ''}</small></div><button class="btn ${why ? 'poor' : 'primary'}" data-act="mbfarm" data-id="${id}" ${why ? 'disabled' : ''}>Fundar finca${ICON.coin}${k1(c.farm[1])}</button></div>`;
+    }
+    const r = sim.mbFarmRate(id), up = sim.mbUpgradePrice(id), why = sim.mbCanUpgrade(id);
+    const btn = up ? `<button class="btn ${why ? 'poor' : ''}" data-act="mbup" data-id="${id}" ${why ? 'disabled' : ''}>Mejorar a nivel ${f.lvl + 1} (×${FARM_LEVELS[f.lvl + 1].mult})${ICON.coin}${k1(up)}</button>` : '<button class="btn" disabled>Nivel máximo</button>';
+    return `<div class="row" data-farm="${id}"><div class="row-ico">${ico}</div><div class="row-main"><b>Finca de ${g.name.toLowerCase()} en ${c.name} · nivel ${f.lvl}/3</b><small>${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto.${up && why ? `<span class="mb-why">${why}</span>` : ''}</small></div>${btn}</div>`;
+  }
+  // Lista de todas las fincas regionales: las libres sin finca primero, luego las fundadas y las que faltan por liberar.
+  openFarms() {
+    this.ui.openSheet('Fincas regionales · Cuba libre', () => {
+      const sim = this.sim, M = sim.mb(), sinFinca = sim.mbFarmless();
+      let out = `<p class="note">Cada ciudad libre puede tener su finca. Libres: <b>${M.freed.length}</b> · con finca: <b>${Object.keys(M.farms).length}</b> · sin finca: <b>${sinFinca.length}</b>. Tienes ${k1(this.s.money)} pesos.</p>`;
+      if (!M.freed.length) out += `<p class="note">Todavía no hay ciudades libres. Libera ${sim.mbNext()?.name} desde el mapa y aquí podrás fundar su finca.</p>`;
+      if (sinFinca.length) { out += '<h3>Libres sin finca</h3>'; for (const id of sinFinca) out += this.farmRow(id); }
+      const con = M.freed.filter((id) => M.farms[id]);
+      if (con.length) {
+        out += '<h3>Fincas fundadas</h3>';
+        for (const id of con) out += this.farmRow(id);
         out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Pendiente: ${k1(sim.mbPending().pesos)} pesos</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
       }
+      const falta = CITIES.filter((c) => !sim.mbFreed(c.id));
+      if (falta.length) out += `<h3>Por liberar</h3><p class="note">${falta.map((c) => `${c.name} (${GOODS[c.farm[0]].name.toLowerCase()})`).join(' · ')}</p>`;
       return out + this.cheats();
     });
   }
@@ -298,7 +365,7 @@ export class MambiUI {
     const lostTxt = lost ? `${r.lost.inf ? `${r.lost.inf} infantes ` : ''}${r.lost.cab ? `${r.lost.cab} jinetes ` : ''}${r.lost.cart ? `${r.lost.cart} carretas ` : ''}se dispersaron y volvieron a sus casas.` : 'Toda la tropa volvió entera.';
     this.g.sound.play(r.win ? 'level' : 'error');
     save(this.s);
-    if (r.win) this.ui.modal(`<h2>${ICON.flagcu} ¡${c.name} es libre!</h2><p>Fuerza ${r.power} contra ${r.guards} guardias: los guardias del Régimen se retiraron y la bandera de la estrella solitaria ondea en la plaza.</p><p>Botín: <b>+${k1(r.loot)} pesos</b> · +${r.xp} XP. ${lostTxt}</p><p>${r.done ? '¡Toda la isla es libre! Fiesta en todas las plazas.' : `Funda una finca de ${GOODS[c.farm[0]].name.toLowerCase()} en ${c.name} para financiar la tropa.`}</p><button class="btn primary" data-act="modal-close">¡Viva Cuba libre!</button>`);
+    if (r.win) this.ui.modal(`<h2>${ICON.flagcu} ¡${c.name} es libre!</h2><p>Fuerza ${r.power} contra ${r.guards} guardias: los guardias del Régimen se retiraron y la bandera de la estrella solitaria ondea en la plaza.</p><p>Botín: <b>+${k1(r.loot)} pesos</b> · +${r.xp} XP. ${lostTxt}</p><p>${r.done ? '¡Toda la isla es libre! Fiesta en todas las plazas.' : `Funda una finca de ${GOODS[c.farm[0]].name.toLowerCase()} en ${c.name} para financiar la tropa.`}</p><div class="modal-btns"><button class="btn" data-act="modal-close">¡Viva Cuba libre!</button><button class="btn primary" data-act="mbfarmgo" data-id="${c.id}">Fundar finca en ${c.name}</button></div>`);
     else this.ui.modal(`<h2>Retirada en ${c.name}</h2><p>Fuerza ${r.power} contra ${r.guards} guardias: esta vez no alcanzó y la columna se retiró a la manigua. ${lostTxt}</p><p>Recluta más jinetes, lleva carretas o prueba otra táctica. +${r.xp} XP por la experiencia.</p><button class="btn primary" data-act="modal-close">Volver al mapa</button>`);
   }
   refreshButton() {
