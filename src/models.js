@@ -850,3 +850,211 @@ export function siteGeo(w, h) {
   b.box(0.7, 0.36, 0.04, 0xf3e3bf, { x: hw - 0.2, z: hh - 0.06, y: 0.55 });
   return b.build();
 }
+
+// ---------------------------------------------------------------- v4: manigua, batey
+// Guásima/algarrobo: tronco y copa ancha (hi) o un solo bulto (lo, para lejos)
+export function treeGeo(seed = 1, lo = false) {
+  const r = rng(seed);
+  const b = new Builder();
+  const h = 1.5 + r() * 0.5;
+  b.cyl(0.12, 0.2, h, lo ? 5 : 8, worn(0x6e5640, r, 0.12), { m: 1 });
+  if (!lo) for (let i = 0; i < 3; i++) { const a = r() * 6.28; b.add(part(new THREE.CylinderGeometry(0.04, 0.07, 0.9, 5), 0x6e5640, { x: Math.cos(a) * 0.25, z: Math.sin(a) * 0.25, y: h - 0.1, rz: Math.cos(a) * 0.9, rx: -Math.sin(a) * 0.9, m: 1 })); }
+  const greens = [0x4f7a34, 0x5d8a3c, 0x46702e, 0x678f40];
+  const n = lo ? 1 : 6;
+  for (let i = 0; i < n; i++) {
+    const a = r() * 6.28, d = lo ? 0 : 0.3 + r() * 0.5;
+    b.ico(lo ? 1.05 : 0.55 + r() * 0.3, greens[i % 4], { x: Math.cos(a) * d, z: Math.sin(a) * d, y: h + 0.35 + r() * 0.3, sy: 0.7 }, 0);
+  }
+  return b.build();
+}
+export function mangoTreeGeo(seed = 3, lo = false) {
+  const r = rng(seed);
+  const b = new Builder();
+  b.cyl(0.14, 0.22, 1.2, lo ? 5 : 8, 0x5e4630, { m: 1 });
+  const n = lo ? 1 : 7;
+  for (let i = 0; i < n; i++) {
+    const a = r() * 6.28, d = lo ? 0 : 0.2 + r() * 0.55;
+    b.ico(lo ? 1.15 : 0.6 + r() * 0.25, [0x355f28, 0x2f5624, 0x3d6a2c][i % 3], { x: Math.cos(a) * d, z: Math.sin(a) * d, y: 1.7 + r() * 0.35, sy: 0.8 }, lo ? 0 : 1);
+  }
+  return b.build();
+}
+export function guayabaGeo(seed = 5, lo = false) {
+  const r = rng(seed);
+  const b = new Builder();
+  b.cyl(0.06, 0.1, 0.7, 5, 0x9a7a5a, { m: 1 });
+  const n = lo ? 1 : 5;
+  for (let i = 0; i < n; i++) {
+    const a = r() * 6.28, d = lo ? 0 : 0.15 + r() * 0.3;
+    b.ico(lo ? 0.6 : 0.32 + r() * 0.12, [0x6f9444, 0x7d9a45, 0x638a3c][i % 3], { x: Math.cos(a) * d, z: Math.sin(a) * d, y: 0.85 + r() * 0.2, sy: 0.8 }, 0);
+  }
+  return b.build();
+}
+export function cocoteroGeo(seed = 9) {
+  const g = palmGeo(seed, 3.2);
+  g.applyMatrix4(new THREE.Matrix4().makeRotationZ(0.18));
+  return g;
+}
+// frutas colgando (se muestran solo si están listas)
+export function fruitGeo(kind) {
+  const b = new Builder();
+  const spots = kind === 'coco' ? [[0.55, 3.25, 0.1], [0.75, 3.2, -0.12], [0.62, 3.1, 0.15]] : kind === 'mango' ? [[0.5, 1.55, 0.3], [-0.45, 1.6, 0.2], [0.1, 1.45, -0.55], [-0.2, 1.5, 0.5]] : [[0.3, 0.82, 0.15], [-0.25, 0.9, 0.2], [0.05, 0.78, -0.32]];
+  const col = kind === 'coco' ? 0x7a5a2a : kind === 'mango' ? 0xe8a02a : 0xd8e070;
+  for (const [x, y, z] of spots) b.add(part(new THREE.SphereGeometry(kind === 'coco' ? 0.12 : 0.09, 8, 6), col, { x, y, z, sy: kind === 'mango' ? 1.25 : 1 }));
+  return b.build();
+}
+export function fordStoneGeo(seed) {
+  const r = rng(seed);
+  const b = new Builder();
+  for (let i = 0; i < 3; i++) b.add(part(new THREE.DodecahedronGeometry(0.2 + r() * 0.08, 0), worn(0x8f877a, r, 0.15), { x: (r() - 0.5) * 0.5, z: (r() - 0.5) * 0.5, y: 0.0, sy: 0.45, m: 6 }));
+  return b.build();
+}
+export function jutiaGeo() {
+  const b = new Builder();
+  b.add(part(new THREE.CapsuleGeometry(0.11, 0.2, 4, 8), 0x6a5240, { y: 0.15, rx: Math.PI / 2 }));
+  b.add(part(new THREE.SphereGeometry(0.09, 8, 6), 0x5e4838, { y: 0.2, z: -0.22 }));
+  b.add(part(new THREE.CylinderGeometry(0.02, 0.035, 0.32, 5), 0x4a3a2c, { y: 0.12, z: 0.3, rx: 1.3 }));
+  for (const x of [-0.05, 0.05]) b.add(part(new THREE.SphereGeometry(0.025, 5, 4), 0x3a2a20, { x, y: 0.3, z: -0.22 }));
+  return b.build();
+}
+export function wildPigGeo() {
+  const b = new Builder();
+  const main = 0x4a3a30;
+  b.add(part(new THREE.CapsuleGeometry(0.19, 0.34, 4, 10), main, { y: 0.31, rx: Math.PI / 2 }));
+  b.box(0.06, 0.16, 0.55, 0x2e2420, { y: 0.45, z: -0.05 }); // crin
+  b.add(part(new THREE.CylinderGeometry(0.07, 0.08, 0.12, 8), 0x3a2e26, { y: 0.29, z: -0.5, rx: Math.PI / 2 }));
+  for (const x of [-0.06, 0.06]) b.add(part(new THREE.ConeGeometry(0.015, 0.09, 4), 0xece4d0, { x, y: 0.3, z: -0.53, rx: -0.6 }));
+  for (const [x, z] of [[-0.1, -0.17], [0.1, -0.17], [-0.1, 0.17], [0.1, 0.17]]) b.add(part(new THREE.CylinderGeometry(0.035, 0.03, 0.16, 5), main, { x, y: 0.08, z }));
+  return b.build();
+}
+export function guineaGeo() {
+  const b = new Builder();
+  b.add(part(new THREE.SphereGeometry(0.17, 10, 8), 0x4a4e58, { y: 0.27, sz: 1.25 }));
+  for (let i = 0; i < 10; i++) b.add(part(new THREE.SphereGeometry(0.02, 4, 3), 0xe8e8f0, { x: Math.cos(i) * 0.15, y: 0.3 + Math.sin(i * 2) * 0.06, z: Math.sin(i) * 0.18 }));
+  b.add(part(new THREE.SphereGeometry(0.07, 8, 6), 0xc8d8e8, { y: 0.44, z: -0.15 }));
+  b.add(part(new THREE.ConeGeometry(0.025, 0.06, 4), 0xc0392b, { y: 0.52, z: -0.15 }));
+  for (const x of [-0.05, 0.05]) b.add(part(new THREE.CylinderGeometry(0.012, 0.012, 0.14, 4), 0x8a6a4a, { x, y: 0.07 }));
+  return b.build();
+}
+export function horseGeo(variant = 0) {
+  const b = new Builder();
+  const main = [0x7a4a2a, 0x3a2a22, 0xc8b08a][variant % 3];
+  b.add(part(new THREE.CapsuleGeometry(0.24, 0.65, 4, 10), main, { y: 0.95, rx: Math.PI / 2 }));
+  b.add(part(new THREE.CylinderGeometry(0.11, 0.16, 0.55, 8), main, { y: 1.25, z: -0.5, rx: -0.7 }));
+  b.box(0.16, 0.18, 0.42, main, { y: 1.42, z: -0.78, rx: 0.5 });
+  b.box(0.05, 0.4, 0.4, 0x1e1814, { y: 1.3, z: -0.48, rx: -0.7 }); // crin
+  b.add(part(new THREE.CylinderGeometry(0.02, 0.05, 0.5, 5), 0x1e1814, { y: 0.85, z: 0.55, rx: 0.5 }));
+  for (const [x, z] of [[-0.14, -0.35], [0.14, -0.35], [-0.14, 0.35], [0.14, 0.35]]) b.add(part(new THREE.CylinderGeometry(0.05, 0.045, 0.72, 6), main, { x, y: 0.36, z }));
+  return b.build();
+}
+export function logPileGeo() {
+  const b = new Builder();
+  for (let i = 0; i < 6; i++) b.add(part(new THREE.CylinderGeometry(0.09, 0.09, 0.8, 7), 0x8a6a45, { x: -0.2 + (i % 3) * 0.2, y: 0.09 + Math.floor(i / 3) * 0.16, rz: Math.PI / 2, ry: Math.PI / 2, m: 1 }));
+  return b.build();
+}
+// Casa de zinc del batey (3×3): madera pintada y techo de zinc acanalado
+export function zincHouseGeo(seed = 1) {
+  const r = rng(seed);
+  const b = new Builder();
+  const paints = [0x6fa8b0, 0xe0b85a, 0xd98a6a, 0x9ab87a, 0xe8d9b5];
+  const paint = paints[seed % paints.length];
+  b.box(2.4, 0.18, 2.0, P.stone, { z: -0.2, m: 6 });
+  b.box(2.2, 1.3, 1.7, worn(paint, r, 0.1), { y: 0.18, z: -0.2, m: 1 });
+  for (let i = 0; i < 10; i++) b.box(0.03, 1.25, 0.02, worn(paint, r, 0.25), { x: -1.05 + i * 0.233, y: 0.2, z: 0.66, m: 1 });
+  b.box(0.48, 0.95, 0.05, 0x5a3a24, { x: -0.4, y: 0.18, z: 0.67 });
+  b.box(0.45, 0.42, 0.05, 0x2c2420, { x: 0.5, y: 0.68, z: 0.67 });
+  b.box(0.48, 0.46, 0.04, worn(0xf0ece0, r, 0.1), { x: 0.5, y: 0.66, z: 0.71 });
+  // techo de zinc a dos aguas, con óxido
+  b.gable(2.7, 2.6, 0.7, worn(P.tin, r, 0.2), { y: 1.48, z: -0.2, m: 4 });
+  for (let i = 0; i < 3; i++) b.box(0.5, 0.02, 0.3, worn(P.rust, r, 0.2), { x: -0.8 + i * 0.7, y: 1.72 + (i % 2) * 0.05, z: 0.2 + (i % 2) * 0.2, rx: 0.48, m: 3 });
+  // portalito
+  b.box(2.4, 0.05, 0.6, worn(P.tin, r, 0.15), { y: 1.25, z: 0.95, rx: 0.12, m: 4 });
+  for (const x of [-1.1, 1.1]) b.box(0.07, 1.25, 0.07, P.wood, { x, z: 1.2, m: 1 });
+  b.box(0.3, 0.45, 0.3, P.woodLite, { x: 0.8, y: 0, z: 0.95, m: 1 });
+  return b.build();
+}
+// Bohío pequeño del batey (más sencillo que el de la familia)
+export function smallBohioGeo(seed = 1) {
+  const r = rng(seed + 40);
+  const b = new Builder();
+  b.box(2.2, 0.12, 1.8, P.stone, { z: -0.2, m: 6 });
+  b.box(2.0, 1.15, 1.5, worn(P.wood, r, 0.1), { y: 0.12, z: -0.2, m: 1 });
+  for (let i = 0; i < 8; i++) b.box(0.2, 1.1, 0.03, worn(P.woodLite, r, 0.2), { x: -0.88 + i * 0.25, y: 0.14, z: 0.56, m: 1 });
+  b.box(0.45, 0.85, 0.05, 0x3a2a1e, { x: -0.3, y: 0.12, z: 0.58 });
+  b.box(0.4, 0.36, 0.05, 0x2c2420, { x: 0.5, y: 0.55, z: 0.58 });
+  b.gable(2.6, 2.6, 1.05, worn(P.thatch, r, 0.08), { y: 1.27, z: -0.2, m: 2 });
+  for (const x of [-1.0, 1.0]) b.box(0.08, 1.25, 0.08, P.wood, { x, z: 1.0, m: 1 });
+  return b.build();
+}
+export function bodegaGeo() {
+  const r = rng(201);
+  const b = new Builder();
+  b.box(3.6, 0.2, 2.6, P.stone, { m: 6 });
+  b.box(3.4, 1.6, 2.2, worn(0xd9c9a0, r, 0.08), { y: 0.2, z: -0.1, m: 0 });
+  b.box(3.6, 0.08, 0.9, worn(P.tin, r, 0.15), { y: 1.55, z: 1.25, rx: 0.15, m: 4 });
+  for (const x of [-1.6, 0, 1.6]) b.box(0.08, 1.4, 0.08, P.wood, { x, z: 1.6, y: 0.2, m: 1 });
+  b.box(1.2, 1.1, 0.05, 0x3a2a1e, { x: -0.6, y: 0.2, z: 1.0 });
+  b.box(0.8, 0.6, 0.05, 0x2c2420, { x: 0.9, y: 0.8, z: 1.0 });
+  b.box(2.2, 0.38, 0.05, 0x8a3a2a, { y: 1.85, z: 1.01 }); // letrero
+  b.box(1.9, 0.08, 0.06, 0xf2e6c4, { y: 1.98, z: 1.04 });
+  b.box(3.6, 0.1, 2.5, worn(0xb5594a, r, 0.1), { y: 1.8, z: -0.1, m: 3 });
+  for (const [x, z] of [[1.3, 1.25], [1.55, 1.15]]) b.box(0.4, 0.4, 0.3, 0xa07848, { x, z, y: 0.2, m: 1 });
+  return b.build();
+}
+export function schoolGeo() {
+  const r = rng(211);
+  const b = new Builder();
+  b.box(3.6, 0.2, 2.6, P.stone, { m: 6 });
+  b.box(3.4, 1.5, 2.0, worn(0xe8d9b5, r, 0.05), { y: 0.2, z: -0.2, m: 0 });
+  b.box(3.42, 0.3, 2.02, 0x6f8fa8, { y: 0.2, z: -0.2 });
+  for (let i = 0; i < 3; i++) b.box(0.55, 0.55, 0.05, 0x2c3a44, { x: -1.1 + i * 1.1, y: 0.75, z: 0.82 });
+  b.box(0.6, 1.0, 0.05, 0x5a3a24, { x: 1.35, y: 0.2, z: 0.82 });
+  b.gable(3.7, 2.5, 0.75, worn(0xb5594a, r, 0.1), { y: 1.7, z: -0.2, m: 3 });
+  // asta con bandera y busto (pedestal)
+  b.box(0.06, 2.6, 0.06, 0xd8d0c0, { x: -1.5, z: 1.1 });
+  b.box(0.35, 0.6, 0.35, 0xe8e0d0, { x: 0.3, z: 1.0, m: 6 });
+  b.add(part(new THREE.SphereGeometry(0.14, 8, 6), 0xf0ece4, { x: 0.3, y: 0.75, z: 1.0 }));
+  return b.build();
+}
+export function churchGeo() {
+  const r = rng(221);
+  const b = new Builder();
+  b.box(3.8, 0.2, 3.8, P.stone, { m: 6 });
+  b.box(2.6, 2.0, 3.0, worn(0xf0e8d4, r, 0.05), { y: 0.2, z: -0.2, m: 0 });
+  b.gable(3.2, 3.0, 1.1, worn(0xb5594a, r, 0.1), { y: 2.2, z: -0.2, ry: Math.PI / 2, m: 3 });
+  // campanario
+  b.box(1.0, 3.6, 1.0, worn(0xf0e8d4, r, 0.05), { y: 0.2, z: 1.2, m: 0 });
+  b.box(0.5, 0.6, 1.02, 0x3a3028, { y: 3.0, z: 1.2 });
+  b.cone(0.75, 0.9, 4, 0x9a4a3a, { y: 3.8, z: 1.2, ry: Math.PI / 4, m: 3 });
+  b.box(0.06, 0.5, 0.06, 0x4a3a2a, { y: 4.7, z: 1.2 });
+  b.box(0.3, 0.06, 0.06, 0x4a3a2a, { y: 4.95, z: 1.2 });
+  b.box(0.7, 1.3, 0.05, 0x5a3a24, { y: 0.2, z: 1.72 });
+  b.add(part(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 12), 0x8a6a4a, { y: 2.3, z: 1.72, rx: Math.PI / 2 }));
+  return b.build();
+}
+export function benchGeo() {
+  const b = new Builder();
+  b.box(0.9, 0.06, 0.3, P.woodLite, { y: 0.38, m: 1 });
+  b.box(0.9, 0.3, 0.05, P.woodLite, { y: 0.45, z: -0.14, m: 1 });
+  for (const x of [-0.38, 0.38]) b.box(0.06, 0.38, 0.28, 0x3a3a3a, { x, m: 3 });
+  return b.build();
+}
+export function lampGeo() {
+  const b = new Builder();
+  b.cyl(0.04, 0.06, 2.2, 6, 0x2f2a26, { m: 3 });
+  b.box(0.22, 0.28, 0.22, 0x2f2a26, { y: 2.2, m: 3 });
+  b.box(0.16, 0.2, 0.16, 0xf2d48a, { y: 2.24 });
+  return b.build();
+}
+export function bridgeGeo(len = 4) {
+  const r = rng(231);
+  const b = new Builder();
+  for (let i = 0; i < len * 4; i++) b.box(0.24, 0.06, 2.2, worn(P.woodGrey, r, 0.15), { x: -len / 2 + 0.12 + i * 0.25, y: 0.08, m: 1 });
+  for (const z of [-1.1, 1.1]) { b.box(len, 0.06, 0.06, P.wood, { y: 0.6, z, m: 1 }); for (let x = -len / 2; x <= len / 2 + 1e-6; x += 1) b.box(0.07, 0.6, 0.07, P.wood, { x, z, m: 1 }); }
+  return b.build();
+}
+export function machetGeo() {
+  const b = new Builder();
+  b.box(0.04, 0.12, 0.05, 0x3a2a1e, { y: -0.06 });
+  b.box(0.015, 0.5, 0.07, 0xc8c8c0, { y: -0.55, m: 4 });
+  return b.build();
+}

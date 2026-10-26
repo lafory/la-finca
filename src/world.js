@@ -5,9 +5,12 @@ import { viewSize } from './viewport.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, WORKERS, WORKER_ORDER,
-  STRUCTURES, OBSTACLE_LIST, TRUCK_SLOTS,
+  STRUCTURES, OBSTACLE_LIST, TRUCK_SLOTS, GW, GH,
 } from './data.js';
-import { isOwned, isRoad, parcelAt, now, parcelReachable } from './state.js';
+import { isOwned, isRoad, parcelAt, now, parcelReachable, structOpen } from './state.js';
+import { ZoneViews } from './world-v4.js';
+import { ZONES, inRect } from './zones.js';
+const inZones = (x, z) => ['manigua', 'camino', 'batey'].some((k) => { const r = ZONES[k].rect; return x >= r.x0 - 0.5 && x <= r.x1 + 1.5 && z >= r.z0 - 0.5 && z <= r.z1 + 1.5; });
 import * as M from './models.js';
 import { patchMaterial, TIME } from './shaders.js';
 import { groundTexture, grassTileTexture, blobTexture, skyTexture } from './textures.js';
@@ -70,6 +73,7 @@ export class World {
     this.staticMesh = null;
     this.buildStatic();
     this.buildDynamic();
+    this.zones = new ZoneViews(this);
     this.buildSkyFx();
     this.setQuality(quality);
   }
@@ -173,10 +177,10 @@ export class World {
   // ------------------------------------------------------------ entorno fuera de la finca
   buildOutside() {
     const r = M.rng(99);
-    const size = 170, seg = 60;
-    const g = new THREE.PlaneGeometry(size, size, 84, 84);
+    const size = 360;
+    const g = new THREE.PlaneGeometry(size, size, 120, 120);
     g.rotateX(-Math.PI / 2);
-    g.translate(W / 2, -0.03, H / 2);
+    g.translate(GW / 2, -0.03, GH / 2);
     const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
     const c = new THREE.Color(), ca = new THREE.Color(0x65793a), cb = new THREE.Color(0x94965a), road = new THREE.Color(0xc4a072), earth = new THREE.Color(0x9b4a2a);
     for (let t = 0; t < pos.count; t++) {
@@ -200,7 +204,7 @@ export class World {
     const cane = M.caneLowGeo();
     const caneSpots = [];
     const field = (x0, z0, x1, z1) => { for (let z = z0; z < z1; z += 1.1) for (let x = x0; x < x1; x += 1.1) caneSpots.push([x + 0.5 + (r() - 0.5) * 0.3, z + 0.5 + (r() - 0.5) * 0.3]); };
-    field(-14, 3, -4, 15); field(W + 4, 10, W + 16, 22); field(-10, -16, 3, -6); field(23, -12, 34, -3); field(-14, H + 4, -2, H + 14); field(24, H + 4, 38, H + 12);
+    field(-14, 3, -4, 15); field(-10, -16, 3, -6); field(23, -12, 34, -3); field(-14, H + 4, -2, H + 14);
     const caneMesh = new THREE.InstancedMesh(cane, this.matCrop, caneSpots.length);
     caneSpots.forEach(([x, z], i) => setMat(caneMesh, i, x, 0, z, r() * 6, 0.95 + r() * 0.2, 0.9 + r() * 0.35));
     caneMesh.receiveShadow = true;
@@ -215,8 +219,8 @@ export class World {
       palmSpots.push([x, z]);
     }
     for (let i = 0; i < 6; i++) palmSpots.push([-2 - r() * 3, r() * H], [W + 1 + r() * 3, r() * H], [r() * W, -2 - r() * 3], [r() * W, H + 1 + r() * 3]);
-    this.outsidePalms = palmSpots.filter(([x]) => !(x > 14.5 && x < 17.5));
-    for (const [x, z, sd] of [[-30, -20, 1], [-14, -38, 2], [6, -42, 3], [-42, 0, 4], [30, -36, 5], [W + 34, 8, 6], [W + 26, H + 30, 7], [4, H + 38, 8], [-40, H + 10, 9]]) {
+    this.outsidePalms = palmSpots.filter(([x, z]) => !(x > 14.5 && x < 17.5) && !inZones(x, z));
+    for (const [x, z, sd] of [[-30, -20, 1], [-14, -38, 2], [6, -42, 3], [-42, 0, 4], [30, -36, 5], [W + 26, H + 30, 7], [4, H + 38, 8], [-40, H + 10, 9]]) {
       const m = new THREE.Mesh(M.mogoteGeo(sd), this.mat);
       m.position.set(x, 0, z); m.scale.setScalar(1.6);
       this.scene.add(m);
@@ -227,6 +231,7 @@ export class World {
       const x = -10 + r() * (W + 20), z = -10 + r() * (H + 20);
       if (x >= 0 && x < W && z >= 0 && z < H) continue;
       if (x > 14.8 && x < 17.2) continue;
+      if (inZones(x, z)) continue;
       spots.push([x, z]);
     }
     this.farGrass = new THREE.InstancedMesh(M.grassClumpGeo(9, 0.42), this.matGrass, spots.length);
@@ -301,9 +306,13 @@ export class World {
     // estructuras construidas y solares
     this.windmill = null;
     for (const [id, st] of Object.entries(STRUCTURES)) {
-      if (!s.parcels.includes(st.parcel)) continue;
+      if (!structOpen(s, st)) continue;
       const cx = st.x + st.w / 2, cz = st.z + st.h / 2;
       if (!s.built[id]) { parts.push(M.place(M.siteGeo(st.w, st.h), cx, cz)); continue; }
+      if (st.kind === 'house') { parts.push(M.place(s.built[id].tier === 2 ? M.zincHouseGeo(st.x) : M.smallBohioGeo(st.x), cx, cz, st.z > 50 ? Math.PI : 0)); continue; }
+      if (id === 'bodega') { parts.push(M.place(M.bodegaGeo(), cx, cz)); continue; }
+      if (id === 'escuela') { parts.push(M.place(M.schoolGeo(), cx, cz)); continue; }
+      if (id === 'iglesia') { parts.push(M.place(M.churchGeo(), cx, cz, Math.PI)); continue; }
       if (st.kind === 'animal') {
         parts.push(M.place(M.penGeo(st.w, st.h, 300 + st.x), cx, cz));
         if (id === 'gallinero2') parts.push(M.place(M.coopGeo(), st.x + st.w - 0.9, st.z + 0.9, Math.PI));
@@ -391,6 +400,7 @@ export class World {
   applyGrassCounts() {
     const f = (this.grassFactor ?? 1) * (this.grassLod ?? 1);
     for (const c of this.grassChunks || []) c.mesh.count = Math.floor(c.total * f);
+    this.zones?.grassCounts(f);
   }
   buildObstacles() {
     const s = this.s;
@@ -478,6 +488,7 @@ export class World {
     for (const c of this.s.chickens) add(c.x, c.z, 0.5, 0.55);
     for (const a of this.animals || []) add(a.x, a.z, a.st.animal === 'cow' ? 0.9 : 0.6, a.st.animal === 'cow' ? 1.6 : 0.9, a.face);
     for (const tv of this.truckViews.values()) if (tv.g.visible) add(tv.g.position.x, tv.g.position.z + 0.2, 1.9, 4.2);
+    this.zones?.blobs(add);
     this.blobs.count = i;
     this.blobs.instanceMatrix.needsUpdate = true;
   }
@@ -776,6 +787,7 @@ export class World {
       this.marker.scale.setScalar(1 + (1 - this.markerT) * 0.4);
     }
     this.updatePlots(time);
+    this.zones?.update(dt, time, this.rig);
     this.updateBlobs();
   }
 
@@ -795,7 +807,7 @@ export class World {
       mk('tank', B.tank.x + 0.5, B.tank.z + 0.5, 0.8, 0.8, 2.0),
     ];
     for (const [id, st] of Object.entries(STRUCTURES)) {
-      if (!this.s.parcels.includes(st.parcel)) continue;
+      if (!structOpen(this.s, st)) continue;
       this.pickers.push(mk(`struct:${id}`, st.x + st.w / 2, st.z + st.h / 2, st.w - 0.2, st.h - 0.2, this.s.built[id] ? 1.6 : 0.5));
     }
   }
@@ -804,7 +816,11 @@ export class World {
     const people = [];
     for (const v of this.workerViewMap.values()) people.push(v.body, v.legL, v.legR, v.armL, v.armR);
     const hits = ray.intersectObjects([...people, ...this.pickers, ...bodies], false);
-    if (!hits.length) return null;
+    if (this.zones && (!hits.length || hits[0].distance > 0)) {
+      const wid = this.zones.pickWild(ray);
+      if (wid !== null && wid !== undefined) return `wild:${wid}`;
+    }
+    if (!hits.length) { const pid = this.zones?.pickPlant(ray); return pid ? `wplant:${pid}` : null; }
     const o = hits[0].object;
     if (o.userData.worker) return `worker:${o.userData.worker}`;
     if (o.userData.truckId !== undefined) return o.userData.dock === 0 || o.userData.front ? 'truck' : o.userData.dock === 1 ? 'truck:1' : 'truckq';
@@ -816,6 +832,7 @@ export class World {
   }
   render(camera, rig) {
     if (rig) {
+      this.rig = rig;
       // niebla y sombras siguen a la cámara: el mapa grande se ve completo al alejarse
       const d = rig.dist;
       this.scene.fog.near = d + 14; this.scene.fog.far = d * 1.6 + 70;
