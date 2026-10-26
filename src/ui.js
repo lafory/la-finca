@@ -9,6 +9,7 @@ import {
 import { ZONES, ZONE_ORDER, zoneOpen, inFarm, CARRY_MAX, WILD_ANIMALS } from './zones.js';
 import { storageCap, invCount, chickenCap, now, parcelReachable, structOpen, workerCap } from './state.js';
 import { fmtTime, fmtClock } from './sim.js';
+import { settingsSection } from './saveui.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
@@ -475,6 +476,7 @@ export class UI {
       else out += '<p class="note">En iPhone: Compartir → “Añadir a pantalla de inicio” para jugar a pantalla completa.</p>';
       out += `<p class="note">Controles: toca el suelo para caminar, toca huevos, canteros, el camión o el fogón para usarlos. Arrastra para mover la vista y pellizca (o usa la rueda) para acercar o alejar.</p>`;
       if (import.meta.env.DEV || window.__fincaDev) out += `<h3>Trucos (solo desarrollo)</h3><div class="seg"><button class="btn" data-act="cheat" data-id="level">+1 nivel</button><button class="btn" data-act="cheat" data-id="money">+1000 pesos</button><button class="btn" data-act="cheat" data-id="wood">+100 madera</button></div>`;
+      out += settingsSection(this);
       out += '<button class="btn danger wide" data-act="reset">Empezar de cero…</button>';
       return out;
     });

@@ -309,3 +309,8 @@ html.nofs #btn-full, html.standalone #btn-full { display: none !important; }
 
 @media (max-height: 500px) { .a2hs { left: 50%; transform: translateX(-50%); bottom: calc(10px + var(--sab)); max-width: min(420px, calc(100% - 220px)); } }
 @keyframes a2hsIn { from { opacity: 0; } }
+
+/* Guardar partida: código */
+.codebox { display: block; width: 100%; margin: 8px 0 4px; padding: 8px; border: 2px solid var(--line); border-radius: 12px; background: #fffaf0; color: var(--ink); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; resize: none; -webkit-user-select: text; user-select: text; touch-action: auto; }
+.codebox.edit { font-size: 16px; } /* 16 px: Safari no hace zoom al escribir */
+.code-err { color: #a5281b; font-weight: 700; font-size: 14px; }
