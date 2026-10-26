@@ -1,0 +1,178 @@
+{
+ "desktop": {
+  "l1": {
+   "cap": 1,
+   "hens": 3
+  },
+  "parcels": 9,
+  "coop": [
+   [
+    true,
+    2
+   ],
+   [
+    true,
+    3
+   ],
+   [
+    true,
+    4
+   ],
+   [
+    false,
+    4
+   ]
+  ],
+  "hens": 16,
+  "plow": {
+   "a": 7,
+   "b": 6,
+   "c": 3,
+   "bad": 0,
+   "plots": 16,
+   "plowed": 16
+  },
+  "landRows": [
+   "granja-look",
+   "granja-plow"
+  ],
+  "pill": {
+   "shown": true,
+   "fits": true
+  },
+  "vacas": {
+   "b": true,
+   "u1": true,
+   "u2": true,
+   "lvl": 3,
+   "cows": 6
+  },
+  "batey": {
+   "built": 18,
+   "cap0": 21,
+   "cap1": 27,
+   "up": [
+    [
+     true,
+     true,
+     false
+    ],
+    [
+     true,
+     true,
+     false
+    ],
+    [
+     true,
+     true,
+     false
+    ]
+   ],
+   "tiers": [
+    3,
+    3,
+    3
+   ]
+  },
+  "reload": {
+   "coop": 4,
+   "cap": 16,
+   "vacas": 3,
+   "cows": 6,
+   "plowed": 16,
+   "plowedPlots": 16,
+   "tier": 3,
+   "wcap": 27
+  },
+  "errors": [],
+  "ok": true
+ },
+ "iphone13": {
+  "l1": {
+   "cap": 1,
+   "hens": 3
+  },
+  "parcels": 9,
+  "coop": [
+   [
+    true,
+    2
+   ],
+   [
+    true,
+    3
+   ],
+   [
+    true,
+    4
+   ],
+   [
+    false,
+    4
+   ]
+  ],
+  "hens": 16,
+  "plow": {
+   "a": 7,
+   "b": 6,
+   "c": 3,
+   "bad": 0,
+   "plots": 16,
+   "plowed": 16
+  },
+  "landRows": [
+   "granja-look",
+   "granja-plow"
+  ],
+  "pill": {
+   "shown": true,
+   "fits": true
+  },
+  "vacas": {
+   "b": true,
+   "u1": true,
+   "u2": true,
+   "lvl": 3,
+   "cows": 6
+  },
+  "batey": {
+   "built": 18,
+   "cap0": 21,
+   "cap1": 27,
+   "up": [
+    [
+     true,
+     true,
+     false
+    ],
+    [
+     true,
+     true,
+     false
+    ],
+    [
+     true,
+     true,
+     false
+    ]
+   ],
+   "tiers": [
+    3,
+    3,
+    3
+   ]
+  },
+  "reload": {
+   "coop": 4,
+   "cap": 16,
+   "vacas": 3,
+   "cows": 6,
+   "plowed": 16,
+   "plowedPlots": 16,
+   "tier": 3,
+   "wcap": 27
+  },
+  "errors": [],
+  "ok": true
+ }
+}

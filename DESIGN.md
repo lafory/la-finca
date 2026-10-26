@@ -200,6 +200,9 @@ Módulo aparte registrado en `src/extensions.js`; estado en `s.ext.central` (par
 - Rendimiento: estáticos fusionados (vía, central, acopio), cultivos/cuadrilla/carretas/humo instanciados con LOD, tren = 3 draw calls.
 - Pruebas: `tests/central.mjs` (4 pantallas, `?dev=1` con trucos de nivel/pesos/campos/central).
 
+## 10h. Granja grande (`src/granja/`)
+Gallinero 1–4 (el corral `PEN` cambia de tamaño; nidales, sombra de zinc y segunda caseta), surcos (`plotGeo` en lomos; «Arar surcos» en bloques de hasta 4×4), potrero 1–3 (`STRUCTURES.vacas` crece; vacas nuevas más grandes) y batey más grande (casas 9–12, dominó, consultorio, panadería, calles, casas de mampostería = `tier 3` con `st.upgrade2`). Estado en `s.ext.granja`.
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.
@@ -225,5 +228,6 @@ registros ya están cuando se hace `newGame()`/`load()`. No hace falta tocar `da
 | `registerUnlock(nivel, texto)` | Línea en el aviso de subir de nivel. |
 | `registerMigration(fn(s, d))` | Migrar partidas viejas (corre en `load()`). |
 | `registerGameModule({ attach(game), frame(game, dt, time) })` | Acceso al `Game` (vistas propias, botones, cámara, ⏩). `attach` al crear la partida, `frame` después de `world.update`. |
+| `FARM_HOOKS.henCap(s, base)` / `FARM_HOOKS.layFactor(s)` | Tope de gallinas y factor del tiempo entre huevos (los usa `src/granja/`). |
 
 Costes genéricos: `sim.canPay({ pesos, madera, res:{}, items:{} })` / `sim.pay(...)` (todo o nada).

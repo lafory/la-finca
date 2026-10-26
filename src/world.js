@@ -497,10 +497,11 @@ export class World {
 
   // ------------------------------------------------------------ canteros y cultivos instanciados
   buildPlots() {
-    const n = START_PLOTS.length + PARCELS.reduce((a, p) => a + p.plots.length, 0);
+    const n = START_PLOTS.length + PARCELS.reduce((a, p) => a + p.plots.length, 0) + 640; // + surcos arados
     if (!this.plotMesh) {
       this.plotMesh = new THREE.InstancedMesh(M.plotGeo(), this.mat, n);
       this.plotMesh.receiveShadow = true;
+      this.plotMesh.frustumCulled = false;
       this.plotMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3);
       this.scene.add(this.plotMesh);
       this.cropMeshes = {};
@@ -508,12 +509,14 @@ export class World {
         this.cropMeshes[c] = [0, 1, 2].map((st) => {
           const m = new THREE.InstancedMesh(st === 0 ? (this.sproutGeo ||= M.cropGeo('tomato', 0)) : M.cropGeo(c, st), this.matCrop, n);
           m.castShadow = st > 0; m.receiveShadow = true; m.count = 0;
+          m.frustumCulled = false; // repartidos por toda la finca: la esfera de la primera vez dejaba fuera los campos lejanos
           this.scene.add(m);
           return m;
         });
       }
       this.sparkles = new THREE.InstancedMesh(M.sparkleGeo(), new THREE.MeshBasicMaterial({ color: 0xffd36a, fog: false }), n);
       this.sparkles.count = 0;
+      this.sparkles.frustumCulled = false;
       this.scene.add(this.sparkles);
     }
     this.plotsDirty = true;

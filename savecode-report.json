@@ -1,0 +1,70 @@
+{
+ "desktop": {
+  "sectionShown": [
+   "code-copy",
+   "code-paste",
+   "file-save",
+   "file-load"
+  ],
+  "copyMsg": "¡Copiado! Pégalo en otro teléfono en Ajustes → Pegar código.",
+  "codeLen": 1631,
+  "codeOk": true,
+  "fileName": "la-finca-nivel6-2026-10-25.lafinca",
+  "badErr": "El código está cortado o le falta un pedazo.",
+  "preview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 25 oct 2026, 22:28 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "afterPaste": {
+   "money": 4321,
+   "level": 6
+  },
+  "backupRow": "↺ Copia anterior Nivel 1 · 10 pesos · 25 oct 2026, 22:28 Restaurar",
+  "afterRestore": {
+   "money": 10,
+   "level": 1
+  },
+  "filePreview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 25 oct 2026, 22:28 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "afterFile": {
+   "money": 4321,
+   "level": 6
+  },
+  "before": {
+   "money": 10,
+   "level": 1
+  },
+  "errors": [],
+  "ok": true
+ },
+ "iphone13": {
+  "sectionShown": [
+   "code-copy",
+   "code-paste",
+   "file-save",
+   "file-load"
+  ],
+  "copyMsg": "¡Copiado! Pégalo en otro teléfono en Ajustes → Pegar código.",
+  "codeLen": 1599,
+  "codeOk": true,
+  "fileName": "la-finca-nivel6-2026-10-25.lafinca",
+  "badErr": "El código está cortado o le falta un pedazo.",
+  "preview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 25 oct 2026, 22:29 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "afterPaste": {
+   "money": 4321,
+   "level": 6
+  },
+  "backupRow": "↺ Copia anterior Nivel 1 · 10 pesos · 25 oct 2026, 22:29 Restaurar",
+  "afterRestore": {
+   "money": 10,
+   "level": 1
+  },
+  "filePreview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 25 oct 2026, 22:29 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "afterFile": {
+   "money": 4321,
+   "level": 6
+  },
+  "before": {
+   "money": 10,
+   "level": 1
+  },
+  "errors": [],
+  "ok": true
+ }
+}

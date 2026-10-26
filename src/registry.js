@@ -50,5 +50,7 @@ export function registerMigration(fn) { MIGRATIONS.push(fn); }
 export function runMigrations(s, d) { for (const f of MIGRATIONS) f(s, d); }
 
 // ---- juego: módulos con acceso al Game (vistas propias, botones, cámara). attach(game) al crear la partida; frame(game, dt, time) cada cuadro
+// ---- ajustes de la finca (opcionales): henCap(s, base) → tope de gallinas; layFactor(s) → factor del tiempo entre huevos
+export const FARM_HOOKS = { henCap: null, layFactor: null };
 export const GAME_MODULES = [];
 export function registerGameModule(mod) { GAME_MODULES.push(mod); }

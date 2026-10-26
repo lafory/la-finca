@@ -268,7 +268,7 @@ button:disabled { cursor: default; }
 
 /* Pantalla completa: botón solo donde existe la API (no en iPhone Safari ni abierto desde inicio) */
 html.nofs #btn-full, html.standalone #btn-full { display: none !important; }
-.a2hs { position: absolute; left: calc(8px + var(--sal)); bottom: calc(84px + var(--sab)); width: max-content; z-index: 7; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 100px - var(--sal) - var(--sar)); padding: 6px 6px 6px 10px; border-radius: 14px; background: rgba(42, 31, 21, 0.92); color: #fbf1da; font-size: 13px; line-height: 1.25; box-shadow: 0 4px 14px rgba(0,0,0,.3); animation: a2hsIn .3s ease-out; }
+.a2hs { position: absolute; left: calc(8px + var(--sal)); bottom: calc(84px + var(--sab)); width: max-content; z-index: 4; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 100px - var(--sal) - var(--sar)); padding: 6px 6px 6px 10px; border-radius: 14px; background: rgba(42, 31, 21, 0.92); color: #fbf1da; font-size: 13px; line-height: 1.25; box-shadow: 0 4px 14px rgba(0,0,0,.3); animation: a2hsIn .3s ease-out; }
 .a2hs .ico { width: 18px; height: 18px; }
 .a2hs b { font-weight: 600; }
 .a2hs-x { flex: none; width: 30px; height: 30px; border-radius: 15px; background: rgba(255,255,255,.12); color: #fbf1da; font-size: 14px; }
@@ -314,3 +314,11 @@ html.nofs #btn-full, html.standalone #btn-full { display: none !important; }
 .codebox { display: block; width: 100%; margin: 8px 0 4px; padding: 8px; border: 2px solid var(--line); border-radius: 12px; background: #fffaf0; color: var(--ink); font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; resize: none; -webkit-user-select: text; user-select: text; touch-action: auto; }
 .codebox.edit { font-size: 16px; } /* 16 px: Safari no hace zoom al escribir */
 .code-err { color: #a5281b; font-weight: 700; font-size: 14px; }
+/* Granja: pastilla del modo «Arar surcos» */
+.plowpill { position: absolute; left: 50%; transform: translateX(-50%); top: calc(58px + var(--sat)); z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; max-width: calc(100% - 16px - var(--sal) - var(--sar)); padding: 6px 8px 6px 12px; border-radius: 18px; background: rgba(42, 31, 21, 0.92); color: #fbf1da; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+.plowpill b { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; }
+.plowpill .ico { width: 18px; height: 18px; }
+.plowpill small { font-size: 12px; opacity: .8; }
+.plowpill .pp-sizes { display: inline-flex; gap: 4px; }
+.plowpill .btn { min-height: 34px; padding: 0 10px; font-size: 13px; }
+@media (max-height: 500px) { .plowpill { top: calc(46px + var(--sat)); } }

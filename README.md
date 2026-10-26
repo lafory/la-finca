@@ -27,6 +27,11 @@ node tests/camionero.mjs    # camionero automático: cargar, despedir, venta sue
 node tests/v4.mjs           # v4: manigua (leña, frutas, animales), batey, leñero → screenshots/v4-*.png y v4-report.json
 npm run smoke               # escritorio, iPad, teléfono vertical y horizontal → screenshots/v2-*.png y smoke-report-v2.json
 node tests/showcase.mjs     # capturas de una finca avanzada
+node tests/fullscreen.mjs   # pantalla completa: Android (al tocar «Entrar»), botón, computadora
+node tests/ios.mjs          # iPhone/iPad Safari (WebKit): cabe en pantalla, pista «Añadir a pantalla de inicio»
+node --test tests/savecode.test.mjs && node tests/savecode.mjs   # guardar partida: código y archivo .lafinca
+node tests/granja.mjs       # granja grande: gallinero 1–4, surcos, potrero, batey → screenshots/granja-*.png
+node tests/central.mjs      # campos grandes, central y tren (usa ?dev=1)
 ```
 Alternativa sin Vite para servir `dist/`: `npx serve dist -l 4173` o `python3 -m http.server 4173 -d dist`.
 
@@ -74,6 +79,18 @@ Alternativa sin Vite para servir `dist/`: `npx serve dist -l 4173` o `python3 -m
     manigua, tumba 3 árboles y trae la leña al bohío.
   - Próximamente: los campos grandes (6×6, nivel 18) y el central azucarero con su tren (nivel 28).
   - Partidas v3 se migran sin perder nada. Trucos de desarrollo (solo `npm run dev`): Ajustes → +1 nivel / +pesos / +leña.
+- **Granja grande (`src/granja/`):**
+  - **Gallinero por niveles** (Terreno y obras → Granja): 1 gallinero (4 gallinas), 2 ampliado (8, nivel 3; es la «Ampliación» de la
+    tienda), 3 de zinc (12, nivel 6: sombra de zinc con perchas), 4 granja avícola (16, nivel 10: segunda caseta). El corral crece y
+    cada nivel pone más nidales y huevos más seguidos.
+  - **Surcos:** los canteros son lomos de tierra colorada con las matas encima; los vecinos forman surcos largos. «Arar surcos» abre
+    campos nuevos en tu tierra libre tocando el suelo (bloques de 1×1 a 4×4, 3 pesos por cantero, hasta 600).
+  - **Vacas** más grandes (holandesa pinta, criolla colorada y cebú con giba). El corral se amplía a potrero mediano (4 vacas, nivel 10)
+    y grande (6 vacas y rancho de ordeño, nivel 14), con más leche por ordeño.
+  - **Batey más grande:** calles nuevas, 4 solares más (casas 9–12), placita del dominó (−5 %), consultorio (+5 % XP), panadería
+    (+5 % en pedidos) y un tercer nivel de casa: **mampostería** (+3 trabajadores).
+- **Guardar partida** (Ajustes): copiar/pegar un código `LF1.…` o descargar/cargar un archivo `.lafinca`; antes de reemplazar se guarda
+  una copia que se puede restaurar.
 - **Calidad gráfica:** Ajustes → Auto / Alta / Media / Baja. En Auto baja sola si el cuadro tarda > 25 ms.
 - Pantalla completa: botón ⛶ arriba (Android/escritorio); en iPhone, "Añadir a pantalla de inicio" abre a pantalla completa.
 

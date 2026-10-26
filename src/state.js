@@ -3,7 +3,7 @@ import {
   EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST, GW, GH, WORKER_BASE_CAP, ITEMS, WORKER_LEVEL_CAP,
 } from './data.js';
 import { zoneAt, zoneOpen, isAnyRoad, MANIGUA, BATEY, inFarm } from './zones.js';
-import { resDefaults, runMigrations } from './registry.js';
+import { resDefaults, runMigrations, FARM_HOOKS } from './registry.js';
 
 // Reloj del juego: tiempo real + lo que se ha adelantado con ⏩ (se guarda en la partida).
 export const CLOCK = { offset: 0 };
@@ -71,14 +71,15 @@ export function invCount(s) {
   return Object.values(s.inv).reduce((a, b) => a + b, 0);
 }
 export function chickenCap(s) {
-  return (s.upgrades.coop ? 8 : 4) + (s.extraHens || 0);
+  const base = (s.upgrades.coop ? 8 : 4) + (s.extraHens || 0);
+  return FARM_HOOKS.henCap ? FARM_HOOKS.henCap(s, base) : base;
 }
 // ¿La estructura está en tierra propia (finca) o en una zona abierta (batey)?
 export function structOpen(s, st) { return st.zone ? zoneOpen(s, st.zone) : s.parcels.includes(st.parcel); }
 // Tope de trabajadores según las casas del batey
 export function workerCap(s) {
   let cap = WORKER_BASE_CAP + Math.floor((s.level || 1) / WORKER_LEVEL_CAP);
-  for (const [id, st] of Object.entries(STRUCTURES)) if (st.kind === 'house' && s.built?.[id]) cap += s.built[id].tier === 2 ? st.upgrade.cap : st.cap;
+  for (const [id, st] of Object.entries(STRUCTURES)) if (st.kind === 'house' && s.built?.[id]) cap += s.built[id].tier === 3 && st.upgrade2 ? st.upgrade2.cap : s.built[id].tier === 2 ? st.upgrade.cap : st.cap;
   return cap;
 }
 export const inGrid = (x, z) => x >= 0 && z >= 0 && x < GW && z < GH;

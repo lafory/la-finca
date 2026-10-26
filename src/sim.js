@@ -9,7 +9,7 @@ import { MANIGUA, PLANT_BY_ID, WILD_PLANTS, ZONES, zoneOpen, inFarm } from './zo
 import { GW, GH } from './data.js';
 import { findPath } from './path.js';
 import { workerName, workerHirePrice } from './data.js';
-import { SIM_MODULES, WORKER_HOOKS } from './registry.js';
+import { SIM_MODULES, WORKER_HOOKS, FARM_HOOKS } from './registry.js';
 
 export const fmtTime = (sec) => {
   sec = Math.max(0, Math.ceil(sec));
@@ -947,7 +947,7 @@ export class Sim {
           this.eggFullWarned = true;
           this.h.toast('El corral está lleno de huevos. ¡Recógelos!');
         }
-        c.nextLay += EGG_INTERVAL * (0.85 + Math.random() * 0.3);
+        c.nextLay += EGG_INTERVAL * (FARM_HOOKS.layFactor ? FARM_HOOKS.layFactor(s) : 1) * (0.85 + Math.random() * 0.3);
         if (t - c.nextLay > EGG_INTERVAL * MAX_GROUND_EGGS) c.nextLay = t + EGG_INTERVAL * 0.5;
       }
     }

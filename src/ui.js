@@ -371,11 +371,12 @@ export class UI {
     const house = st.kind === 'house';
     let btn, name = st.name, detail = st.detail || '';
     if (house) {
-      name = b?.tier === 2 ? st.upgrade.name : b ? 'Bohío' : `Solar: ${st.name}`;
-      detail = b?.tier === 2 ? `Viven ${st.upgrade.cap} trabajadores más.` : b ? `Vive ${st.cap} trabajador más. Mejóralo a casa de zinc: +${st.upgrade.cap - st.cap}.` : `Bohío de guano: +${st.cap} trabajador.`;
+      name = b?.tier === 3 ? st.upgrade2.name : b?.tier === 2 ? st.upgrade.name : b ? 'Bohío' : `Solar: ${st.name}`;
+      detail = b?.tier === 3 ? `Viven ${st.upgrade2.cap} trabajadores más.` : b?.tier === 2 ? `Viven ${st.upgrade.cap} trabajadores más.${st.upgrade2 ? ` Mejórala a mampostería: +${st.upgrade2.cap - st.upgrade.cap}.` : ''}` : b ? `Vive ${st.cap} trabajador más. Mejóralo a casa de zinc: +${st.upgrade.cap - st.cap}.` : `Bohío de guano: +${st.cap} trabajador.`;
     }
     if (!b) btn = this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.madera });
-    else if (house && b.tier !== 2) btn = s.level < st.upgrade.level ? `<button class="btn locked" disabled>Zinc · nivel ${st.upgrade.level}</button>` : this.priceBtn(st.upgrade.price, { act: 'uphouse', id: k, wood: st.upgrade.wood, label: 'Zinc · ' });
+    else if (house && (b.tier || 1) === 1) btn = s.level < st.upgrade.level ? `<button class="btn locked" disabled>Zinc · nivel ${st.upgrade.level}</button>` : this.priceBtn(st.upgrade.price, { act: 'uphouse', id: k, wood: st.upgrade.wood, label: 'Zinc · ' });
+    else if (house && b.tier === 2 && st.upgrade2) btn = s.level < st.upgrade2.level ? `<button class="btn locked" disabled>Mampostería · nivel ${st.upgrade2.level}</button>` : this.priceBtn(st.upgrade2.price, { act: 'uphouse', id: k, wood: st.upgrade2.madera, label: 'Bloque · ' });
     else btn = `<button class="btn" data-act="goBuild" data-id="${k}">Ver</button>`;
     return `<div class="row ${lock ? 'dim' : ''} ${b ? 'sel' : ''}"><div class="row-ico">${ICON[STRUCT_ICON[k]] || ICON.house}</div><div class="row-main"><b>${name}</b><small>${detail}</small></div>${btn}</div>`;
   }

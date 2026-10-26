@@ -586,17 +586,23 @@ export function basketGeo() {
 }
 
 // ---------------------------------------------------------------- Canteros y cultivos
+// Cantero en surcos: dos lomos de tierra colorada a lo largo de X (de borde a borde, así los canteros vecinos
+// forman surcos largos) y el surco hondo en medio; las matas van encima de los lomos (z = ±0.25).
 export function plotGeo() {
   const b = new Builder();
-  b.box(0.94, 0.08, 0.94, P.earth);
-  for (let i = 0; i < 3; i++) b.box(0.84, 0.07, 0.16, P.earthDark, { y: 0.06, z: -0.3 + i * 0.3 });
+  b.box(1.0, 0.04, 1.0, P.furrow, { m: 7 });
+  for (const z of [-0.25, 0.25]) {
+    b.box(1.0, 0.07, 0.36, P.earthDark, { y: 0.03, z, m: 7 });
+    b.box(1.0, 0.04, 0.24, P.earth, { y: 0.09, z, m: 7 });
+  }
+  b.box(1.0, 0.012, 0.08, P.earthWet, { y: 0.04, m: 7 });
   return b.build();
 }
 
 export function cropGeo(type, stage) {
   const r = rng(type.length * 10 + stage);
   const b = new Builder();
-  const spots = [[-0.22, -0.22], [0.22, -0.22], [-0.22, 0.22], [0.22, 0.22]];
+  const spots = [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]]; // encima de los dos lomos del surco
   if (stage === 0) {
     for (const [x, z] of spots) {
       b.box(0.12, 0.02, 0.05, P.leafLite, { x: x - 0.04, y: 0.13, z, rz: 0.4 });
@@ -616,7 +622,7 @@ export function cropGeo(type, stage) {
     }
   } else if (type === 'cane') {
     const h = stage === 2 ? 1.25 : 0.7;
-    for (const [x, z] of [[-0.25, -0.2], [0, -0.25], [0.25, -0.2], [-0.22, 0.2], [0.05, 0.22], [0.27, 0.18]]) {
+    for (const [x, z] of [[-0.33, -0.25], [0, -0.25], [0.33, -0.25], [-0.33, 0.25], [0, 0.25], [0.33, 0.25]]) {
       const segs = 4;
       for (let k = 0; k < segs; k++) b.cyl(0.035, 0.04, h / segs - 0.01, 5, k % 2 ? 0xb9b05a : 0x9fa24a, { x, y: 0.08 + k * (h / segs), z });
       for (let k = 0; k < 3; k++) {
@@ -744,17 +750,43 @@ export function stumpGeo(seed) {
   return b.build();
 }
 const sph2 = (r, w = 10, h = 8) => new THREE.SphereGeometry(r, w, h);
+// Vaca: grande y bien proporcionada (≈1.6 de largo, 1.2 a la cruz). 0 = holandesa pinta, 1 = criolla colorada, 2 = cebú con giba.
 export function cowGeo(variant = 0) {
   const b = new Builder();
-  const main = [0xe8e0d0, 0x8a5a3a, 0xd9c7a8][variant % 3];
-  b.add(part(new THREE.CapsuleGeometry(0.26, 0.55, 4, 10), main, { y: 0.62, rx: Math.PI / 2 }));
-  if (variant % 3 === 0) for (let i = 0; i < 4; i++) b.add(part(sph2(0.12), 0x2e2620, { x: (i % 2 ? 0.2 : -0.2), y: 0.7 + (i % 3) * 0.05, z: -0.25 + i * 0.16, sx: 0.5 }));
-  b.add(part(new THREE.BoxGeometry(0.26, 0.26, 0.34), main, { y: 0.78, z: -0.6 }));
-  b.add(part(new THREE.BoxGeometry(0.2, 0.14, 0.12), 0xd9a89a, { y: 0.7, z: -0.8 }));
-  for (const x of [-0.12, 0.12]) b.add(part(new THREE.ConeGeometry(0.03, 0.14, 5), 0xe8dcc0, { x, y: 0.97, z: -0.58, rz: x * 3 }));
-  for (const [x, z] of [[-0.16, -0.3], [0.16, -0.3], [-0.16, 0.3], [0.16, 0.3]]) b.add(part(new THREE.CylinderGeometry(0.05, 0.045, 0.42, 6), main, { x, y: 0.21, z }));
-  b.add(part(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 4), main, { y: 0.55, z: 0.55, rx: 0.3 }));
-  return b.build();
+  const S = 0.9; // escala final (abajo)
+  const v = variant % 3;
+  const main = [0xece6da, 0x9a5a34, 0xd9d2c4][v];
+  const dark = [0x2a2420, 0x6e3e22, 0x8a847a][v];
+  const r = rng(77 + v);
+  // cuerpo: barril con pecho hondo, cruz y anca
+  b.add(part(new THREE.CapsuleGeometry(0.34, 0.78, 6, 14), main, { y: 0.92, rx: Math.PI / 2, sx: 0.88, sy: 1.04 }));
+  b.add(part(sph2(0.3, 12, 8), main, { y: 0.8, z: 0.08, sx: 0.95, sy: 0.85, sz: 1.5 })); // barriga
+  b.add(part(sph2(0.27, 10, 8), main, { y: 1.02, z: 0.42, sx: 1.05, sy: 0.85, sz: 0.9 })); // anca
+  b.add(part(sph2(0.25, 10, 8), main, { y: 1.04, z: -0.38, sx: 0.95, sy: 0.9 })); // cruz
+  if (v === 2) b.add(part(sph2(0.16, 10, 8), main, { y: 1.28, z: -0.42, sx: 0.8, sz: 1.1 })); // giba de cebú
+  if (v === 0) for (let i = 0; i < 6; i++) b.add(part(sph2(0.16, 8, 6), dark, { x: (i % 2 ? 0.27 : -0.27) * (0.92 + r() * 0.1), y: 0.9 + r() * 0.18, z: -0.42 + i * 0.17, sx: 0.32, sz: 1 + r() * 0.5 }));
+  // cuello y cabeza (un poco gacha)
+  b.add(part(new THREE.CylinderGeometry(0.16, 0.22, 0.42, 10), main, { y: 1.08, z: -0.72, rx: 1.05 }));
+  if (v === 2) b.add(part(new THREE.BoxGeometry(0.08, 0.3, 0.32), main, { y: 0.8, z: -0.66, rx: 0.3 })); // papada
+  b.add(part(new THREE.BoxGeometry(0.26, 0.3, 0.4), main, { y: 1.12, z: -0.98, rx: 0.45 }));
+  b.add(part(new THREE.BoxGeometry(0.24, 0.18, 0.16), v === 1 ? 0xc9907a : 0xd9a89a, { y: 0.98, z: -1.17, rx: 0.45 })); // hocico
+  for (const x of [-0.06, 0.06]) b.add(part(sph2(0.025, 6, 4), 0x2a2420, { x, y: 0.98, z: -1.25 }));
+  for (const x of [-0.1, 0.1]) b.add(part(sph2(0.03, 6, 4), 0x1a1612, { x: x * 1.25, y: 1.2, z: -1.0 }));
+  // orejas (caídas en el cebú) y cuernos
+  for (const sx of [-1, 1]) {
+    b.add(part(new THREE.BoxGeometry(0.2, 0.03, 0.1), main, { x: sx * 0.2, y: v === 2 ? 1.12 : 1.22, z: -0.9, rz: sx * (v === 2 ? -0.7 : 0.25) }));
+    b.add(part(new THREE.ConeGeometry(0.035, 0.2, 6), 0xe8dcc0, { x: sx * 0.14, y: 1.36, z: -0.86, rz: -sx * 0.7, rx: -0.2 }));
+  }
+  // patas con pezuñas
+  for (const [x, z] of [[-0.19, -0.48], [0.19, -0.48], [-0.19, 0.5], [0.19, 0.5]]) {
+    b.add(part(new THREE.CylinderGeometry(0.075, 0.06, 0.62, 7), main, { x, y: 0.33, z }));
+    b.add(part(new THREE.CylinderGeometry(0.065, 0.07, 0.07, 7), 0x2a2420, { x, y: 0.035, z }));
+  }
+  // ubre y cola con borla
+  if (v !== 2) { b.add(part(sph2(0.13, 8, 6), 0xe0a8a0, { y: 0.56, z: 0.3, sx: 1.2, sy: 0.8 })); for (const [x, z] of [[-0.05, 0.25], [0.05, 0.25], [-0.05, 0.35], [0.05, 0.35]]) b.add(part(new THREE.CylinderGeometry(0.018, 0.012, 0.08, 4), 0xd99a90, { x, y: 0.42, z })); }
+  b.add(part(new THREE.CylinderGeometry(0.02, 0.018, 0.75, 5), main, { y: 0.68, z: 0.76, rx: 0.12 }));
+  b.add(part(sph2(0.06, 6, 5), dark, { y: 0.32, z: 0.8, sy: 1.6 }));
+  return b.build().scale(S, S, S);
 }
 export function goatGeo(variant = 0) {
   const b = new Builder();
