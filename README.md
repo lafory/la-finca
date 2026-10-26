@@ -24,6 +24,7 @@ npm run preview             # = vite preview --host 0.0.0.0 --port 4173 --strict
 node tests/v3.mjs           # v3: contratar, ⏩, noche → screenshots/v3-*.png
 node tests/v31.mjs          # v3.1: finca grande, obstáculos, obras, cámara → screenshots/v31-*.png
 node tests/camionero.mjs    # camionero automático: cargar, despedir, venta suelta → screenshots/cam-*.png
+node tests/v4.mjs           # v4: manigua (leña, frutas, animales), batey, leñero → screenshots/v4-*.png y v4-report.json
 npm run smoke               # escritorio, iPad, teléfono vertical y horizontal → screenshots/v2-*.png y smoke-report-v2.json
 node tests/showcase.mjs     # capturas de una finca avanzada
 ```
@@ -60,12 +61,27 @@ Alternativa sin Vite para servir `dist/`: `npx serve dist -l 4173` o `python3 -m
   casa de curar tabaco → puros (N15). Cada obra va en su solar dentro de su tierra.
 - **Cámara:** "Ver finca" (a la derecha) encuadra toda la tierra tuya; "Centrar" vuelve a la vista cercana sobre el guajiro.
   El límite de alejar y de mover la vista crece (con animación) cada vez que compras tierra.
+- **Salir de la finca (v4):** el mundo ahora mide 88×80 casillas. Por el **camino del sur** se llega a:
+  - **La manigua** (nivel 3, al este): monte con guásimas, marabú, ceibas, palmas reales, mangos, guayabos, cocoteros, un arroyo con
+    pasos de piedra y mogotes. Toca un árbol y el guajiro lo tumba con el machete (**leña**; vuelve a crecer). Toca frutales para
+    recoger mangos, guayabas y cocos. Atrapa jutías, puercos jíbaros, guineas y gallinas perdidas (hasta 3 en brazos) y doma el
+    caballo cimarrón (3 intentos): al volver a la finca se entregan solos (gallinas/guineas al corral, jíbaro al chiquero, el
+    caballo hace caminar más rápido). Botones **Manigua** / **Batey** (arriba a la izquierda) y **Volver a la finca** cuando estás fuera.
+  - **El batey** (nivel 5, al sur): bohíos (y luego casas de zinc) con pesos + leña; cada casa sube el tope de trabajadores
+    (empiezas con 4). La bodega (semillas y gallinas −15 %), la escuelita (+10 % XP) y la iglesita (+5 % en pedidos). Los
+    trabajadores sin tarea se van a descansar a su casa del batey.
+  - **Leña:** recurso nuevo (tope 500) que piden los corrales, el trapiche y las casas. **Tato, el leñero** (nivel 4) va solo a la
+    manigua, tumba 3 árboles y trae la leña al bohío.
+  - Próximamente: los campos grandes (6×6, nivel 18) y el central azucarero con su tren (nivel 28).
+  - Partidas v3 se migran sin perder nada. Trucos de desarrollo (solo `npm run dev`): Ajustes → +1 nivel / +pesos / +leña.
 - **Calidad gráfica:** Ajustes → Auto / Alta / Media / Baja. En Auto baja sola si el cuadro tarda > 25 ms.
 - Pantalla completa: botón ⛶ arriba (Android/escritorio); en iPhone, "Añadir a pantalla de inicio" abre a pantalla completa.
 
 ## Estructura
 - `src/data.js` – economía, niveles, mapa (cuadrícula 22×18), parcelas.
 - `src/state.js` – estado, guardado en localStorage (`lafinca-v2`), cuadrícula de bloqueos.
+- `src/zones.js` – zonas del mundo (camino, manigua, batey, campos, central), plantas y animales del monte (datos).
+- `src/sim-v4.js` / `src/world-v4.js` – lógica y vistas (perezosas, por trozos instanciados con LOD) de las zonas de fuera.
 - `src/sim.js` – lógica: jugador, gallinas, huevos, canteros, riego, camión y pedidos, fogón, trabajadores, XP.
 - `src/world.js` / `src/models.js` – escena Three.js (MeshStandardMaterial, ACES, sombras PCF, niebla, cielo) y modelos procedurales.
 - `src/shaders.js` – detalle procedural por material (madera, guano, metal oxidado, zinc, follaje, tierra roja) y viento.
