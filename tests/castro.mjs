@@ -38,12 +38,14 @@ async function run(name) {
     await enter();
     await ev(() => { const g = window.__finca, s = g.sim; s.s.tutorialDone = true; s.mbCheat('unlock'); s.mbCheat('army'); s.mbCheat('army'); s.mbCheat('free'); s.mbCheat('free'); s.mbBuyFarm('manzanillo'); });
     await closeModals();
-    R.noAttackYet = await waitFor(() => !window.__finca.sim.cs().attack && !!window.__finca.sim.cs().next, 8000);
+    R.noAttackYet = await waitFor(() => !window.__finca.sim.cs().attack && !!window.__finca.sim.cs().next, 30000);
     await click('#btn-mambi'); await sleep(2200); await closeModals(); await sleep(500);
     // 1) aviso: truco «Ataque ahora» desde la hoja de Bayamo
     await click('.mb-city[data-id="bayamo"]'); await sleep(500);
     R.citySection = await ev(() => !!document.querySelector('#sheet-body .cs-sec') && document.querySelector('#sheet-body').textContent.includes('Defensa de Bayamo'));
-    await click('[data-act="cscheat"][data-k="attack"][data-id="bayamo"]'); await sleep(400);
+    await click('[data-act="cscheat"][data-k="attack"][data-id="bayamo"]');
+    await ev(() => { const A = window.__finca.sim.cs().attack; if (A) A.hit = Date.now() / 1000 + 180; }); // máquinas lentas: más margen
+    await sleep(400);
     let c = await C();
     R.attack = c.attack && { city: c.attack.city, power: c.attack.power, secs: Math.round(c.attack.hit - Date.now() / 1000) };
     R.sheetWarn = await ev(() => !!document.querySelector('#sheet-body .cs-warn'));

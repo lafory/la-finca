@@ -255,10 +255,12 @@ export function installCastro(SimC) {
   };
 
   // ---- cada segundo
-  let acc = 0;
-  P.csUpdate = function (dt) {
-    acc += dt; if (acc < 0.5 || this.csFrozen) return; acc = 0;
-    const C = this.cs(), t = rt();
+  // se revisa por reloj real (cada medio segundo), aunque los cuadros vayan lentos
+  P.csUpdate = function () {
+    const t = rt();
+    if (this.csFrozen || t - (this.csTick || 0) < 0.5) return;
+    this.csTick = t;
+    const C = this.cs();
     C.seen = t;
     if (this.csSync()) this.mbChanged();
     if (!this.mbUnlocked() || !this.csOwned().length) { if (!C.attack) C.next = 0; return; }
