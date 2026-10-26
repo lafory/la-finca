@@ -1,7 +1,9 @@
 import './style.css';
+import './extensions.js'; // primero: los módulos se registran antes de crear la partida
 import { viewSize, watchViewport, CAN_FULLSCREEN } from './viewport.js';
 import * as THREE from 'three';
 import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK, structOpen } from './state.js';
+import { TAP_HANDLERS } from './registry.js';
 import { ZONES, zoneOpen, zoneAt, isAnyRoad, PLANT_BY_ID, inFarm } from './zones.js';
 import { Sim } from './sim.js';
 import { World } from './world.js';
@@ -246,7 +248,7 @@ class Game {
     this.ffPlot = p;
   }
   focusWorker(role) {
-    const w = this.sim.workers.find((x) => x.role === role);
+    const w = this.sim.workerById(role);
     if (!w) return;
     this.rig.goal.set(w.x, 0, w.z);
     this.rig.manualUntil = performance.now() + 5000;
@@ -269,6 +271,7 @@ class Game {
     const kind = this.world.pick(ray);
     const s = this.sim.s;
     const go = (t, mx, mz) => { if (this.sim.command(t)) { this.world.showMarker(mx, mz); this.sound.play('tap'); } };
+    if (kind && kind.includes(':') && TAP_HANDLERS[kind.split(':')[0]]) return TAP_HANDLERS[kind.split(':')[0]](this, kind.slice(kind.indexOf(':') + 1));
     if (kind && kind.startsWith('worker:')) return this.ui.openWorker(kind.slice(7));
     if (kind && kind.startsWith('wild:')) { const a = this.sim.wildById(+kind.slice(5)); if (a) return go({ kind: 'wild', id: a.id }, a.x, a.z); }
     if (kind && kind.startsWith('wplant:')) return this.tapPlant(kind.slice(7));

@@ -1,10 +1,11 @@
 // Interfaz DOM: HUD, barra inferior, hojas (Tienda, Terreno, Canasta, Camión, Fogón, Ajustes), tutorial, etiquetas del mundo.
 import { ICON, portrait } from './icons.js';
 import { CAN_FULLSCREEN, viewSize } from './viewport.js';
+import { RESOURCES, UI_SECTIONS, UI_ACTS, UNLOCKS } from './registry.js';
 import {
   ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, WORKERS, WORKER_ORDER, PARCELS, BUILDINGS, TRUCK_SPOT,
   SELLABLE, xpForLevel, EGG_INTERVAL, LEVEL_XP, WORKER_SPEED, workerUpgradePrice, FF_SPEEDS,
-  STRUCTURES, STRUCTURE_ORDER, OBSTACLES, STORAGE_CAPS, STORAGE_LEVELS, TRUCK_SLOTS, CAM_WAIT, CAM_KEEP, BATEY_ORDER, WOOD_CAP } from './data.js';
+  STRUCTURES, STRUCTURE_ORDER, OBSTACLES, STORAGE_CAPS, STORAGE_LEVELS, TRUCK_SLOTS, CAM_WAIT, CAM_KEEP, BATEY_ORDER, WOOD_CAP, workerName, workerLook } from './data.js';
 import { ZONES, ZONE_ORDER, zoneOpen, inFarm, CARRY_MAX, WILD_ANIMALS } from './zones.js';
 import { storageCap, invCount, chickenCap, now, parcelReachable, structOpen, workerCap } from './state.js';
 import { fmtTime, fmtClock } from './sim.js';
@@ -21,6 +22,7 @@ export function unlocksAt(level) {
   for (const k of WORKER_ORDER) if (WORKERS[k].level === level) out.push(`Contratar: ${WORKERS[k].name}`);
   for (const p of PARCELS) if (p.level === level) out.push(`Terreno: ${p.name}`);
   for (const k of STRUCTURE_ORDER) if (STRUCTURES[k].level === level) out.push(`Construir: ${STRUCTURES[k].name}`);
+  for (const u of UNLOCKS) if (u.level === level) out.push(u.text);
   for (const id of ZONE_ORDER) if (ZONES[id].level === level && !ZONES[id].road) out.push(`${ZONES[id].soon ? 'Muy pronto' : 'Se abre'}: ${ZONES[id].name} (${ZONES[id].blurb.toLowerCase().replace(/\.$/, '')})`);
   const houses = BATEY_ORDER.filter((k) => STRUCTURES[k].level === level && STRUCTURES[k].kind === 'house').length;
   if (houses) out.push(`Batey: ${houses} solar${houses > 1 ? 'es' : ''} para casas`);
@@ -60,7 +62,7 @@ export class UI {
         </button>
         <div class="chip money" aria-label="Pesos">${ICON.coin}<b id="money">0</b><small>pesos</small></div>
         <button class="chip inv" data-act="inventory" aria-label="Canasta">${ICON.basket}<b id="invc">0/20</b></button>
-        <div class="chip wood hidden" id="woodchip" aria-label="Leña">${ICON.wood}<b id="wood">0</b><small>leña</small></div>
+        <div class="chip wood hidden" id="woodchip" aria-label="Madera">${ICON.wood}<b id="wood">0</b><small>madera</small></div>
         <span class="grow"></span>
         <button class="round ffbtn" id="btn-ff" data-act="ff" aria-label="Adelantar el tiempo">${ICON.ff}<b id="ffx">x1</b></button>
         <button class="round" id="btn-full" data-act="fullscreen" aria-label="Pantalla completa">${ICON.full}</button>
@@ -145,11 +147,11 @@ export class UI {
       case 'land': return this.openLand();
       case 'workers': return this.openWorkers();
       case 'worker': return this.openWorker(d.id);
-      case 'hire': if (sim.hire(d.id)) { this.openWorker(d.id); } else this.refreshSheet(); return;
+      case 'hire': if (sim.hire(d.id)) { const mine = sim.workers.filter((x) => x.role === d.id); this.openWorker(mine[mine.length - 1].rec.id); } else this.refreshSheet(); return;
       case 'wup': sim.upgradeWorker(d.id); this.refreshSheet(); return;
       case 'wauto': sim.toggleAutobuy(d.id); this.refreshSheet(); return;
-      case 'wsell': sim.toggleSell(); this.refreshSheet(); return;
-      case 'wkeep': sim.cycleKeep(); this.refreshSheet(); return;
+      case 'wsell': sim.toggleSell(d.id); this.refreshSheet(); return;
+      case 'wkeep': sim.cycleKeep(d.id); this.refreshSheet(); return;
       case 'wfire': return this.confirmFire(d.id);
       case 'wfire-yes': sim.fireWorker(d.id); $('#modal-wrap').classList.add('hidden'); this.openWorkers(); return;
       case 'ff': this.g.cycleSpeed(); return;
@@ -188,7 +190,7 @@ export class UI {
       case 'reset-yes': this.g.resetGame(); return;
       case 'modal-close': $('#modal-wrap').classList.add('hidden'); return;
       case 'selseed': this.s.selectedSeed = d.id; this.refreshHud(); this.closeSheet(); return;
-      default:
+      default: if (UI_ACTS[a]) UI_ACTS[a](this, d);
     }
   }
   cycleSeed() {
@@ -224,7 +226,7 @@ export class UI {
 
   priceBtn(price, { act = 'buy', id, qty, disabled, lockLevel, label, wood } = {}) {
     if (lockLevel) return `<button class="btn locked" disabled>Nivel ${lockLevel}</button>`;
-    const poor = this.s.money < price || (wood && this.s.wood < wood);
+    const poor = this.s.money < price || (wood && this.s.res.madera < wood);
     return `<button class="btn ${poor ? 'poor' : ''}" data-act="${act}" data-id="${id}" ${qty ? `data-qty="${qty}"` : ''} ${disabled || poor ? 'disabled' : ''}>${label || ''}${ICON.coin}${price}${wood ? `<span class="wd">${ICON.wood}${wood}</span>` : ''}</button>`;
   }
   openShop() {
@@ -255,74 +257,79 @@ export class UI {
   }
   // ------------------------------------------------------------ trabajadores
   workerCard(k) {
-    const s = this.s, w = WORKERS[k], rt = this.sim.workers.find((x) => x.role === k);
-    const lock = s.level < w.level ? w.level : 0;
-    const stars = rt ? `<span class="stars">${[1, 2, 3].map((i) => `<i class="${i <= rt.rec.lvl ? 'on' : ''}">★</i>`).join('')}</span>` : '';
-    const btn = rt ? `<button class="btn" data-act="worker" data-id="${k}">Ver</button>`
-      : lock ? `<button class="btn locked" disabled>Nivel ${lock}</button>`
-      : `<button class="btn primary ${s.money < w.price ? 'poor' : ''}" data-act="hire" data-id="${k}" ${s.money < w.price ? 'disabled' : ''}>Contratar ${ICON.coin}${w.price}</button>`;
-    return `<div class="wcard ${lock ? 'dim' : ''} ${rt ? 'hired' : ''} ${w.tag ? 'feat' : ''}" data-worker="${k}">
+    const s = this.s, w = WORKERS[k], sim = this.sim, mine = sim.workers.filter((x) => x.role === k);
+    const lock = s.level < w.level ? w.level : 0, price = sim.hirePrice(k), full = s.workers.length >= sim.workerCap();
+    const btn = lock ? `<button class="btn locked" disabled>Nivel ${lock}</button>`
+      : full ? '<button class="btn locked" disabled>Sin vivienda</button>'
+      : `<button class="btn primary ${s.money < price ? 'poor' : ''}" data-act="hire" data-id="${k}" ${s.money < price ? 'disabled' : ''}>${mine.length ? 'Otro' : 'Contratar'} ${ICON.coin}${price}</button>`;
+    const who = mine.length ? mine.map((x) => workerName(k, x.rec.n || 0)).join(', ') : workerName(k, 0);
+    const crew = mine.map((x) => `<button class="wchip" data-act="worker" data-id="${x.rec.id}">${portrait(workerLook(k, x.rec.n || 0), WORKER_ORDER.indexOf(k) + (x.rec.n || 0))}<span><b>${esc(workerName(k, x.rec.n || 0))}</b> <i class="stars">${'★'.repeat(x.rec.lvl)}</i><small>${esc(x.status)}</small></span></button>`).join('');
+    return `<div class="wcard ${lock ? 'dim' : ''} ${mine.length ? 'hired' : ''} ${w.tag ? 'feat' : ''}" data-worker="${k}">
       ${portrait(w.look, WORKER_ORDER.indexOf(k))}
-      <div class="wmain">${w.tag ? `<span class="wtag">${ICON.coin}${w.tag}</span>` : ''}<b>${w.who} ${stars}</b><span class="role">${ICON[w.icon] || ''}${w.name}</span>
-        <small>${rt ? `Ahora: ${esc(rt.status)}` : w.detail}</small></div>
-      <div class="wbtn">${btn}</div></div>`;
+      <div class="wmain">${w.tag ? `<span class="wtag">${ICON.coin}${w.tag}</span>` : ''}<b>${esc(who)}${mine.length > 1 ? ` <em class="cnt">×${mine.length}</em>` : ''}</b><span class="role">${ICON[w.icon] || ''}${w.name}</span>
+        <small>${mine.length === 1 ? `Ahora: ${esc(mine[0].status)}` : w.detail}</small></div>
+      <div class="wbtn">${btn}</div>${crew ? `<div class="wcrew">${crew}</div>` : ''}</div>`;
   }
   openWorkers() {
     this.openSheet('Trabajadores', () => {
       const s = this.s;
       const n = s.workers.length;
       const cap = workerCap(s);
-      return `<p class="note">Se contratan una sola vez (sin salario). Trabajan solos, también mientras adelantas el tiempo. ${n ? `Tienes ${n} de ${WORKER_ORDER.length}.` : 'El primero cuesta poco: ¡vende huevos y contrata a Pancho!'}</p>
-        <div class="capbar ${n >= cap ? 'full' : ''}">${ICON.house}<b>Viviendas: ${n}/${cap}</b><small>${n >= cap ? (s.level >= ZONES.batey.level ? 'Construye casas en el batey para contratar más.' : `En el nivel ${ZONES.batey.level} se abre el batey para hacer casas.`) : 'Cada casa del batey da sitio a más trabajadores.'}</small></div>`
+      return `<div class="capbar ${n >= cap ? 'full' : ''}">${ICON.worker}<b>Trabajadores ${n}/${cap}</b><small>${n >= cap ? (s.level >= ZONES.batey.level ? 'Para contratar más: construye o mejora casas en el batey, o sube de nivel.' : `Sube de nivel para más sitio; en el nivel ${ZONES.batey.level} se abre el batey para hacer casas.`) : 'Puedes tener varios del mismo oficio: se reparten el trabajo sin estorbarse. El tope sube con el nivel y con las casas del batey.'}</small></div>
+        <p class="note">Pago único, sin salario. Trabajan solos, también mientras adelantas el tiempo. ${n ? '' : 'El primero cuesta poco: ¡vende huevos y contrata a Pancho!'}</p>`
         + [...WORKER_ORDER].sort((a, b) => (WORKERS[b].tag ? 1 : 0) - (WORKERS[a].tag ? 1 : 0)).map((k) => this.workerCard(k)).join('');
     });
   }
-  openWorker(role) {
-    const w = WORKERS[role];
-    this.openSheet(`${w.who} · ${w.name}`, () => {
-      const s = this.s, rt = this.sim.workers.find((x) => x.role === role);
+  openWorker(id) {
+    const first = this.sim.workerById(id);
+    if (!first) { if (WORKERS[id]) return this.openSheet(WORKERS[id].name, () => this.workerCard(id)); return; }
+    const role = first.role, w = WORKERS[role], rid = first.rec.id, name = workerName(role, first.rec.n || 0);
+    this.openSheet(`${name} · ${w.name}`, () => {
+      const s = this.s, rt = this.sim.workerById(rid);
       if (!rt) return this.workerCard(role);
       const lvl = rt.rec.lvl, sp = WORKER_SPEED[lvl];
-      let out = `<div class="wdetail">${portrait(w.look, WORKER_ORDER.indexOf(role))}<div><p class="wstatus">${ICON[w.icon] || ''} <b>${esc(rt.status)}</b></p><small>${w.detail} Trabajos hechos: ${rt.rec.jobs || 0}.</small></div></div>`;
+      let out = `<div class="wdetail">${portrait(workerLook(role, rt.rec.n || 0), WORKER_ORDER.indexOf(role) + (rt.rec.n || 0))}<div><p class="wstatus">${ICON[w.icon] || ''} <b>${esc(rt.status)}</b></p><small>${w.detail} Trabajos hechos: ${rt.rec.jobs || 0}.</small></div></div>`;
       out += `<div class="row"><div class="row-ico">${ICON.up}</div><div class="row-main"><b>Rapidez ${'★'.repeat(lvl)}${'☆'.repeat(3 - lvl)}</b><small>Camina ${sp.walk.toFixed(1)} · trabaja en ${sp.work.toFixed(1)} s${lvl < 3 ? ` → nivel ${lvl + 1}: ${WORKER_SPEED[lvl + 1].walk.toFixed(1)} · ${WORKER_SPEED[lvl + 1].work.toFixed(1)} s` : ' · ¡al máximo!'}</small></div>
-        ${lvl < 3 ? this.priceBtn(workerUpgradePrice(role, lvl), { act: 'wup', id: role, label: 'Mejorar · ' }) : '<button class="btn locked" disabled>Máximo</button>'}</div>`;
+        ${lvl < 3 ? this.priceBtn(workerUpgradePrice(role, lvl), { act: 'wup', id: rid, label: 'Mejorar · ' }) : '<button class="btn locked" disabled>Máximo</button>'}</div>`;
       if (role === 'sembrador') {
         out += `<div class="row"><div class="row-ico">${ICON.seed}</div><div class="row-main"><b>Comprar semillas sola</b><small>Si no quedan, compra ${CROPS[s.selectedSeed]?.seedName.toLowerCase() || 'semillas'} con tus pesos.</small></div>
-          <button class="btn toggle ${rt.rec.autobuy ? 'on' : ''}" data-act="wauto" data-id="${role}">${rt.rec.autobuy ? 'Sí' : 'No'}</button></div>`;
+          <button class="btn toggle ${rt.rec.autobuy ? 'on' : ''}" data-act="wauto" data-id="${rid}">${rt.rec.autobuy ? 'Sí' : 'No'}</button></div>`;
       }
       if (role === 'camionero') {
         const keep = rt.rec.keep ?? 10;
-        out += `<div class="row"><div class="row-ico">${ICON.truck}</div><div class="row-main"><b>Atiende los camiones solo</b><small>Trae del bohío lo que piden, carga y cobra. Si piden lo que no hay, espera ${CAM_WAIT} s por si llega y luego lo despide.</small></div></div>`;
+        out += `<div class="row"><div class="row-ico">${ICON.truck}</div><div class="row-main"><b>Atiende los camiones solo</b><small>Trae del bohío lo que piden, carga y cobra. Si piden lo que no hay, espera ${CAM_WAIT} s por si llega y luego lo despide. Con dos camioneros, cada uno atiende un camión.</small></div></div>`;
         out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Vender lo que sobra</b><small>Venta suelta a precio normal de lo que pase de lo que guardas (nunca lo que piden los camiones).</small></div>
-          <button class="btn toggle ${rt.rec.sell ? 'on' : ''}" data-act="wsell" data-id="${role}">${rt.rec.sell ? 'Sí' : 'No'}</button></div>`;
-        out += `<div class="row ${rt.rec.sell ? '' : 'dim'}"><div class="row-ico">${ICON.basket || ICON.egg}</div><div class="row-main"><b>Guardar ${keep} de cada cosa</b><small>Lo demás lo vende Chucho. Toca para cambiar (${CAM_KEEP.join(' / ')}).</small></div>
-          <button class="btn" data-act="wkeep" data-id="${role}">${keep}</button></div>`;
+          <button class="btn toggle ${rt.rec.sell ? 'on' : ''}" data-act="wsell" data-id="${rid}">${rt.rec.sell ? 'Sí' : 'No'}</button></div>`;
+        out += `<div class="row ${rt.rec.sell ? '' : 'dim'}"><div class="row-ico">${ICON.basket || ICON.egg}</div><div class="row-main"><b>Guardar ${keep} de cada cosa</b><small>Lo demás lo vende ${esc(name)}. Toca para cambiar (${CAM_KEEP.join(' / ')}).</small></div>
+          <button class="btn" data-act="wkeep" data-id="${rid}">${keep}</button></div>`;
       }
-      out += `<div class="modal-btns"><button class="btn" data-act="workers">Todos los trabajadores</button><button class="btn danger" data-act="wfire" data-id="${role}">Despedir</button></div>`;
+      out += `<div class="modal-btns"><button class="btn" data-act="workers">Todos los trabajadores</button><button class="btn danger" data-act="wfire" data-id="${rid}">Despedir</button></div>`;
       return out;
     });
-    this.g.focusWorker?.(role);
+    this.g.focusWorker?.(rid);
   }
-  confirmFire(role) {
-    const w = WORKERS[role];
-    this.modal(`<h2>¿Despedir a ${w.who}?</h2><p>No se devuelve lo pagado. Puedes volver a contratarlo después.</p>
-      <div class="modal-btns"><button class="btn" data-act="modal-close">Cancelar</button><button class="btn danger" data-act="wfire-yes" data-id="${role}">Despedir</button></div>`);
+  confirmFire(id) {
+    const rt = this.sim.workerById(id);
+    if (!rt) return;
+    const who = workerName(rt.role, rt.rec.n || 0);
+    this.modal(`<h2>¿Despedir a ${esc(who)}?</h2><p>No se devuelve lo pagado. Puedes volver a contratar después.</p>
+      <div class="modal-btns"><button class="btn" data-act="modal-close">Cancelar</button><button class="btn danger" data-act="wfire-yes" data-id="${rt.rec.id}">Despedir</button></div>`);
   }
-
   openLand() {
     this.openSheet('Terreno y obras', () => {
       const s = this.s;
       const owned = s.parcels.length;
       let out = `<p class="note">Tienes ${owned} de ${PARCELS.length} pedazos de tierra. Compra la tierra de al lado, quita piedras, marabú y tocones para abrir canteros, y construye en los solares.</p>`;
-      out += `<div class="capbar">${ICON.wood}<b>Leña: ${s.wood}/${WOOD_CAP}</b><small>${s.level >= ZONES.manigua.level ? 'Tumba árboles en la manigua o contrata al leñero.' : `La leña sale de la manigua (nivel ${ZONES.manigua.level}).`}</small></div>`;
+      out += `<div class="capbar">${ICON.wood}<b>Madera: ${s.res.madera}/${WOOD_CAP}</b><small>${s.level >= ZONES.manigua.level ? 'Tumba árboles en la manigua o contrata al leñador.' : `La madera sale de la manigua (nivel ${ZONES.manigua.level}).`}</small></div>`;
       out += this.bateySection();
+      for (const f of UI_SECTIONS.land || []) out += f(this) || '';
       out += '<h3>Construir en la finca</h3>';
       for (const k of STRUCTURE_ORDER) {
         const st = STRUCTURES[k], built = !!s.built[k], par = PARCELS.find((p) => p.id === st.parcel);
         const hasLand = s.parcels.includes(st.parcel), lock = s.level < st.level ? st.level : 0;
         const btn = built ? `<button class="btn" data-act="goBuild" data-id="${k}">Ver</button>`
           : !hasLand ? `<button class="btn locked" disabled>${lock ? `Nivel ${lock}` : 'Sin tierra'}</button>`
-          : this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.wood });
+          : this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.madera });
         out += `<div class="row ${lock || !hasLand ? 'dim' : ''} ${built ? 'sel' : ''}"><div class="row-ico">${ICON[STRUCT_ICON[k]] || ICON.up}</div><div class="row-main"><b>${st.name}</b><small>${st.detail}${built ? ' · ¡construido!' : hasLand ? '' : ` · en “${par.name}”`}</small></div>${btn}</div>`;
       }
       out += '<h3>Tierra</h3>';
@@ -354,21 +361,21 @@ export class UI {
       name = b?.tier === 2 ? st.upgrade.name : b ? 'Bohío' : `Solar: ${st.name}`;
       detail = b?.tier === 2 ? `Viven ${st.upgrade.cap} trabajadores más.` : b ? `Vive ${st.cap} trabajador más. Mejóralo a casa de zinc: +${st.upgrade.cap - st.cap}.` : `Bohío de guano: +${st.cap} trabajador.`;
     }
-    if (!b) btn = this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.wood });
+    if (!b) btn = this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.madera });
     else if (house && b.tier !== 2) btn = s.level < st.upgrade.level ? `<button class="btn locked" disabled>Zinc · nivel ${st.upgrade.level}</button>` : this.priceBtn(st.upgrade.price, { act: 'uphouse', id: k, wood: st.upgrade.wood, label: 'Zinc · ' });
     else btn = `<button class="btn" data-act="goBuild" data-id="${k}">Ver</button>`;
     return `<div class="row ${lock ? 'dim' : ''} ${b ? 'sel' : ''}"><div class="row-ico">${ICON[STRUCT_ICON[k]] || ICON.house}</div><div class="row-main"><b>${name}</b><small>${detail}</small></div>${btn}</div>`;
   }
   openBuild(id) {
     const st = STRUCTURES[id];
-    if (st.zone === 'batey') return this.openSheet(st.kind === 'house' ? 'Casa del batey' : st.name, () => `<p class="note">${st.kind === 'house' ? 'Cada casa da vivienda a trabajadores. Hacen falta pesos y leña.' : st.detail}</p>${this.bateyRow(id)}<p class="note">Leña: ${this.s.wood}. Viviendas: ${this.sim.workers.length}/${workerCap(this.s)}.</p>`);
+    if (st.zone === 'batey') return this.openSheet(st.kind === 'house' ? 'Casa del batey' : st.name, () => `<p class="note">${st.kind === 'house' ? 'Cada casa da vivienda a trabajadores. Hacen falta pesos y madera.' : st.detail}</p>${this.bateyRow(id)}<p class="note">Madera: ${this.s.res.madera}. Viviendas: ${this.sim.workers.length}/${workerCap(this.s)}.</p>`);
     this.openSheet(st.name, () => {
       const s = this.s, lock = s.level < st.level ? st.level : 0;
       if (s.built[id]) return `<p class="note">Ya está construido. ${st.detail}</p>`;
       let blocked = false;
       for (let z = st.z; z < st.z + st.h; z++) for (let x = st.x; x < st.x + st.w; x++) if (this.sim.obstacleAt(x, z)) blocked = true;
-      return `<div class="row"><div class="row-ico">${ICON[STRUCT_ICON[id]] || ICON.up}</div><div class="row-main"><b>Solar para: ${st.name}</b><small>${st.detail}</small></div>${this.priceBtn(st.price, { act: 'build', id, lockLevel: lock, wood: st.wood })}</div>
-        ${st.wood ? `<p class="note">Lleva ${st.wood} de leña (tienes ${s.wood}).</p>` : ''}
+      return `<div class="row"><div class="row-ico">${ICON[STRUCT_ICON[id]] || ICON.up}</div><div class="row-main"><b>Solar para: ${st.name}</b><small>${st.detail}</small></div>${this.priceBtn(st.price, { act: 'build', id, lockLevel: lock, wood: st.madera })}</div>
+        ${st.madera ? `<p class="note">Lleva ${st.madera} de madera (tienes ${s.res.madera}).</p>` : ''}
         ${blocked ? '<p class="note">Hay que limpiar el solar primero (toca las piedras o el marabú).</p>' : ''}`;
     });
   }
@@ -382,7 +389,7 @@ export class UI {
   openInventory() {
     this.openSheet('La canasta', () => {
       const s = this.s;
-      let out = `<p class="note">Llevas ${invCount(s)} de ${storageCap(s)}. Vende en el camión.${s.wood ? ` Leña en el bohío: ${s.wood}.` : ''}</p><div class="grid">`;
+      let out = `<p class="note">Llevas ${invCount(s)} de ${storageCap(s)}. Vende en el camión.${s.res.madera ? ` Madera en el bohío: ${s.res.madera}.` : ''}</p><div class="grid">`;
       for (const k of SELLABLE) if (s.inv[k] || ITEMS[k].level === undefined || s.level >= (ITEMS[k].level || 1)) out += `<div class="cell">${ICON[k]}<b>${s.inv[k]}</b><small>${ITEMS[k].plural}</small></div>`;
       out += '</div><h3>Semillas</h3><div class="grid">';
       for (const c of CROP_ORDER) out += `<div class="cell">${ICON[c]}<b>${s.seeds[c]}</b><small>${CROPS[c].name}</small></div>`;
@@ -455,7 +462,7 @@ export class UI {
       if (this.fsSupported()) out += `<div class="row"><div class="row-ico">${ICON.full}</div><div class="row-main"><b>Pantalla completa</b></div><button class="btn" data-act="fullscreen">${this.isFullscreen() ? 'Salir' : 'Activar'}</button></div>`;
       else out += '<p class="note">En iPhone: Compartir → “Añadir a pantalla de inicio” para jugar a pantalla completa.</p>';
       out += `<p class="note">Controles: toca el suelo para caminar, toca huevos, canteros, el camión o el fogón para usarlos. Arrastra para mover la vista y pellizca (o usa la rueda) para acercar o alejar.</p>`;
-      if (import.meta.env.DEV || window.__fincaDev) out += `<h3>Trucos (solo desarrollo)</h3><div class="seg"><button class="btn" data-act="cheat" data-id="level">+1 nivel</button><button class="btn" data-act="cheat" data-id="money">+1000 pesos</button><button class="btn" data-act="cheat" data-id="wood">+100 leña</button></div>`;
+      if (import.meta.env.DEV || window.__fincaDev) out += `<h3>Trucos (solo desarrollo)</h3><div class="seg"><button class="btn" data-act="cheat" data-id="level">+1 nivel</button><button class="btn" data-act="cheat" data-id="money">+1000 pesos</button><button class="btn" data-act="cheat" data-id="wood">+100 madera</button></div>`;
       out += '<button class="btn danger wide" data-act="reset">Empezar de cero…</button>';
       return out;
     });
@@ -490,8 +497,8 @@ export class UI {
     const ic = invCount(s), cap = storageCap(s);
     $('#invc').textContent = `${ic}/${cap}`;
     $('.chip.inv').classList.toggle('full', ic >= cap);
-    $('#woodchip').classList.toggle('hidden', !(s.wood > 0 || s.level >= ZONES.manigua.level));
-    $('#wood').textContent = s.wood;
+    $('#woodchip').classList.toggle('hidden', !(s.res.madera > 0 || s.level >= ZONES.manigua.level));
+    $('#wood').textContent = s.res.madera;
     $('#seedname').textContent = CROPS[s.selectedSeed].name.split(' ')[0];
     $('#seedcount').textContent = s.seeds[s.selectedSeed];
     $('#seedsel .ico').outerHTML = ICON[s.selectedSeed];
@@ -567,9 +574,10 @@ export class UI {
       }
     }
     // zonas cerradas: letrero en la entrada
-    for (const [id, x, z] of [['manigua', 47.5, 39], ['batey', 13, 43], ['campos', 40, 44], ['central', 8, 60]]) {
-      if (zoneOpen(s, id)) continue;
+    for (const id of ZONE_ORDER) {
       const Z = ZONES[id];
+      if (!Z.sign || zoneOpen(s, id)) continue;
+      const [x, z] = Z.sign;
       if (Z.soon && s.level < Z.level - 10) continue;
       this.label(`zone-${id}`, x, 1.4, z, `${Z.name} · ${Z.soon ? 'muy pronto' : `nivel ${Z.level}`}`, 'muted');
     }
@@ -582,7 +590,7 @@ export class UI {
     for (const w of sim.workers) {
       const W0 = WORKERS[w.role];
       const html = w.work > 0 ? `${ICON[W0.icon] || ''}<span>${esc(w.status)}</span>` : w.busy ? `${ICON[W0.icon] || ''}<span class="dots">…</span>` : '<span class="zz">z z</span>';
-      this.label(`w-${w.role}`, w.x, 1.75, w.z, html, `mini wk ${w.work > 0 ? 'working' : ''}`, `worker" data-id="${w.role}`);
+      this.label(`w-${w.rec.id}`, w.x, 1.75, w.z, html, `mini wk ${w.work > 0 ? 'working' : ''}`, `worker" data-id="${w.rec.id}`);
     }
     if (this.focusPlot && performance.now() < this.focusUntil && this.focusPlot.crop) {
       const p = this.focusPlot, rem = p.at + p.dur - now();
@@ -735,10 +743,10 @@ export class UI {
     if (!$('#modal-wrap').classList.contains('hidden') || this.sheet) return;
     if (performance.now() < (this.hintAt || 0)) return;
     const hint = (k, cond, text) => { if (!s.hints[k] && cond) { s.hints[k] = 1; this.toast(text); this.hintAt = performance.now() + 4500; return true; } return false; };
-    hint('manigua', zoneOpen(s, 'manigua'), '¡Se abrió la manigua! Toca «Manigua» para buscar leña, frutas y animales.')
-      || hint('wood', s.wood > 0 && s.level < 12, 'La leña se guarda en el bohío. Sirve para construir corrales y casas.')
+    hint('manigua', zoneOpen(s, 'manigua'), '¡Se abrió la manigua! Toca «Manigua» para buscar madera, frutas y animales.')
+      || hint('wood', s.res.madera > 0 && s.level < 12, 'La madera se guarda en el bohío. Sirve para construir corrales y casas.')
       || hint('carry', s.carry.length > 0, 'Llévalo a la finca: toca «Volver a la finca» y se entrega solo.')
-      || hint('lenador', s.level >= WORKERS.lenador.level, `${WORKERS.lenador.who}, el leñero, ya se puede contratar: tumba árboles por ti.`)
+      || hint('lenador', s.level >= WORKERS.lenador.level, `${WORKERS.lenador.who}, el leñador, ya se puede contratar: tumba árboles por ti.`)
       || hint('batey', zoneOpen(s, 'batey'), '¡Se abrió el batey! Construye casas para tener más trabajadores (Terreno y obras).');
   }
   update(dt) {

@@ -293,3 +293,12 @@ html.ios #btn-full { display: none !important; }
 .capbar small { flex-basis: 100%; opacity: .75; }
 .capbar.full { border-color: var(--red); }
 @media (max-height: 500px) { .explore { top: calc(48px + var(--sat)); } .explore .round.cam { width: 44px; height: 44px; } }
+/* v4: varios del mismo oficio */
+.wcard .wcrew { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.wchip { display: flex; align-items: center; gap: 6px; padding: 3px 8px 3px 3px; border-radius: 12px; border: 1.5px solid rgba(90, 60, 30, .3); background: rgba(255, 250, 235, .7); font: inherit; color: inherit; text-align: left; max-width: 100%; }
+.wchip .portrait { width: 30px; height: 30px; flex: none; }
+.wchip span { display: flex; flex-direction: column; min-width: 0; font-size: 12px; line-height: 1.2; }
+.wchip small { opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.wchip .stars { color: #c98a14; font-style: normal; font-size: 10px; }
+.wcard .cnt { font-style: normal; font-size: 12px; background: var(--red); color: #fff; border-radius: 8px; padding: 0 5px; }
+.wcard { flex-wrap: wrap; } .wcard .wmain { flex: 1; min-width: 0; }

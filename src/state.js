@@ -1,8 +1,9 @@
 import {
   W, H, SAVE_KEY, START_AREA, ROAD, PARCELS, START_PLOTS, BUILDINGS, PEN, TRUCK_TILES,
-  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST, GW, GH, WORKER_BASE_CAP, ITEMS,
+  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST, GW, GH, WORKER_BASE_CAP, ITEMS, WORKER_LEVEL_CAP,
 } from './data.js';
 import { zoneAt, zoneOpen, isAnyRoad, MANIGUA, BATEY, inFarm } from './zones.js';
+import { resDefaults, runMigrations } from './registry.js';
 
 // Reloj del juego: tiempo real + lo que se ha adelantado con ⏩ (se guarda en la partida).
 export const CLOCK = { offset: 0 };
@@ -37,9 +38,10 @@ export function newGame() {
     tod: 0.4, // hora del día (0 = medianoche, 0.5 = mediodía)
     ffUsed: false,
     hireHint: false,
-    stats: { eggs: 0, harvests: 0, sold: 0, earned: 0, wood: 0, caught: 0, fruit: 0 },
+    stats: { eggs: 0, harvests: 0, sold: 0, earned: 0, madera: 0, caught: 0, fruit: 0 },
     // v4: fuera de la finca
-    wood: 0,
+    res: resDefaults(), // recursos (madera, y los que registren otros módulos)
+    ext: {}, // estado propio de cada extensión registrada (p. ej. ext.central)
     chopped: {}, // id de planta de la manigua → momento en que se tumbó (vuelve a crecer)
     fruit: {}, // id de frutal → momento en que se recogió
     wild: [], // animales sueltos en la manigua { id, kind, x, z }
@@ -75,7 +77,7 @@ export function chickenCap(s) {
 export function structOpen(s, st) { return st.zone ? zoneOpen(s, st.zone) : s.parcels.includes(st.parcel); }
 // Tope de trabajadores según las casas del batey
 export function workerCap(s) {
-  let cap = WORKER_BASE_CAP;
+  let cap = WORKER_BASE_CAP + Math.floor((s.level || 1) / WORKER_LEVEL_CAP);
   for (const [id, st] of Object.entries(STRUCTURES)) if (st.kind === 'house' && s.built?.[id]) cap += s.built[id].tier === 2 ? st.upgrade.cap : st.cap;
   return cap;
 }
@@ -192,7 +194,11 @@ export function load() {
     s.built = { ...(d.built || {}) };
     s.cleared = Array.isArray(d.cleared) ? d.cleared : [];
     // v4: saves viejos sin manigua ni batey
-    s.wood = Math.max(0, Math.floor(+d.wood || 0));
+    s.res = { ...resDefaults(), ...(d.res || {}) };
+    if (d.wood && !d.res) s.res.madera = d.wood; // v4a guardaba la madera como "wood"
+    for (const k of Object.keys(s.res)) s.res[k] = Math.max(0, Math.floor(+s.res[k] || 0));
+    s.ext = d.ext && typeof d.ext === 'object' ? d.ext : {};
+    runMigrations(s, d);
     s.chopped = d.chopped && typeof d.chopped === 'object' ? d.chopped : {};
     s.fruit = d.fruit && typeof d.fruit === 'object' ? d.fruit : {};
     s.wild = Array.isArray(d.wild) ? d.wild : [];
@@ -204,6 +210,8 @@ export function load() {
     s.money = Math.max(0, Math.floor(+s.money || 0));
     // trabajadores de saves viejos
     s.workers = (d.workers || []).map((w) => ({ ...w, role: w.role === 'cocinero' ? 'cocinera' : w.role, lvl: w.lvl || 1 }));
+    // v4: cada trabajador con id propio (los viejos son el original de su oficio)
+    for (const w of s.workers) { if (!w.id) w.id = w.role; if (w.n == null) w.n = 0; }
     return s;
   } catch {
     return null;

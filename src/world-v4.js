@@ -7,6 +7,7 @@ import { ZONES, MANIGUA, WILD_PLANTS, BATEY, zoneOpen, inRect } from './zones.js
 import * as M from './models.js';
 import { patchMaterial } from './shaders.js';
 import { now } from './state.js';
+import { ZONE_VIEWS } from './registry.js';
 
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpE = new THREE.Euler();
 const compose = (x, y, z, ry, s, sy = s) => { tmpQ.setFromEuler(tmpE.set(0, ry, 0)); return tmpM.compose(tmpV.set(x, y, z), tmpQ, tmpS.set(s, sy, s)).clone(); };
@@ -39,6 +40,7 @@ export class ZoneViews {
     this.plantRef = new Map(); // id → { mesh(es), i, m }
     this.pickMeshes = [];
     this.wildViews = new Map();
+    this.ext = {};
     this.dirty = true;
     this.isSmall = world.isSmall;
     this.buildDynamic();
@@ -68,7 +70,13 @@ export class ZoneViews {
     }
     this.updateWild(dt, time);
     this.updateHome(time);
+    // vistas registradas por otros módulos (ver registry.js)
+    for (const [id, f] of Object.entries(ZONE_VIEWS)) {
+      if (!this.ext[id] && ZONES[id] && (zoneOpen(this.s, id) || (rig && this.near(ZONES[id].rect, rig)))) { this.ext[id] = f(this.w) || {}; this.w.applyGrassCounts(); }
+      this.ext[id]?.update?.(dt, time, rig);
+    }
   }
+  pickExt(ray) { for (const v of Object.values(this.ext)) { const k = v.pick?.(ray); if (k) return k; } return null; }
   build(id) {
     if (id === 'camino') this.buildCamino();
     if (id === 'manigua') this.buildManigua();
@@ -332,8 +340,8 @@ export class ZoneViews {
     const s = this.s;
     this.horse.visible = !!s.horse;
     if (s.horse) this.horse.rotation.x = Math.max(0, Math.sin(time * 0.9)) * 0.06;
-    this.logs.visible = s.wood > 0;
-    const sc = Math.min(1.6, 0.6 + s.wood / 120);
+    this.logs.visible = s.res.madera > 0;
+    const sc = Math.min(1.6, 0.6 + s.res.madera / 120);
     this.logs.scale.set(sc, sc, sc);
     // machete en la mano cuando está en la manigua
     const p = this.sim.player;
@@ -388,9 +396,10 @@ export class ZoneViews {
     return hits.length ? hits[0].object.userData.wild : null;
   }
   blobs(add) {
+    for (const v of Object.values(this.ext)) v.blobs?.(add);
     for (const a of this.s.wild) add(a.x, a.z, a.kind === 'caballo' ? 0.9 : 0.5, a.kind === 'caballo' ? 1.6 : 0.7);
     if (this.s.horse) add(this.horse.position.x, this.horse.position.z, 0.9, 1.6, this.horse.rotation.y);
   }
-  grassCounts(f) { for (const c of this.grass) c.mesh.count = Math.floor(c.total * f); }
+  grassCounts(f) { for (const c of this.grass) c.mesh.count = Math.floor(c.total * f); for (const v of Object.values(this.ext)) v.grassCounts?.(f); }
 }
 export { inRect };

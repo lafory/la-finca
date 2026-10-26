@@ -4,12 +4,11 @@ import { GW, GH, W, H } from './data.js';
 
 export const ZONES = {
   camino: { name: 'Camino del sur', blurb: 'Une la finca con el batey y la manigua.', level: 1, rect: { x0: 0, z0: 40, x1: GW - 1, z1: 41 }, road: true },
-  manigua: { name: 'La manigua', blurb: 'El monte salvaje: leña, frutas y animales.', level: 3, rect: { x0: 46, z0: 0, x1: GW - 1, z1: 39 } },
-  batey: { name: 'El batey', blurb: 'El pueblito de los trabajadores.', level: 5, rect: { x0: 0, z0: 42, x1: 30, z1: 57 } },
-  campos: { name: 'Los campos grandes', blurb: 'Bloques de 6×6 para sembrar en grande.', level: 18, rect: { x0: 32, z0: 42, x1: GW - 1, z1: GH - 1 }, soon: true },
-  central: { name: 'El central', blurb: 'El central azucarero y su tren.', level: 28, rect: { x0: 0, z0: 58, x1: 30, z1: GH - 1 }, soon: true },
+  manigua: { name: 'La manigua', blurb: 'El monte salvaje: madera, frutas y animales.', level: 3, rect: { x0: 46, z0: 0, x1: GW - 1, z1: 39 }, sign: [47.5, 39] },
+  batey: { name: 'El batey', blurb: 'El pueblito de los trabajadores.', level: 5, rect: { x0: 0, z0: 42, x1: 30, z1: 57 }, sign: [13, 43] },
+  // libres para otros módulos (registerZone): x32–87 × z42–79 (campos) y x0–30 × z58–79 (central)
 };
-export const ZONE_ORDER = ['camino', 'manigua', 'batey', 'campos', 'central'];
+export const ZONE_ORDER = ['camino', 'manigua', 'batey'];
 export const inRect = (r, x, z) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 export const inFarm = (x, z) => x >= 0 && z >= 0 && x < W && z < H;
 export function zoneAt(x, z) {
@@ -26,8 +25,8 @@ function srng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6d2b79f5) >>
 
 // kind: arbol (leña), marabu (leña), ceiba (sagrada: no se tumba), palma (palma real), coco/mango/guayaba (frutas)
 export const WILD_PLANTS = {
-  arbol: { name: 'Guásima', wood: 3, regrow: 300, chop: true },
-  marabu: { name: 'Marabú', wood: 1, regrow: 200, chop: true },
+  arbol: { name: 'Guásima', madera: 3, regrow: 300, chop: true },
+  marabu: { name: 'Marabú', madera: 1, regrow: 200, chop: true },
   ceiba: { name: 'Ceiba', sacred: true },
   palma: { name: 'Palma real', royal: true },
   coco: { name: 'Cocotero', fruit: 'coco', qty: 2, regrow: 240 },

@@ -5,10 +5,11 @@ import { viewSize } from './viewport.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
   W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, WORKERS, WORKER_ORDER,
-  STRUCTURES, OBSTACLE_LIST, TRUCK_SLOTS, GW, GH,
+  STRUCTURES, OBSTACLE_LIST, TRUCK_SLOTS, GW, GH, workerLook,
 } from './data.js';
 import { isOwned, isRoad, parcelAt, now, parcelReachable, structOpen } from './state.js';
 import { ZoneViews } from './world-v4.js';
+import { STRUCT_MODELS } from './registry.js';
 import { ZONES, inRect } from './zones.js';
 const inZones = (x, z) => ['manigua', 'camino', 'batey'].some((k) => { const r = ZONES[k].rect; return x >= r.x0 - 0.5 && x <= r.x1 + 1.5 && z >= r.z0 - 0.5 && z <= r.z1 + 1.5; });
 import * as M from './models.js';
@@ -309,6 +310,7 @@ export class World {
       if (!structOpen(s, st)) continue;
       const cx = st.x + st.w / 2, cz = st.z + st.h / 2;
       if (!s.built[id]) { parts.push(M.place(M.siteGeo(st.w, st.h), cx, cz)); continue; }
+      if (STRUCT_MODELS[id]) { const g = STRUCT_MODELS[id](M, s.built[id]); if (g) parts.push(M.place(g, cx, cz)); continue; }
       if (st.kind === 'house') { parts.push(M.place(s.built[id].tier === 2 ? M.zincHouseGeo(st.x) : M.smallBohioGeo(st.x), cx, cz, st.z > 50 ? Math.PI : 0)); continue; }
       if (id === 'bodega') { parts.push(M.place(M.bodegaGeo(), cx, cz)); continue; }
       if (id === 'escuela') { parts.push(M.place(M.schoolGeo(), cx, cz)); continue; }
@@ -671,12 +673,12 @@ export class World {
   syncWorkers() {
     const ws = this.sim.workers;
     // vista por rol (se puede despedir y volver a contratar)
-    const roles = new Set(ws.map((w) => w.role));
-    for (const [role, v] of this.workerViewMap) if (!roles.has(role)) { this.scene.remove(v.root); this.workerViewMap.delete(role); }
+    const ids = new Set(ws.map((w) => w.rec.id));
+    for (const [id, v] of this.workerViewMap) if (!ids.has(id)) { this.scene.remove(v.root); this.workerViewMap.delete(id); }
     for (const w of ws) {
-      if (this.workerViewMap.has(w.role)) continue;
-      const L = WORKERS[w.role].look;
-      const v = this.makePerson(L.shirt, L.hat, 5 + WORKER_ORDER.indexOf(w.role), L);
+      if (this.workerViewMap.has(w.rec.id)) continue;
+      const L = workerLook(w.role, w.rec.n || 0);
+      const v = this.makePerson(L.shirt, L.hat, 5 + WORKER_ORDER.indexOf(w.role) + (w.rec.n || 0) * 7, L);
       const tool = new THREE.Mesh(M.toolGeo(w.role), this.mat);
       tool.position.set(0, -0.42, -0.02);
       tool.castShadow = true;
@@ -690,13 +692,13 @@ export class World {
         v.root.add(v.crate);
         tool.visible = false;
       }
-      for (const m of [v.body, v.legL, v.legR, v.armL, v.armR]) m.userData.worker = w.role;
+      for (const m of [v.body, v.legL, v.legR, v.armL, v.armR]) m.userData.worker = w.rec.id;
       v.role = w.role;
-      this.workerViewMap.set(w.role, v);
+      this.workerViewMap.set(w.rec.id, v);
       this.puff(w.x, 0.5, w.z, 0xf2c14e, 6, 1.4);
     }
   }
-  workerView(role) { return this.workerViewMap.get(role); }
+  workerView(id) { return this.workerViewMap.get(id) || [...this.workerViewMap.values()].find((v) => v.role === id); }
   puff(x, y, z, color, n = 3, spd = 1) {
     for (let k = 0; k < n; k++) {
       const p = this.puffs.find((q) => q.life <= 0);
@@ -734,7 +736,7 @@ export class World {
     this.posePerson(this.player, sim.player, time);
     this.basket.visible = Object.values(s.inv).some((v) => v > 0);
     this.syncWorkers();
-    for (const w of sim.workers) this.posePerson(this.workerViewMap.get(w.role), w, time);
+    for (const w of sim.workers) this.posePerson(this.workerViewMap.get(w.rec.id), w, time);
     this.eggMesh.count = Math.min(16, s.eggs.length);
     for (let i = 0; i < this.eggMesh.count; i++) { const e = s.eggs[i]; setMat(this.eggMesh, i, e.x, 0, e.z, e.id); }
     this.eggMesh.instanceMatrix.needsUpdate = true;
@@ -820,6 +822,8 @@ export class World {
       const wid = this.zones.pickWild(ray);
       if (wid !== null && wid !== undefined) return `wild:${wid}`;
     }
+    const ext = this.zones?.pickExt(ray);
+    if (ext && !hits.length) return ext;
     if (!hits.length) { const pid = this.zones?.pickPlant(ray); return pid ? `wplant:${pid}` : null; }
     const o = hits[0].object;
     if (o.userData.worker) return `worker:${o.userData.worker}`;

@@ -8,6 +8,8 @@ import { installV4 } from './sim-v4.js';
 import { MANIGUA, PLANT_BY_ID, WILD_PLANTS, ZONES, zoneOpen, inFarm } from './zones.js';
 import { GW, GH } from './data.js';
 import { findPath } from './path.js';
+import { workerName, workerHirePrice } from './data.js';
+import { SIM_MODULES, WORKER_HOOKS } from './registry.js';
 
 export const fmtTime = (sec) => {
   sec = Math.max(0, Math.ceil(sec));
@@ -37,6 +39,7 @@ export class Sim {
     this.lastUseTarget = null;
     this.leaving = [];
     this.initTrucks();
+    for (const m of SIM_MODULES) m.init?.(this);
   }
 
   // ------------------------------------------------------------ utilidades
@@ -272,7 +275,12 @@ export class Sim {
     for (const [k, q] of Object.entries(this.missing(tr))) { const m = Math.min(q, this.s.inv[k] || 0); if (m > 0) out[k] = m; }
     return out;
   }
-  camHome() { return this.can(14, 9) ? [14, 9] : this.can(14, 10) ? [14, 10] : null; }
+  camHome(w) {
+    // cada camionero tiene su sitio en el andén
+    const k = w ? this.workers.filter((o) => o.role === 'camionero').indexOf(w) : 0;
+    const spots = [[[14, 9], [14, 10]], [[14, 12], [14, 13]], [[13, 9], [13, 10]], [[13, 12], [13, 13]]][Math.max(0, k) % 4];
+    return spots.find(([x, z]) => this.can(x, z)) || null;
+  }
   updateTrucks(dt) {
     const s = this.s, t = now();
     s.trucks.forEach((tr, i) => {
@@ -434,7 +442,7 @@ export class Sim {
       const lvl = s.upgrades.storage;
       const need = STORAGE_LEVELS[lvl];
       if (lvl >= PRICES.storage.length || s.level < need) return false;
-      if (this.storageWood() > s.wood) return this.spendWood(this.storageWood());
+      if (this.storageWood() > s.res.madera) return this.spendWood(this.storageWood());
       if (!this.spend(PRICES.storage[lvl])) return false;
       this.spendWood(this.storageWood());
       s.upgrades.storage++; this.h.sfx('buy'); this.h.changed('inv');
@@ -444,23 +452,31 @@ export class Sim {
     return false;
   }
   // ------------------------------------------------------------ contratar / mejorar / despedir
+  roleCount(role) { return this.s.workers.filter((x) => x.role === role).length; }
+  hirePrice(role) { return workerHirePrice(role, this.roleCount(role)); }
+  workerById(id) { return this.workers.find((x) => x.rec.id === id) || this.workers.find((x) => x.role === id) || null; }
   hire(id) {
     const s = this.s, w = WORKERS[id];
-    if (s.workers.some((x) => x.role === id) || s.level < w.level) return false;
-    if (s.workers.length >= this.workerCap()) { this.h.toast(`No hay dónde vivan más trabajadores (${s.workers.length}/${this.workerCap()}). Construye casas en el batey.`); this.h.sfx('error'); return false; }
-    if (!this.spend(w.price)) return false;
-    const rec = { role: id, x: 13.5, z: 11.5, lvl: 1, autobuy: id === 'sembrador', ...(id === 'camionero' ? { sell: false, keep: 10 } : {}) };
+    if (!w || s.level < w.level) return false;
+    if (s.workers.length >= this.workerCap()) { this.h.toast(`No hay dónde vivan más trabajadores (${s.workers.length}/${this.workerCap()}). Construye casas en el batey o sube de nivel.`); this.h.sfx('error'); return false; }
+    if (!this.spend(this.hirePrice(id))) return false;
+    // n: el siguiente nombre libre del oficio
+    const used = new Set(s.workers.filter((x) => x.role === id).map((x) => x.n || 0));
+    let n = 0; while (used.has(n)) n++;
+    const rid = n === 0 && !s.workers.some((x) => x.id === id) ? id : `${id}-${(s.nextWorker = (s.nextWorker || 1) + 1)}`;
+    const rec = { id: rid, n, role: id, x: 13.5, z: 11.5, lvl: 1, autobuy: id === 'sembrador', ...(id === 'camionero' ? { sell: false, keep: 10 } : {}) };
     s.workers.push(rec);
     this.workers.push(this.makeWorker(rec));
+    const who = workerName(id, n);
     this.h.sfx('level');
-    this.h.toast(`¡${w.who} ya trabaja en la finca! ${w.name}.`);
-    this.h.float(rec.x, rec.z, `¡${w.who} contratado${w.look.skirt ? 'a' : ''}!`, 'xp');
+    this.h.toast(`¡${who} ya trabaja en la finca! ${w.name}.`);
+    this.h.float(rec.x, rec.z, `¡${who} contratado${w.look.skirt ? 'a' : ''}!`, 'xp');
     this.h.changed('workers');
     return true;
   }
-  upgradeWorker(role) {
-    const w = this.workers.find((x) => x.role === role);
-    if (!w || w.rec.lvl >= 3 || !this.spend(workerUpgradePrice(role, w.rec.lvl))) return false;
+  upgradeWorker(id) {
+    const w = this.workerById(id);
+    if (!w || w.rec.lvl >= 3 || !this.spend(workerUpgradePrice(w.role, w.rec.lvl))) return false;
     w.rec.lvl++;
     w.speed = WORKER_SPEED[w.rec.lvl].walk;
     this.h.sfx('buy');
@@ -468,24 +484,23 @@ export class Sim {
     this.h.changed('workers');
     return true;
   }
-  fireWorker(role) {
-    const i = this.workers.findIndex((x) => x.role === role);
-    if (i < 0) return false;
-    const w = this.workers[i];
+  fireWorker(id) {
+    const w = this.workerById(id);
+    if (!w) return false;
     if (w.task) this.reserved.delete(w.task.key);
-    this.workers.splice(i, 1);
-    this.s.workers = this.s.workers.filter((x) => x.role !== role);
-    this.h.toast(`${WORKERS[role].who} se despidió. Puedes volver a contratarlo cuando quieras.`);
+    this.workers.splice(this.workers.indexOf(w), 1);
+    this.s.workers = this.s.workers.filter((x) => x !== w.rec);
+    this.h.toast(`${workerName(w.role, w.rec.n || 0)} se despidió. Puedes volver a contratar cuando quieras.`);
     this.h.changed('workers');
     return true;
   }
-  toggleSell() { const w = this.workers.find((x) => x.role === 'camionero'); if (w) w.rec.sell = !w.rec.sell; }
-  cycleKeep() {
-    const w = this.workers.find((x) => x.role === 'camionero');
+  toggleSell(id) { const w = id ? this.workerById(id) : this.workers.find((x) => x.role === 'camionero'); if (w) w.rec.sell = !w.rec.sell; }
+  cycleKeep(id) {
+    const w = id ? this.workerById(id) : this.workers.find((x) => x.role === 'camionero');
     if (w) { const i = CAM_KEEP.indexOf(w.rec.keep ?? 10); w.rec.keep = CAM_KEEP[(i + 1) % CAM_KEEP.length]; }
   }
-  toggleAutobuy(role) {
-    const w = this.workers.find((x) => x.role === role);
+  toggleAutobuy(id) {
+    const w = this.workerById(id);
     if (w) w.rec.autobuy = !w.rec.autobuy;
   }
 
@@ -533,11 +548,10 @@ export class Sim {
     if (!st || s.built[id]) return false;
     if (!structOpen(s, st)) { this.h.toast(st.zone ? `${ZONES[st.zone].name} se abre en el nivel ${ZONES[st.zone].level}.` : `Primero compra “${PARCELS.find((p) => p.id === st.parcel).name}”.`); return false; }
     if (s.level < st.level) { this.h.toast(`Se construye en el nivel ${st.level}.`); return false; }
-    if ((st.wood || 0) > s.wood) return this.spendWood(st.wood);
+    if (!this.canPay(st.cost ? { ...st.cost, pesos: st.price } : { pesos: 0, madera: st.madera })) return false;
     // el solar tiene que estar libre de obstáculos
     for (let z = st.z; z < st.z + st.h; z++) for (let x = st.x; x < st.x + st.w; x++) if (this.obstacleAt(x, z)) { this.h.toast('Limpia el solar primero.'); return false; }
-    if (!this.spend(st.price)) return false;
-    this.spendWood(st.wood || 0);
+    if (!this.pay(st.cost ? { ...st.cost, pesos: st.price } : { pesos: st.price, madera: st.madera })) return false;
     s.built[id] = { at: now(), ready: st.kind === 'proc' ? null : false, recipe: null, ...(st.kind === 'house' ? { tier: 1 } : {}) };
     // quita al guajiro o a un trabajador si está parado en el solar
     this.rebuildGrid();
@@ -601,7 +615,7 @@ export class Sim {
       case 'wild': { const a = this.wildById(t.id); if (!a) return []; const g = this.footprintGoals(Math.floor(a.x), Math.floor(a.z), 1, 1); return g.length ? g : this.footprintGoals(Math.floor(a.x) - 1, Math.floor(a.z) - 1, 3, 3); }
       case 'woodhome': return this.footprintGoals(B.house.x, B.house.z, B.house.w, B.house.h);
       case 'ground': return this.can(t.x, t.z) ? [[t.x, t.z]] : this.footprintGoals(t.x, t.z, 1, 1);
-      default: return [];
+      default: for (const m of SIM_MODULES) { const g = m.goals?.(this, t); if (g) return g; } return [];
     }
   }
   pathTo(ent, goals) {
@@ -641,7 +655,7 @@ export class Sim {
       case 'coop': this.h.toast(`Gallinas: ${this.s.chickens.length}/${chickenCap(this.s)}. Ponen un huevo cada ${EGG_INTERVAL} s.`); return true;
       case 'house': this.h.toast('El bohío de la familia. Aquí se guarda todo lo que recoges.'); return true;
       case 'tank': this.h.toast('El tanque de agua. Toca una mata que esté creciendo para regarla.'); return true;
-      default: return false;
+      default: for (const m of SIM_MODULES) { const r = m.perform?.(this, t); if (r !== undefined) return r; } return false;
     }
   }
   // Lo más útil cerca del jugador (para "Usar"/E).
@@ -740,8 +754,9 @@ export class Sim {
         const fetch = (i, sell) => ({ x: H.x + H.w / 2, z: H.z + H.h, t: { kind: 'fetch', i, sell }, key: `truck${i}`, verb: sell ? 'buscar lo que sobra en el bohío' : 'buscar en el bohío lo que pide el camión' });
         w.status = 'En el andén, esperando un camión';
         let waiting = null;
+        const other = (i) => this.workers.some((o) => o !== w && o.role === 'camionero' && o.carry && o.carry.i === i);
         for (let i = 0; i < this.docks(); i++) {
-          if (!free(`truck${i}`) || !this.isParked(i)) continue;
+          if (!free(`truck${i}`) || !this.isParked(i) || other(i)) continue;
           const f = s.trucks[i];
           if (Object.keys(this.loadable(f)).length) return fetch(i, false);
           const left = CAM_WAIT - (t - Math.max(f.parkedSince || t, f.lastLoadAt || 0));
@@ -749,11 +764,12 @@ export class Sim {
           if (!waiting || left < waiting) waiting = left;
         }
         if (w.rec.sell) for (let i = 0; i < this.docks(); i++) {
-          if (free(`truck${i}`) && this.isParked(i) && Object.keys(this.surplus(w.rec)).length) return fetch(i, true);
+          if (free(`truck${i}`) && !other(i) && this.isParked(i) && Object.keys(this.surplus(w.rec)).length) return fetch(i, true);
         }
         if (waiting) w.status = `Esperando mercancía: despide al camión en ${Math.ceil(waiting)} s`;
         return null;
       }
+      default: if (WORKER_HOOKS[w.role]?.pick) return WORKER_HOOKS[w.role].pick(this, w, free);
     }
     return null;
   }
@@ -779,6 +795,7 @@ export class Sim {
       }
     } else if (t.kind === 'struct') { this.collectAnimal(t.id, true); }
     else if (t.kind === 'wplant' || t.kind === 'woodhome') this.lenadorDo(w, t);
+    else if (WORKER_HOOKS[w.role]?.do) WORKER_HOOKS[w.role].do(this, w, t);
     else if (t.kind === 'fetch') {
       const tr = s.trucks[t.i];
       const items = t.sell ? this.surplus(w.rec) : tr ? this.loadable(tr) : {};
@@ -816,7 +833,7 @@ export class Sim {
     if (!pick && w.role === 'camionero') {
       // se queda parado en el andén mirando al camino
       w.wait = 0.8;
-      const home = this.camHome();
+      const home = this.camHome(w);
       if (home && (Math.floor(w.x) !== home[0] || Math.floor(w.z) !== home[1])) {
         const path = this.pathTo(w, [home]);
         if (path && path.length > 1) { path.shift(); w.path = path.map(([x, z]) => ({ x: x + 0.5, z: z + 0.5 })); }
@@ -847,7 +864,7 @@ export class Sim {
     const path = this.pathTo(w, goals);
     if (!path) { w.wait = 2; return; }
     this.reserved.add(pick.key);
-    const DOING = { recolector: pick.t.kind === 'struct' ? 'Recogiendo' : 'Recogiendo huevos', regador: 'Regando', sembrador: 'Sembrando', cosechador: 'Cosechando', cocinera: 'En el fogón', lenador: pick.t.kind === 'woodhome' ? 'Apilando la leña' : 'Tumbando con el machete', camionero: pick.t.kind === 'fetch' ? 'Juntando la mercancía' : w.carry ? (w.carry.sell ? 'Vendiendo lo que sobra' : 'Cargando el camión') : 'Despidiendo el camión' };
+    const DOING = { recolector: pick.t.kind === 'struct' ? 'Recogiendo' : 'Recogiendo huevos', regador: 'Regando', sembrador: 'Sembrando', cosechador: 'Cosechando', cocinera: 'En el fogón', lenador: pick.t.kind === 'woodhome' ? 'Apilando la madera' : 'Tumbando con el machete', camionero: pick.t.kind === 'fetch' ? 'Juntando la mercancía' : w.carry ? (w.carry.sell ? 'Vendiendo lo que sobra' : 'Cargando el camión') : 'Despidiendo el camión' };
     pick.doing = DOING[w.role];
     w.task = pick;
     w.status = `Va a ${pick.verb}`;
@@ -948,6 +965,7 @@ export class Sim {
     // trabajadores
     for (const w of this.workers) { this.updateWorker(w, dt); w.rec.x = w.x; w.rec.z = w.z; }
     this.updateV4(dt);
+    for (const m of SIM_MODULES) m.update?.(this, dt);
     // gallinas deambulan (separadas entre sí)
     for (const c of s.chickens) {
       let rt = this.chickRT.get(c.id);

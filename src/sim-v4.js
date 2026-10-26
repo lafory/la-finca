@@ -1,6 +1,7 @@
 // v4: lógica fuera de la finca — manigua (leña, frutas, animales), batey (casas, tope de trabajadores), leñero.
 import { ITEMS, STRUCTURES, WORKERS, WOOD_CAP, GW, BUILDINGS, LENADOR_LOAD, STORAGE_WOOD } from './data.js';
 import { ZONES, MANIGUA, PLANT_BY_ID, PLANT_AT, WILD_PLANTS, WILD_ANIMALS, CARRY_MAX, zoneOpen, inFarm, inRect, BATEY } from './zones.js';
+import { RESOURCES } from './registry.js';
 import { now, chickenCap, addChicken, workerCap, structOpen } from './state.js';
 
 const ART = { jutia: ['la', 'a'], jibaro: ['el', 'o'], guinea: ['la', 'a'], gallina: ['la', 'a'], caballo: ['el', 'o'] };
@@ -24,21 +25,49 @@ export function installV4(Sim) {
   P.discount = function () { return 1 - this.civic('discount'); };
   P.workerCap = function () { return workerCap(this.s); };
 
-  // ------------------------------------------------------------ leña
-  P.addWood = function (n, x, z) {
-    const s = this.s;
-    const add = Math.min(n, WOOD_CAP - s.wood);
-    if (add <= 0) { this.h.toast(`El leñero del bohío está lleno (${WOOD_CAP}).`); return false; }
-    s.wood += add; s.stats.wood = (s.stats.wood || 0) + add;
-    if (x !== undefined) this.h.float(x, z, `+${add} leña`, 'item');
-    this.h.changed('wood');
+  // ------------------------------------------------------------ recursos (madera y los registrados)
+  P.addRes = function (id, n, x, z) {
+    const s = this.s, R = RESOURCES[id];
+    if (!R) return false;
+    const add = Math.min(n, (R.cap ?? 9999) - (s.res[id] || 0));
+    if (add <= 0) { this.h.toast(`No cabe más ${R.name.toLowerCase()} (tope ${R.cap}).`); return false; }
+    s.res[id] = (s.res[id] || 0) + add; s.stats[id] = (s.stats[id] || 0) + add;
+    if (x !== undefined) this.h.float(x, z, `+${add} ${R.name.toLowerCase()}`, 'item');
+    this.h.changed('res');
     return true;
   };
-  P.spendWood = function (n) {
+  P.hasRes = function (id, n) { return (this.s.res[id] || 0) >= (n || 0); };
+  P.spendRes = function (id, n) {
     if (!n) return true;
-    if (this.s.wood < n) { this.h.toast(`Hace falta ${n} de leña (tienes ${this.s.wood}). Búscala en la manigua.`); this.h.sfx('error'); return false; }
-    this.s.wood -= n; this.h.changed('wood'); return true;
+    const R = RESOURCES[id];
+    if (!this.hasRes(id, n)) { this.h.toast(`Hace falta ${n} de ${R.name.toLowerCase()} (tienes ${this.s.res[id] || 0}).${id === 'madera' ? ' Búscala en la manigua.' : ''}`); this.h.sfx('error'); return false; }
+    this.s.res[id] -= n; this.h.changed('res'); return true;
   };
+  // Coste genérico: { pesos, madera, res: { id: n }, items: { item: n } }. canPay avisa de lo que falta; pay cobra todo o nada.
+  P.costParts = function (c) {
+    const res = { ...(c.res || {}) };
+    if (c.madera) res.madera = (res.madera || 0) + c.madera;
+    return { pesos: c.pesos || c.price || 0, res, items: c.items || {} };
+  };
+  P.canPay = function (c, quiet) {
+    const { pesos, res, items } = this.costParts(c), s = this.s;
+    const miss = (msg) => { if (!quiet) { this.h.toast(msg); this.h.sfx('error'); } return false; };
+    for (const [k, n] of Object.entries(res)) if ((s.res[k] || 0) < n) return miss(`Hace falta ${n} de ${RESOURCES[k].name.toLowerCase()} (tienes ${s.res[k] || 0}).${k === 'madera' ? ' Búscala en la manigua.' : ''}`);
+    for (const [k, n] of Object.entries(items)) if ((s.inv[k] || 0) < n) return miss(`Hacen falta ${n} ${ITEMS[k].plural.toLowerCase()} (tienes ${s.inv[k] || 0}).`);
+    if (s.money < pesos) return miss('Todavía no alcanzan los pesos.');
+    return true;
+  };
+  P.pay = function (c) {
+    if (!this.canPay(c)) return false;
+    const { pesos, res, items } = this.costParts(c), s = this.s;
+    if (pesos && !this.spend(pesos)) return false;
+    for (const [k, n] of Object.entries(res)) s.res[k] -= n;
+    for (const [k, n] of Object.entries(items)) s.inv[k] -= n;
+    this.h.changed('res'); this.h.changed('inv');
+    return true;
+  };
+  P.addWood = function (n, x, z) { return this.addRes('madera', n, x, z); };
+  P.spendWood = function (n) { return this.spendRes('madera', n); };
   P.storageWood = function () { return STORAGE_WOOD[this.s.upgrades.storage] || 0; };
 
   // ------------------------------------------------------------ plantas de la manigua
@@ -62,8 +91,8 @@ export function installV4(Sim) {
     s.chopped[id] = now();
     this.rebuildGrid();
     this.addXp(pl.kind === 'arbol' ? 3 : 1);
-    if (byWorker) return W.wood;
-    this.addWood(W.wood, pl.x + 0.5, pl.z + 0.5);
+    if (byWorker) return W.madera;
+    this.addWood(W.madera, pl.x + 0.5, pl.z + 0.5);
     this.h.sfx('harvest');
     this.h.burst?.(pl.x + 0.5, pl.z + 0.5, 'tobacco');
     this.h.changed('manigua');
@@ -256,9 +285,9 @@ export function installV4(Sim) {
     if (!st || st.kind !== 'house' || !b || b.tier === 2) return false;
     const u = st.upgrade;
     if (s.level < u.level) { this.h.toast(`La casa de zinc se hace en el nivel ${u.level}.`); return false; }
-    if (s.wood < u.wood) return this.spendWood(u.wood);
+    if (s.res.madera < u.madera) return this.spendWood(u.madera);
     if (!this.spend(u.price)) return false;
-    this.spendWood(u.wood);
+    this.spendWood(u.madera);
     b.tier = 2;
     this.addXp(20);
     this.h.sfx('level');
@@ -304,9 +333,9 @@ export function installV4(Sim) {
     if (!zoneOpen(s, 'manigua')) { w.status = 'La manigua se abre en el nivel 3'; return null; }
     if ((w.trees || 0) >= LENADOR_LOAD || (w.load && !this.nearestChop(w, free))) {
       const H = BUILDINGS.house;
-      return { x: H.x + H.w / 2, z: H.z + H.h, t: { kind: 'woodhome' }, key: 'woodhome', verb: `llevar ${w.load} de leña al bohío` };
+      return { x: H.x + H.w / 2, z: H.z + H.h, t: { kind: 'woodhome' }, key: `woodhome-${w.rec.id}`, verb: `llevar ${w.load} de madera al bohío` };
     }
-    if (s.wood >= WOOD_CAP) { w.status = 'El bohío está lleno de leña'; return null; }
+    if (s.res.madera >= WOOD_CAP) { w.status = 'El bohío está lleno de madera'; return null; }
     const pl = this.nearestChop(w, free);
     if (!pl) { w.status = 'Esperando que vuelvan a crecer los árboles'; return null; }
     return { x: pl.x + 0.5, z: pl.z + 0.5, t: { kind: 'wplant', id: pl.id }, key: `pl${pl.id}`, verb: `tumbar ${WILD_PLANTS[pl.kind].name === 'Marabú' ? 'marabú' : 'una guásima'}` };
@@ -326,7 +355,7 @@ export function installV4(Sim) {
     return best;
   };
   P.lenadorDo = function (w, t) {
-    if (t.kind === 'wplant') { const got = this.chopPlant(t.id, true); if (got) { w.load = (w.load || 0) + got; w.trees = (w.trees || 0) + 1; this.h.float(w.x, w.z, `+${got} leña`, 'item'); this.h.changed('manigua'); } }
+    if (t.kind === 'wplant') { const got = this.chopPlant(t.id, true); if (got) { w.load = (w.load || 0) + got; w.trees = (w.trees || 0) + 1; this.h.float(w.x, w.z, `+${got} madera`, 'item'); this.h.changed('manigua'); } }
     else if (t.kind === 'woodhome') { if (w.load) { this.addWood(w.load, w.x, w.z); w.load = 0; } w.trees = 0; }
   };
 }
