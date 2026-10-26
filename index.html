@@ -13,8 +13,8 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="apple-touch-icon" href="./icon-180.png" />
-    <script type="module" crossorigin src="./assets/index-DEmdQU0n.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Cec-wrsw.css">
+    <script type="module" crossorigin src="./assets/index-divjY5kT.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D7-ULe1u.css">
   </head>
   <body>
     <canvas id="game" aria-label="La finca"></canvas>
@@ -33,5 +33,53 @@
         <p class="small">Toca para caminar y usar · arrastra para mover la vista · pellizca para acercar</p>
       </div>
     </div>
+    <script>
+      /* Arranque a prueba de fallos (ES5, sin módulos): si el juego no puede abrir, «Entrar» nunca se queda mudo. */
+      (function () {
+        var errs = (window.__fincaErrs = []);
+        function note(m) { try { errs.push(String(m).slice(0, 300)); if (errs.length > 8) errs.shift(); } catch (e) {} }
+        window.addEventListener('error', function (e) { note((e && (e.message || (e.error && e.error.message))) || 'error'); });
+        window.addEventListener('unhandledrejection', function (e) { var r = e && e.reason; note('promesa: ' + ((r && (r.message || r.name)) || r)); });
+        var KEY = 'lafinca-v2', RESCUE = 'lafinca-v2-rescate';
+        function keepCopy() {
+          try {
+            var raw = localStorage.getItem(KEY);
+            if (!raw) return true;
+            var old = localStorage.getItem(RESCUE);
+            if (old && old !== raw) localStorage.setItem(RESCUE + '-' + Date.now(), old);
+            localStorage.setItem(RESCUE, raw);
+            return localStorage.getItem(RESCUE) === raw;
+          } catch (e) { return false; }
+        }
+        function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+        window.__fincaRescue = function (err) {
+          if (document.getElementById('rescue')) return;
+          if (err) note((err && (err.message || err.name)) || err);
+          var hasSave = false; try { hasSave = !!localStorage.getItem(KEY); } catch (e) {}
+          var d = document.createElement('div');
+          d.id = 'rescue'; d.setAttribute('role', 'alertdialog');
+          d.style.cssText = 'position:fixed;inset:0;z-index:99;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(30,20,10,.6);font:15px/1.4 system-ui,-apple-system,sans-serif;color:#2a1f15;';
+          d.innerHTML = '<div style="width:min(420px,100%);max-height:90vh;overflow:auto;background:#f6ead0;border:2px solid #5a3a16;border-radius:20px;padding:18px;text-align:center">'
+            + '<h2 style="margin:4px 0 8px;font-family:Georgia,serif">La finca no pudo abrir</h2>'
+            + '<p style="margin:6px 0">' + (hasSave ? 'Tu partida sigue guardada en este equipo: no se borró nada.' : 'Algo falló al cargar el juego.') + ' Toca <b>Reintentar</b>. Si vuelve a pasar, toca <b>Empezar nueva</b>: tu partida queda guardada como copia y la puedes restaurar en Ajustes.</p>'
+            + '<p id="rescue-err" style="margin:8px 0;font:12px/1.3 ui-monospace,Menlo,monospace;color:#a5281b;word-break:break-word">' + esc(errs.slice(-3).join(' · ') || 'sin detalle') + '</p>'
+            + '<div style="display:flex;gap:10px;margin-top:12px"><button id="rescue-retry" style="flex:1;min-height:48px;border-radius:12px;border:2px solid #45691f;background:#6f9a3a;color:#fff;font-weight:800;font-size:15px">Reintentar</button>'
+            + '<button id="rescue-new" style="flex:1;min-height:48px;border-radius:12px;border:2px solid #b58a2a;background:#f2c14e;color:#2a1f15;font-weight:800;font-size:15px">Empezar nueva</button></div></div>';
+          document.body.appendChild(d);
+          document.getElementById('rescue-retry').onclick = function () { location.reload(); };
+          document.getElementById('rescue-new').onclick = function () {
+            if (!keepCopy()) { document.getElementById('rescue-err').textContent = 'No hay espacio para guardar la copia: no borré tu partida. Libera espacio en Safari y reintenta.'; return; }
+            try { localStorage.removeItem(KEY); sessionStorage.setItem('lafinca-rescued', '1'); } catch (e) {}
+            location.reload();
+          };
+        };
+        // Si se toca «Entrar» y el juego no arrancó (módulo sin cargar o error al crear la finca): avisar.
+        document.addEventListener('click', function (e) {
+          var t = e.target, b = t && t.closest ? t.closest('#start') : null;
+          if (!b) return;
+          setTimeout(function () { if (!window.__fincaStarted) window.__fincaRescue(window.__finca ? null : 'el juego no terminó de cargar'); }, 2500);
+        }, true);
+      })();
+    </script>
   </body>
 </html>
