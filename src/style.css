@@ -280,3 +280,16 @@ html.ios #btn-full { display: none !important; }
   .big { min-width: 52px; }
 }
 .hud-top > * { flex-shrink: 1; min-width: 0; }
+/* ---- v4: leña, explorar, viviendas */
+.chip.wood .ico { width: 24px; height: 24px; }
+.explore { position: absolute; left: calc(10px + var(--sal, 0px)); top: calc(62px + var(--sat)); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 4; }
+.explore .gohome { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 22px; font-weight: 800; box-shadow: 0 3px 0 rgba(60, 40, 20, 0.35); }
+.explore .gohome .ico { width: 22px; height: 22px; }
+.explore .hidden { display: none !important; }
+.btn .wd { display: inline-flex; align-items: center; margin-left: 4px; gap: 1px; }
+.btn .wd .ico { width: 16px; height: 16px; }
+.capbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; margin: 6px 0; border-radius: 12px; background: rgba(120, 90, 50, 0.1); border: 1.5px dashed rgba(90, 60, 30, 0.35); }
+.capbar .ico { width: 24px; height: 24px; }
+.capbar small { flex-basis: 100%; opacity: .75; }
+.capbar.full { border-color: var(--red); }
+@media (max-height: 500px) { .explore { top: calc(48px + var(--sat)); } .explore .round.cam { width: 44px; height: 44px; } }

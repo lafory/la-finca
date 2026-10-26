@@ -1,7 +1,8 @@
 import './style.css';
 import { viewSize, watchViewport, CAN_FULLSCREEN } from './viewport.js';
 import * as THREE from 'three';
-import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK } from './state.js';
+import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK, structOpen } from './state.js';
+import { ZONES, zoneOpen, zoneAt, isAnyRoad, PLANT_BY_ID, inFarm } from './zones.js';
 import { Sim } from './sim.js';
 import { World } from './world.js';
 import { CameraRig } from './camera.js';
@@ -9,7 +10,7 @@ import { Input } from './input.js';
 import { Sound } from './audio.js';
 import { UI } from './ui.js';
 import { ICON } from './icons.js';
-import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT, FF_SPEEDS, FF_STEP, CROPS, STRUCTURES, TRUCK_SLOTS } from './data.js';
+import { W, H, PARCELS, START_AREA, BUILDINGS, TRUCK_TILES, TRUCK_SPOT, FF_SPEEDS, FF_STEP, CROPS, STRUCTURES, TRUCK_SLOTS, GW, GH, xpForLevel } from './data.js';
 
 class Game {
   constructor() {
@@ -57,13 +58,19 @@ class Game {
         if (this.ffSpeed > 1) { const t = performance.now(); if (t - (this.lastSfx[n] || 0) < 400) return; this.lastSfx[n] = t; }
         this.sound.play(n);
       },
-      levelUp: (l) => { this.sound.play('level'); this.ui?.levelUp(l); },
+      levelUp: (l) => {
+        this.sound.play('level'); this.ui?.levelUp(l);
+        // zonas nuevas y solares del batey aparecen al subir
+        if (this.world && this.rig && (Object.values(ZONES).some((z) => z.level === l) || Object.values(STRUCTURES).some((st) => st.zone && st.level === l))) { this.world.buildStatic(); this.updateBounds(); this.sim.reach = null; this.sim.rebuildGrid(); }
+      },
       changed: (k) => {
         this.ui?.refreshHud();
         if (!this.world) return;
         if (k === 'plots') this.world.plotsDirty = true;
         if (k === 'land') { this.world.buildStatic(); save(this.sim.s); }
         if (k === 'obstacles') { this.world.buildObstacles(); }
+        if (k === 'manigua' && this.world.zones) this.world.zones.dirty = true;
+        if (k === 'travel') { this.updateBounds(true); this.centerPlayer(); this.rig.target.copy(this.rig.goal); this.world.puff(this.sim.player.x, 0.3, this.sim.player.z, 0xe8dcc0, 10, 1.5); }
       },
       openTruck: (i) => this.ui.openTruck(i),
       openKitchen: (key) => this.ui.openKitchen(key),
@@ -121,11 +128,20 @@ class Game {
     for (const p of PARCELS) if (s.parcels.includes(p.id)) { x0 = Math.min(x0, p.rect.x0); z0 = Math.min(z0, p.rect.z0); x1 = Math.max(x1, p.rect.x1 + 1); z1 = Math.max(z1, p.rect.z1 + 1); }
     return { x0, z0, x1, z1 };
   }
+  // Todo lo que se puede recorrer: tierra propia + zonas abiertas
+  worldRect() {
+    const r = this.ownedRect();
+    for (const [id, z] of Object.entries(ZONES)) {
+      if (z.road || !zoneOpen(this.sim.s, id)) continue;
+      r.x0 = Math.min(r.x0, z.rect.x0); r.z0 = Math.min(r.z0, z.rect.z0); r.x1 = Math.max(r.x1, z.rect.x1 + 1); r.z1 = Math.max(r.z1, z.rect.z1 + 1);
+    }
+    return r;
+  }
   // Paneo y zoom máximo según la tierra propia (se animan al comprar)
   updateBounds(snap = false) {
-    const r = this.ownedRect();
+    const r = this.worldRect();
     this.rig.setBounds({ x0: r.x0 - 3, z0: r.z0 - 3, x1: r.x1 + 3, z1: r.z1 + 3 }, snap);
-    this.rig.setMaxDist(Math.max(46, this.rig.fitDist(r.x0, r.z0, r.x1, r.z1) * 1.2), snap);
+    this.rig.setMaxDist(Math.max(46, this.rig.fitDist(r.x0, r.z0, r.x1, r.z1) * 1.15), snap);
   }
   // Vista inicial/cercana: la finca original (como antes)
   fitFarm(snap) {
@@ -143,6 +159,26 @@ class Game {
     this.rig.maxDist = Math.max(this.rig.maxDist, this.rig.fitDist(r.x0, r.z0, r.x1, r.z1));
     this.rig.fit(r.x0, r.z0, r.x1, r.z1);
     this.rig.manualUntil = performance.now() + 6000;
+  }
+  // Vista de todo lo abierto (finca + manigua + batey)
+  viewWorld() {
+    const r = this.worldRect();
+    this.updateBounds();
+    this.rig.maxDist = Math.max(this.rig.maxDist, this.rig.fitDist(r.x0, r.z0, r.x1, r.z1));
+    this.rig.fit(r.x0, r.z0, r.x1, r.z1);
+    this.rig.manualUntil = performance.now() + 6000;
+  }
+  goManigua() { this.sound.unlock(); if (this.sim.goManigua()) this.sound.play('tap'); }
+  goBatey() { this.sound.unlock(); if (this.sim.goBatey()) this.sound.play('tap'); }
+  goFarm() { this.sound.unlock(); this.sim.goFarm(); this.sound.play('tap'); }
+  // Trucos solo para desarrollo (no salen en el juego publicado)
+  cheat(k) {
+    if (!import.meta.env.DEV && !window.__fincaDev) return;
+    const s = this.sim.s;
+    if (k === 'level') { const need = xpForLevel(s.level + 1) - s.xp; this.sim.addXp(Math.max(1, need)); }
+    if (k === 'money') this.sim.addMoney(1000);
+    if (k === 'wood') this.sim.addWood(100);
+    this.ui.refreshHud();
   }
   // "Centrar": vuelve a la vista cercana sobre el guajiro
   centerPlayer() {
@@ -234,9 +270,11 @@ class Game {
     const s = this.sim.s;
     const go = (t, mx, mz) => { if (this.sim.command(t)) { this.world.showMarker(mx, mz); this.sound.play('tap'); } };
     if (kind && kind.startsWith('worker:')) return this.ui.openWorker(kind.slice(7));
+    if (kind && kind.startsWith('wild:')) { const a = this.sim.wildById(+kind.slice(5)); if (a) return go({ kind: 'wild', id: a.id }, a.x, a.z); }
+    if (kind && kind.startsWith('wplant:')) return this.tapPlant(kind.slice(7));
     if (kind && kind.startsWith('struct:')) {
       const id = kind.slice(7), st = STRUCTURES[id];
-      if (!s.built[id]) return this.ui.openBuild(id);
+      if (!s.built[id] || st.zone) return this.ui.openBuild(id);
       return go({ kind: 'struct', id }, st.x + st.w / 2, st.z + st.h + 0.5);
     }
     if (kind === 'truck:1') return go({ kind: 'truck', i: 1 }, 14.5, TRUCK_SLOTS[1]);
@@ -253,7 +291,21 @@ class Game {
     for (const e of s.eggs) { const d = Math.hypot(e.x - p.x, e.z - p.z); if (d < bd) { bd = d; best = e; } }
     if (best) return go({ kind: 'egg', id: best.id }, best.x, best.z);
     const tx = Math.floor(p.x), tz = Math.floor(p.z);
-    if (tx < 0 || tz < 0 || tx >= W || tz >= H) return;
+    if (tx < 0 || tz < 0 || tx >= GW || tz >= GH) return;
+    if (!inFarm(tx, tz)) {
+      // fuera de la finca: plantas de la manigua (tolera tocar la copa), caminos y zonas abiertas
+      let pl = this.sim.plantAtTile(tx, tz), pd = 1.3;
+      if (!pl) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+        const q = this.sim.plantAtTile(tx + dx, tz + dz);
+        if (!q) continue;
+        const d = Math.hypot(q.x + 0.5 - p.x, q.z + 0.5 - p.z);
+        if (d < pd) { pd = d; pl = q; }
+      }
+      if (pl) return this.tapPlant(pl.id);
+      const zid = zoneAt(tx, tz);
+      if (zid && !isAnyRoad(tx, tz) && !zoneOpen(s, zid)) return this.ui.toast(`${ZONES[zid].name}: ${ZONES[zid].soon ? 'muy pronto' : `se abre en el nivel ${ZONES[zid].level}`}.`);
+      return go({ kind: 'ground', x: tx, z: tz }, tx + 0.5, tz + 0.5);
+    }
     // obstáculos: tolera tocar la parte alta (cae una casilla detrás)
     let obs = this.sim.obstacleAt(tx, tz);
     if (!obs) {
@@ -279,6 +331,12 @@ class Game {
     }
     if (TRUCK_TILES.some(([x, z]) => x === tx && z === tz) && this.sim.truckParked()) return go({ kind: 'truck' }, 14.5, 9.5);
     go({ kind: 'ground', x: tx, z: tz }, tx + 0.5, tz + 0.5);
+  }
+
+  tapPlant(id) {
+    const pl = PLANT_BY_ID.get(id);
+    if (!pl) return;
+    if (this.sim.command({ kind: 'wplant', id })) { this.world.showMarker(pl.x + 0.5, pl.z + 0.5); this.sound.play('tap'); }
   }
 
   frame() {

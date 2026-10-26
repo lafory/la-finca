@@ -4,8 +4,9 @@ import { CAN_FULLSCREEN, viewSize } from './viewport.js';
 import {
   ITEMS, CROPS, CROP_ORDER, RECIPES, PRICES, WORKERS, WORKER_ORDER, PARCELS, BUILDINGS, TRUCK_SPOT,
   SELLABLE, xpForLevel, EGG_INTERVAL, LEVEL_XP, WORKER_SPEED, workerUpgradePrice, FF_SPEEDS,
-  STRUCTURES, STRUCTURE_ORDER, OBSTACLES, STORAGE_CAPS, STORAGE_LEVELS, TRUCK_SLOTS, CAM_WAIT, CAM_KEEP } from './data.js';
-import { storageCap, invCount, chickenCap, now, parcelReachable } from './state.js';
+  STRUCTURES, STRUCTURE_ORDER, OBSTACLES, STORAGE_CAPS, STORAGE_LEVELS, TRUCK_SLOTS, CAM_WAIT, CAM_KEEP, BATEY_ORDER, WOOD_CAP } from './data.js';
+import { ZONES, ZONE_ORDER, zoneOpen, inFarm, CARRY_MAX, WILD_ANIMALS } from './zones.js';
+import { storageCap, invCount, chickenCap, now, parcelReachable, structOpen, workerCap } from './state.js';
 import { fmtTime, fmtClock } from './sim.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -20,6 +21,10 @@ export function unlocksAt(level) {
   for (const k of WORKER_ORDER) if (WORKERS[k].level === level) out.push(`Contratar: ${WORKERS[k].name}`);
   for (const p of PARCELS) if (p.level === level) out.push(`Terreno: ${p.name}`);
   for (const k of STRUCTURE_ORDER) if (STRUCTURES[k].level === level) out.push(`Construir: ${STRUCTURES[k].name}`);
+  for (const id of ZONE_ORDER) if (ZONES[id].level === level && !ZONES[id].road) out.push(`${ZONES[id].soon ? 'Muy pronto' : 'Se abre'}: ${ZONES[id].name} (${ZONES[id].blurb.toLowerCase().replace(/\.$/, '')})`);
+  const houses = BATEY_ORDER.filter((k) => STRUCTURES[k].level === level && STRUCTURES[k].kind === 'house').length;
+  if (houses) out.push(`Batey: ${houses} solar${houses > 1 ? 'es' : ''} para casas`);
+  for (const k of BATEY_ORDER) if (STRUCTURES[k].level === level && STRUCTURES[k].kind !== 'house') out.push(`Batey: ${STRUCTURES[k].name}`);
   if (level === 2) out.push('El fogón (cocina)', 'Almacén más grande');
   if (level === 3) out.push('Ampliar gallinero');
   if (level === 4) out.push('Abono');
@@ -27,7 +32,7 @@ export function unlocksAt(level) {
   return out;
 }
 
-const STRUCT_ICON = { anden: 'truck', vacas: 'leche', chivos: 'queso', pozo: 'water', cerdos: 'carne', trapiche: 'azucar', gallinero2: 'hen', fogon2: 'fire', casaTabaco: 'puros' };
+const STRUCT_ICON = { bodega: 'shop', escuela: 'xp', iglesia: 'house', anden: 'truck', vacas: 'leche', chivos: 'queso', pozo: 'water', cerdos: 'carne', trapiche: 'azucar', gallinero2: 'hen', fogon2: 'fire', casaTabaco: 'puros' };
 
 export class UI {
   constructor(game) {
@@ -55,6 +60,7 @@ export class UI {
         </button>
         <div class="chip money" aria-label="Pesos">${ICON.coin}<b id="money">0</b><small>pesos</small></div>
         <button class="chip inv" data-act="inventory" aria-label="Canasta">${ICON.basket}<b id="invc">0/20</b></button>
+        <div class="chip wood hidden" id="woodchip" aria-label="Leña">${ICON.wood}<b id="wood">0</b><small>leña</small></div>
         <span class="grow"></span>
         <button class="round ffbtn" id="btn-ff" data-act="ff" aria-label="Adelantar el tiempo">${ICON.ff}<b id="ffx">x1</b></button>
         <button class="round" id="btn-full" data-act="fullscreen" aria-label="Pantalla completa">${ICON.full}</button>
@@ -77,6 +83,11 @@ export class UI {
       <div class="camgroup">
         <button class="round cam" data-act="viewfarm" id="btn-viewfarm" aria-label="Ver toda la finca">${ICON.land}<span>Ver finca</span></button>
         <button class="round cam" data-act="center" aria-label="Centrar en el guajiro">${ICON.center}<span>Centrar</span></button>
+      </div>
+      <div class="explore" id="explore">
+        <button class="btn primary gohome hidden" data-act="gofarm" id="btn-home">${ICON.home}<span>Volver a la finca</span></button>
+        <button class="round cam hidden" data-act="gomanigua" id="btn-manigua" aria-label="Ir a la manigua">${ICON.tree}<span>Manigua</span></button>
+        <button class="round cam hidden" data-act="gobatey" id="btn-batey" aria-label="Ir al batey">${ICON.house}<span>Batey</span></button>
       </div>
       <div class="hint" id="hint">Toca para caminar · WASD/flechas · E/Espacio usar · rueda o pellizco = zoom</div>
       <div class="joy hidden" id="joy"><div class="joy-knob" id="knob"></div></div>
@@ -149,7 +160,12 @@ export class UI {
       case 'levelinfo': return this.openLevel();
       case 'fullscreen': return this.toggleFullscreen();
       case 'center': this.g.centerPlayer(); return;
-      case 'viewfarm': this.g.viewFarm(); return;
+      case 'viewfarm': if (this.s.level >= ZONES.manigua.level && this.g.rig.goalDist > this.g.rig.fitDist(...Object.values(this.g.ownedRect())) * 0.95) this.g.viewWorld(); else this.g.viewFarm(); return;
+      case 'gomanigua': this.closeSheet(); this.g.goManigua(); return;
+      case 'gobatey': this.closeSheet(); this.g.goBatey(); return;
+      case 'gofarm': this.closeSheet(); this.g.goFarm(); return;
+      case 'uphouse': if (sim.upgradeHouse(d.id)) this.closeSheet(); else this.refreshSheet(); return;
+      case 'cheat': this.g.cheat(d.id); this.refreshSheet(); return;
       case 'build': if (sim.build(d.id)) this.closeSheet(); else this.refreshSheet(); return;
       case 'opensite': return this.openBuild(d.id);
       case 'goBuild': this.closeSheet(); { const st = STRUCTURES[d.id]; this.g.rig.goal.set(st.x + st.w / 2, 0, st.z + st.h / 2); this.g.rig.goalDist = Math.min(this.g.rig.maxDist, 24); this.g.rig.manualUntil = performance.now() + 5000; } return;
@@ -206,10 +222,10 @@ export class UI {
   refreshSettingsIfOpen() { if (this.sheet?.title === 'Ajustes') this.refreshSheet(); }
   closeSheet() { this.sheet = null; $('#sheet-wrap').classList.add('hidden'); }
 
-  priceBtn(price, { act = 'buy', id, qty, disabled, lockLevel, label } = {}) {
+  priceBtn(price, { act = 'buy', id, qty, disabled, lockLevel, label, wood } = {}) {
     if (lockLevel) return `<button class="btn locked" disabled>Nivel ${lockLevel}</button>`;
-    const poor = this.s.money < price;
-    return `<button class="btn ${poor ? 'poor' : ''}" data-act="${act}" data-id="${id}" ${qty ? `data-qty="${qty}"` : ''} ${disabled || poor ? 'disabled' : ''}>${label || ''}${ICON.coin}${price}</button>`;
+    const poor = this.s.money < price || (wood && this.s.wood < wood);
+    return `<button class="btn ${poor ? 'poor' : ''}" data-act="${act}" data-id="${id}" ${qty ? `data-qty="${qty}"` : ''} ${disabled || poor ? 'disabled' : ''}>${label || ''}${ICON.coin}${price}${wood ? `<span class="wd">${ICON.wood}${wood}</span>` : ''}</button>`;
   }
   openShop() {
     this.openSheet('Tienda', () => {
@@ -220,7 +236,7 @@ export class UI {
         const profit = ITEMS[cr.item].sell - cr.seed;
         out += `<div class="row ${lock ? 'dim' : ''}"><div class="row-ico">${ICON[c]}</div>
           <div class="row-main"><b>${cr.seedName}</b><small>Crece en ${fmtTime(sim.plotDur(c))} · se vende a ${ITEMS[cr.item].sell} (+${profit}) · tienes ${s.seeds[c]}</small></div>
-          <div class="row-btns">${this.priceBtn(cr.seed, { id: c, qty: 1, lockLevel: lock, label: '1 · ' })}${lock ? '' : this.priceBtn(cr.seed * 5, { id: c, qty: 5, label: '5 · ' })}</div></div>`;
+          <div class="row-btns">${this.priceBtn(sim.seedPrice(c), { id: c, qty: 1, lockLevel: lock, label: '1 · ' })}${lock ? '' : this.priceBtn(sim.seedPrice(c) * 5, { id: c, qty: 5, label: '5 · ' })}</div></div>`;
       }
       out += '<h3>Animales y mejoras</h3>';
       const full = s.chickens.length >= chickenCap(s);
@@ -255,7 +271,9 @@ export class UI {
     this.openSheet('Trabajadores', () => {
       const s = this.s;
       const n = s.workers.length;
-      return `<p class="note">Se contratan una sola vez (sin salario). Trabajan solos, también mientras adelantas el tiempo. ${n ? `Tienes ${n} de ${WORKER_ORDER.length}.` : 'El primero cuesta poco: ¡vende huevos y contrata a Pancho!'}</p>`
+      const cap = workerCap(s);
+      return `<p class="note">Se contratan una sola vez (sin salario). Trabajan solos, también mientras adelantas el tiempo. ${n ? `Tienes ${n} de ${WORKER_ORDER.length}.` : 'El primero cuesta poco: ¡vende huevos y contrata a Pancho!'}</p>
+        <div class="capbar ${n >= cap ? 'full' : ''}">${ICON.house}<b>Viviendas: ${n}/${cap}</b><small>${n >= cap ? (s.level >= ZONES.batey.level ? 'Construye casas en el batey para contratar más.' : `En el nivel ${ZONES.batey.level} se abre el batey para hacer casas.`) : 'Cada casa del batey da sitio a más trabajadores.'}</small></div>`
         + [...WORKER_ORDER].sort((a, b) => (WORKERS[b].tag ? 1 : 0) - (WORKERS[a].tag ? 1 : 0)).map((k) => this.workerCard(k)).join('');
     });
   }
@@ -296,13 +314,15 @@ export class UI {
       const s = this.s;
       const owned = s.parcels.length;
       let out = `<p class="note">Tienes ${owned} de ${PARCELS.length} pedazos de tierra. Compra la tierra de al lado, quita piedras, marabú y tocones para abrir canteros, y construye en los solares.</p>`;
-      out += '<h3>Construir</h3>';
+      out += `<div class="capbar">${ICON.wood}<b>Leña: ${s.wood}/${WOOD_CAP}</b><small>${s.level >= ZONES.manigua.level ? 'Tumba árboles en la manigua o contrata al leñero.' : `La leña sale de la manigua (nivel ${ZONES.manigua.level}).`}</small></div>`;
+      out += this.bateySection();
+      out += '<h3>Construir en la finca</h3>';
       for (const k of STRUCTURE_ORDER) {
         const st = STRUCTURES[k], built = !!s.built[k], par = PARCELS.find((p) => p.id === st.parcel);
         const hasLand = s.parcels.includes(st.parcel), lock = s.level < st.level ? st.level : 0;
         const btn = built ? `<button class="btn" data-act="goBuild" data-id="${k}">Ver</button>`
           : !hasLand ? `<button class="btn locked" disabled>${lock ? `Nivel ${lock}` : 'Sin tierra'}</button>`
-          : this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock });
+          : this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.wood });
         out += `<div class="row ${lock || !hasLand ? 'dim' : ''} ${built ? 'sel' : ''}"><div class="row-ico">${ICON[STRUCT_ICON[k]] || ICON.up}</div><div class="row-main"><b>${st.name}</b><small>${st.detail}${built ? ' · ¡construido!' : hasLand ? '' : ` · en “${par.name}”`}</small></div>${btn}</div>`;
       }
       out += '<h3>Tierra</h3>';
@@ -318,14 +338,37 @@ export class UI {
       return out;
     });
   }
+  bateySection() {
+    const s = this.s, open = zoneOpen(s, 'batey');
+    let out = `<h3>El batey <small>${open ? `· viviendas para ${workerCap(s)} trabajadores` : `· nivel ${ZONES.batey.level}`}</small></h3>`;
+    if (!open) return out + `<p class="note">${ZONES.batey.blurb} Aquí harás bohíos y casas de zinc (más trabajadores), la bodega, la escuelita y la iglesita.</p>`;
+    out += `<div class="row"><div class="row-ico">${ICON.house}</div><div class="row-main"><b>Ir al batey</b><small>Queda al sur, cruzando el camino.</small></div><button class="btn" data-act="gobatey">Ir</button></div>`;
+    for (const k of BATEY_ORDER) out += this.bateyRow(k);
+    return out;
+  }
+  bateyRow(k) {
+    const s = this.s, st = STRUCTURES[k], b = s.built[k], lock = s.level < st.level ? st.level : 0;
+    const house = st.kind === 'house';
+    let btn, name = st.name, detail = st.detail || '';
+    if (house) {
+      name = b?.tier === 2 ? st.upgrade.name : b ? 'Bohío' : `Solar: ${st.name}`;
+      detail = b?.tier === 2 ? `Viven ${st.upgrade.cap} trabajadores más.` : b ? `Vive ${st.cap} trabajador más. Mejóralo a casa de zinc: +${st.upgrade.cap - st.cap}.` : `Bohío de guano: +${st.cap} trabajador.`;
+    }
+    if (!b) btn = this.priceBtn(st.price, { act: 'build', id: k, lockLevel: lock, wood: st.wood });
+    else if (house && b.tier !== 2) btn = s.level < st.upgrade.level ? `<button class="btn locked" disabled>Zinc · nivel ${st.upgrade.level}</button>` : this.priceBtn(st.upgrade.price, { act: 'uphouse', id: k, wood: st.upgrade.wood, label: 'Zinc · ' });
+    else btn = `<button class="btn" data-act="goBuild" data-id="${k}">Ver</button>`;
+    return `<div class="row ${lock ? 'dim' : ''} ${b ? 'sel' : ''}"><div class="row-ico">${ICON[STRUCT_ICON[k]] || ICON.house}</div><div class="row-main"><b>${name}</b><small>${detail}</small></div>${btn}</div>`;
+  }
   openBuild(id) {
     const st = STRUCTURES[id];
+    if (st.zone === 'batey') return this.openSheet(st.kind === 'house' ? 'Casa del batey' : st.name, () => `<p class="note">${st.kind === 'house' ? 'Cada casa da vivienda a trabajadores. Hacen falta pesos y leña.' : st.detail}</p>${this.bateyRow(id)}<p class="note">Leña: ${this.s.wood}. Viviendas: ${this.sim.workers.length}/${workerCap(this.s)}.</p>`);
     this.openSheet(st.name, () => {
       const s = this.s, lock = s.level < st.level ? st.level : 0;
       if (s.built[id]) return `<p class="note">Ya está construido. ${st.detail}</p>`;
       let blocked = false;
       for (let z = st.z; z < st.z + st.h; z++) for (let x = st.x; x < st.x + st.w; x++) if (this.sim.obstacleAt(x, z)) blocked = true;
-      return `<div class="row"><div class="row-ico">${ICON[STRUCT_ICON[id]] || ICON.up}</div><div class="row-main"><b>Solar para: ${st.name}</b><small>${st.detail}</small></div>${this.priceBtn(st.price, { act: 'build', id, lockLevel: lock })}</div>
+      return `<div class="row"><div class="row-ico">${ICON[STRUCT_ICON[id]] || ICON.up}</div><div class="row-main"><b>Solar para: ${st.name}</b><small>${st.detail}</small></div>${this.priceBtn(st.price, { act: 'build', id, lockLevel: lock, wood: st.wood })}</div>
+        ${st.wood ? `<p class="note">Lleva ${st.wood} de leña (tienes ${s.wood}).</p>` : ''}
         ${blocked ? '<p class="note">Hay que limpiar el solar primero (toca las piedras o el marabú).</p>' : ''}`;
     });
   }
@@ -339,8 +382,8 @@ export class UI {
   openInventory() {
     this.openSheet('La canasta', () => {
       const s = this.s;
-      let out = `<p class="note">Llevas ${invCount(s)} de ${storageCap(s)}. Vende en el camión.</p><div class="grid">`;
-      for (const k of SELLABLE) out += `<div class="cell">${ICON[k]}<b>${s.inv[k]}</b><small>${ITEMS[k].plural}</small></div>`;
+      let out = `<p class="note">Llevas ${invCount(s)} de ${storageCap(s)}. Vende en el camión.${s.wood ? ` Leña en el bohío: ${s.wood}.` : ''}</p><div class="grid">`;
+      for (const k of SELLABLE) if (s.inv[k] || ITEMS[k].level === undefined || s.level >= (ITEMS[k].level || 1)) out += `<div class="cell">${ICON[k]}<b>${s.inv[k]}</b><small>${ITEMS[k].plural}</small></div>`;
       out += '</div><h3>Semillas</h3><div class="grid">';
       for (const c of CROP_ORDER) out += `<div class="cell">${ICON[c]}<b>${s.seeds[c]}</b><small>${CROPS[c].name}</small></div>`;
       return out + '</div>';
@@ -412,6 +455,7 @@ export class UI {
       if (this.fsSupported()) out += `<div class="row"><div class="row-ico">${ICON.full}</div><div class="row-main"><b>Pantalla completa</b></div><button class="btn" data-act="fullscreen">${this.isFullscreen() ? 'Salir' : 'Activar'}</button></div>`;
       else out += '<p class="note">En iPhone: Compartir → “Añadir a pantalla de inicio” para jugar a pantalla completa.</p>';
       out += `<p class="note">Controles: toca el suelo para caminar, toca huevos, canteros, el camión o el fogón para usarlos. Arrastra para mover la vista y pellizca (o usa la rueda) para acercar o alejar.</p>`;
+      if (import.meta.env.DEV || window.__fincaDev) out += `<h3>Trucos (solo desarrollo)</h3><div class="seg"><button class="btn" data-act="cheat" data-id="level">+1 nivel</button><button class="btn" data-act="cheat" data-id="money">+1000 pesos</button><button class="btn" data-act="cheat" data-id="wood">+100 leña</button></div>`;
       out += '<button class="btn danger wide" data-act="reset">Empezar de cero…</button>';
       return out;
     });
@@ -446,6 +490,8 @@ export class UI {
     const ic = invCount(s), cap = storageCap(s);
     $('#invc').textContent = `${ic}/${cap}`;
     $('.chip.inv').classList.toggle('full', ic >= cap);
+    $('#woodchip').classList.toggle('hidden', !(s.wood > 0 || s.level >= ZONES.manigua.level));
+    $('#wood').textContent = s.wood;
     $('#seedname').textContent = CROPS[s.selectedSeed].name.split(' ')[0];
     $('#seedcount').textContent = s.seeds[s.selectedSeed];
     $('#seedsel .ico').outerHTML = ICON[s.selectedSeed];
@@ -499,7 +545,7 @@ export class UI {
     // terrenos a la venta
     const frontier = this.g.world.frontierParcels();
     for (const p of PARCELS) {
-      if (s.parcels.includes(p.id) || !frontier.has(p.id)) continue;
+      if (s.parcels.includes(p.id) || !frontier.has(p.id) || this.g.rig.dist > 75) continue;
       const [cx, cz] = this.g.world.parcelCenter(p);
       const lock = s.level < p.level;
       this.label(`parcel-${p.id}`, cx, 1.2, cz, lock ? `Se vende · nivel ${p.level}` : `Se vende ${ICON.coin}${p.price}`, lock ? 'muted' : 'sale', 'land');
@@ -507,14 +553,30 @@ export class UI {
     // temporizador de la mata seleccionada
     // estructuras: listo / tiempo / solar
     for (const [id, st] of Object.entries(STRUCTURES)) {
-      if (!s.parcels.includes(st.parcel)) continue;
+      if (!structOpen(s, st)) continue;
       const cx = st.x + st.w / 2, cz = st.z + st.h / 2, b = s.built[id];
-      if (!b) { this.label(`st-${id}`, cx, 1.1, cz, `Solar · ${st.name}${s.level < st.level ? ` · nivel ${st.level}` : ''}`, s.level < st.level ? 'muted' : 'sale', `opensite" data-id="${id}`); continue; }
+      if (!b) {
+        if (st.zone && (s.level < st.level - 3 || this.g.rig.dist > 40)) continue; // en el batey solo los solares cercanos de nivel
+        this.label(`st-${id}`, cx, 1.1, cz, `${st.kind === 'house' ? 'Solar · casa' : `Solar · ${st.name}`}${s.level < st.level ? ` · nivel ${st.level}` : ''}`, s.level < st.level ? 'muted' : 'sale', `opensite" data-id="${id}`);
+        continue;
+      }
       if (st.kind === 'animal') this.label(`st-${id}`, cx, 1.6, cz, b.ready ? `${ICON[st.produce.item]} ¡Listo!` : `${ICON[st.produce.item]} ${fmtClock(sim.animalLeft(id))}`, b.ready ? 'ready' : 'mini');
       else if (st.kind === 'proc') {
         const k = b;
         this.label(`st-${id}`, cx, 2.4, cz, k.ready ? `${ICON[k.ready]} ¡Listo!` : k.recipe ? `${ICON[RECIPES[k.recipe].out]} ${fmtClock(RECIPES[k.recipe].time - (now() - k.at))}` : `${st.name} libre`, k.ready ? 'ready' : k.recipe ? '' : 'muted');
       }
+    }
+    // zonas cerradas: letrero en la entrada
+    for (const [id, x, z] of [['manigua', 47.5, 39], ['batey', 13, 43], ['campos', 40, 44], ['central', 8, 60]]) {
+      if (zoneOpen(s, id)) continue;
+      const Z = ZONES[id];
+      if (Z.soon && s.level < Z.level - 10) continue;
+      this.label(`zone-${id}`, x, 1.4, z, `${Z.name} · ${Z.soon ? 'muy pronto' : `nivel ${Z.level}`}`, 'muted');
+    }
+    // lo que llevas en brazos
+    if (s.carry.length) {
+      const p = sim.player;
+      this.label('carry', p.x, 2.2, p.z, `${s.carry.map((c) => (c.kind === 'caballo' ? ICON.horse : ICON[c.kind] || ICON.hen)).join('')}<span>${s.carry.length}/${CARRY_MAX} · a la finca</span>`, 'mini ready');
     }
     // trabajadores: burbuja con lo que hacen
     for (const w of sim.workers) {
@@ -658,6 +720,27 @@ export class UI {
     joy.addEventListener('pointercancel', end);
   }
 
+  updateExplore() {
+    const s = this.s, p = this.sim.player;
+    const out = !inFarm(Math.floor(p.x), Math.floor(p.z));
+    const st = `${out}|${zoneOpen(s, 'manigua')}|${zoneOpen(s, 'batey')}`;
+    if (st !== this.exploreState) {
+      this.exploreState = st;
+      $('#btn-home').classList.toggle('hidden', !out);
+      $('#btn-manigua').classList.toggle('hidden', out || !zoneOpen(s, 'manigua'));
+      $('#btn-batey').classList.toggle('hidden', out || !zoneOpen(s, 'batey'));
+    }
+    // avisos de cada zona nueva (una sola vez, cuando no hay ventana abierta)
+    if (!s.started && !this.g.started) return;
+    if (!$('#modal-wrap').classList.contains('hidden') || this.sheet) return;
+    if (performance.now() < (this.hintAt || 0)) return;
+    const hint = (k, cond, text) => { if (!s.hints[k] && cond) { s.hints[k] = 1; this.toast(text); this.hintAt = performance.now() + 4500; return true; } return false; };
+    hint('manigua', zoneOpen(s, 'manigua'), '¡Se abrió la manigua! Toca «Manigua» para buscar leña, frutas y animales.')
+      || hint('wood', s.wood > 0 && s.level < 12, 'La leña se guarda en el bohío. Sirve para construir corrales y casas.')
+      || hint('carry', s.carry.length > 0, 'Llévalo a la finca: toca «Volver a la finca» y se entrega solo.')
+      || hint('lenador', s.level >= WORKERS.lenador.level, `${WORKERS.lenador.who}, el leñero, ya se puede contratar: tumba árboles por ti.`)
+      || hint('batey', zoneOpen(s, 'batey'), '¡Se abrió el batey! Construye casas para tener más trabajadores (Terreno y obras).');
+  }
   update(dt) {
     // toasts
     for (let i = this.toasts.length - 1; i >= 0; i--) {
@@ -676,6 +759,7 @@ export class UI {
       if (f.life <= 0) { f.el.remove(); this.floaters.splice(i, 1); }
     }
     this.updateLabels();
+    this.updateExplore();
     this.updateTutorial();
     this.updateFF();
     // botón Usar contextual
