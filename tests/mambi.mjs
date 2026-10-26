@@ -72,6 +72,8 @@ async function run(name, opts) {
   await click('[data-act="mbfarm"]'); await sleep(300);
   res.farm = await ev(() => !!window.__finca.sim.mb().farms.manzanillo);
   await ev(() => window.__finca.sim.mbCheat('rent'));
+  await ev(() => window.__finca.ui.refreshSheet()); await sleep(300);
+  await shot('5b-finca-regional');
   const m0 = await ev(() => window.__finca.sim.s.money);
   await click('[data-act="mbrent"]'); await sleep(300);
   res.rent = (await ev(() => window.__finca.sim.s.money)) - m0;
