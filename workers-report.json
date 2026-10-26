@@ -37,8 +37,8 @@
   "dupSamples": 0,
   "samples": 40,
   "camStatus": [
-   "Cargando el camión",
-   "Cargando el camión"
+   "Va a cargar 3 huevos",
+   "Va a cargar 2 tomates"
   ],
   "sold": 0,
   "afterReload": 6,
@@ -82,8 +82,8 @@
   "dupSamples": 0,
   "samples": 40,
   "camStatus": [
-   "Juntando la mercancía",
-   "Va a buscar en el bohío lo que pide el camión"
+   "Va a buscar en el bohío lo que pide el camión",
+   "Esperando mercancía: despide al camión en 17 s"
   ],
   "sold": 1,
   "afterReload": 6,

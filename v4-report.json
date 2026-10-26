@@ -5,7 +5,42 @@
   "level3": 3,
   "manBtn": true,
   "inManigua": true,
-  "homeBtn": false,
+  "homeBtn": true,
+  "tree": {
+   "id": "m213",
+   "x": 51,
+   "z": 36
+  },
+  "tapKind": "wplant:m213 → wplant",
+  "chopped": true,
+  "madera": 3,
+  "stump": true,
+  "fruitKind": "mango",
+  "fruitPicked": true,
+  "wildCount": 10,
+  "carry": [
+   "gallina"
+  ],
+  "backInFarm": true,
+  "delivered": true,
+  "caught": 1,
+  "inBatey": true,
+  "buildBtn": true,
+  "house": true,
+  "capUp": true,
+  "lenadorHired": true,
+  "lenadorWood": true,
+  "lenadorStatus": "Va a tumbar una guásima",
+  "fps": 12.542209358417752,
+  "persist": true
+ },
+ "phone": {
+  "errors": [],
+  "manBtnBefore": false,
+  "level3": 3,
+  "manBtn": true,
+  "inManigua": true,
+  "homeBtn": true,
   "tree": {
    "id": "m213",
    "x": 51,
@@ -28,13 +63,10 @@
   "buildBtn": true,
   "house": true,
   "capUp": true,
-  "lenadorHired": true,
-  "lenadorWood": true,
-  "lenadorStatus": "Apilando la madera",
-  "fps": 10.856691669964556,
+  "fps": 13.30166270783848,
   "persist": true
  },
- "phone": {
+ "ipad": {
   "errors": [],
   "manBtnBefore": false,
   "level3": 3,
@@ -48,13 +80,13 @@
   },
   "tapKind": "wplant:m213 → wplant",
   "chopped": true,
-  "wood": 3,
+  "madera": 3,
   "stump": true,
   "fruitKind": "mango",
   "fruitPicked": true,
   "wildCount": 11,
   "carry": [
-   "jutia"
+   "gallina"
   ],
   "backInFarm": true,
   "delivered": true,
@@ -63,39 +95,7 @@
   "buildBtn": true,
   "house": true,
   "capUp": true,
-  "fps": 12.660693416430236,
-  "persist": true
- },
- "ipad": {
-  "errors": [],
-  "manBtnBefore": false,
-  "level3": 3,
-  "manBtn": false,
-  "inManigua": true,
-  "homeBtn": true,
-  "tree": {
-   "id": "m213",
-   "x": 51,
-   "z": 36
-  },
-  "tapKind": "wplant:m213 → wplant",
-  "chopped": true,
-  "wood": 3,
-  "stump": true,
-  "fruitKind": "mango",
-  "fruitPicked": true,
-  "wildCount": 11,
-  "carry": [
-   "jutia"
-  ],
-  "backInFarm": true,
-  "delivered": true,
-  "caught": 1,
-  "inBatey": true,
-  "buildBtn": true,
-  "house": true,
-  "capUp": true,
-  "fps": 15.552099533468814,
+  "fps": 11.878835874049296,
   "persist": true
  },
  "phone-landscape": {
@@ -112,13 +112,13 @@
   },
   "tapKind": "wplant:m213 → wplant",
   "chopped": true,
-  "wood": 3,
+  "madera": 3,
   "stump": true,
   "fruitKind": "mango",
   "fruitPicked": true,
   "wildCount": 11,
   "carry": [
-   "jibaro"
+   "guinea"
   ],
   "backInFarm": true,
   "delivered": true,
@@ -127,7 +127,7 @@
   "buildBtn": true,
   "house": true,
   "capUp": true,
-  "fps": 12.44257274122998,
+  "fps": 13.679890560921992,
   "persist": true
  }
 }

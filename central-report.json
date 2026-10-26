@@ -1,0 +1,114 @@
+{
+  "desktop": {
+    "errors": [],
+    "devFlag": true,
+    "level25": 25,
+    "fieldSheet": "Campo 1 · 6×6",
+    "planting": "planting",
+    "planted": true,
+    "ripe": "ripe",
+    "harvested": true,
+    "yard": 108,
+    "building": true,
+    "stage": 4,
+    "trainMoved": true,
+    "trainDelivered": true,
+    "milled": true,
+    "orderPaid": true,
+    "moneyGain": 13820,
+    "perf": {
+      "fps": 3,
+      "calls": 191,
+      "tris": 271212
+    },
+    "afterReload": {
+      "stage": 4,
+      "owned": 12,
+      "level": 35
+    }
+  },
+  "ipad": {
+    "errors": [],
+    "devFlag": true,
+    "level25": 25,
+    "fieldSheet": "Campo 1 · 6×6",
+    "planting": "planting",
+    "planted": true,
+    "ripe": "ripe",
+    "harvested": true,
+    "yard": 216,
+    "building": true,
+    "stage": 4,
+    "trainMoved": true,
+    "trainDelivered": true,
+    "milled": true,
+    "orderPaid": true,
+    "moneyGain": 8660,
+    "perf": {
+      "fps": 3,
+      "calls": 200,
+      "tris": 279427
+    },
+    "afterReload": {
+      "stage": 4,
+      "owned": 12,
+      "level": 35
+    }
+  },
+  "phone": {
+    "errors": [],
+    "devFlag": true,
+    "level25": 25,
+    "fieldSheet": "Campo 1 · 6×6",
+    "planting": "planting",
+    "planted": true,
+    "ripe": "ripe",
+    "harvested": true,
+    "yard": 108,
+    "building": true,
+    "stage": 4,
+    "trainMoved": true,
+    "trainDelivered": true,
+    "milled": true,
+    "orderPaid": true,
+    "moneyGain": 21620,
+    "perf": {
+      "fps": 5,
+      "calls": 210,
+      "tris": 282669
+    },
+    "afterReload": {
+      "stage": 4,
+      "owned": 12,
+      "level": 35
+    }
+  },
+  "phone-land": {
+    "errors": [],
+    "devFlag": true,
+    "level25": 25,
+    "fieldSheet": "Campo 1 · 6×6",
+    "planting": "planting",
+    "planted": true,
+    "ripe": "ripe",
+    "harvested": true,
+    "yard": 216,
+    "building": true,
+    "stage": 4,
+    "trainMoved": true,
+    "trainDelivered": true,
+    "milled": true,
+    "orderPaid": true,
+    "moneyGain": 22060,
+    "perf": {
+      "fps": 3,
+      "calls": 229,
+      "tris": 279527
+    },
+    "afterReload": {
+      "stage": 4,
+      "owned": 12,
+      "level": 35
+    }
+  }
+}
