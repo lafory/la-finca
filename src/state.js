@@ -1,7 +1,8 @@
 import {
   W, H, SAVE_KEY, START_AREA, ROAD, PARCELS, START_PLOTS, BUILDINGS, PEN, TRUCK_TILES,
-  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST,
+  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST, GW, GH, WORKER_BASE_CAP, ITEMS,
 } from './data.js';
+import { zoneAt, zoneOpen, isAnyRoad, MANIGUA, BATEY, inFarm } from './zones.js';
 
 // Reloj del juego: tiempo real + lo que se ha adelantado con ⏩ (se guarda en la partida).
 export const CLOCK = { offset: 0 };
@@ -14,7 +15,7 @@ export function newGame() {
     money: 10,
     xp: 0,
     level: 1,
-    inv: { egg: 0, tomato: 0, cane: 0, tobacco: 0, ketchup: 0, guarapo: 0 },
+    inv: Object.fromEntries(Object.keys(ITEMS).map((k) => [k, 0])),
     seeds: { tomato: 2, cane: 0, tobacco: 0 },
     selectedSeed: 'tomato',
     parcels: [],
@@ -36,7 +37,16 @@ export function newGame() {
     tod: 0.4, // hora del día (0 = medianoche, 0.5 = mediodía)
     ffUsed: false,
     hireHint: false,
-    stats: { eggs: 0, harvests: 0, sold: 0, earned: 0 },
+    stats: { eggs: 0, harvests: 0, sold: 0, earned: 0, wood: 0, caught: 0, fruit: 0 },
+    // v4: fuera de la finca
+    wood: 0,
+    chopped: {}, // id de planta de la manigua → momento en que se tumbó (vuelve a crecer)
+    fruit: {}, // id de frutal → momento en que se recogió
+    wild: [], // animales sueltos en la manigua { id, kind, x, z }
+    carry: [], // lo que el guajiro lleva en brazos (se entrega al entrar a la finca)
+    horse: false,
+    tame: {}, // intentos de domar por id de caballo
+    hints: {}, // avisos de apertura ya mostrados
     nextId: 1,
     savedAt: t,
   };
@@ -59,8 +69,17 @@ export function invCount(s) {
   return Object.values(s.inv).reduce((a, b) => a + b, 0);
 }
 export function chickenCap(s) {
-  return s.upgrades.coop ? 8 : 4;
+  return (s.upgrades.coop ? 8 : 4) + (s.extraHens || 0);
 }
+// ¿La estructura está en tierra propia (finca) o en una zona abierta (batey)?
+export function structOpen(s, st) { return st.zone ? zoneOpen(s, st.zone) : s.parcels.includes(st.parcel); }
+// Tope de trabajadores según las casas del batey
+export function workerCap(s) {
+  let cap = WORKER_BASE_CAP;
+  for (const [id, st] of Object.entries(STRUCTURES)) if (st.kind === 'house' && s.built?.[id]) cap += s.built[id].tier === 2 ? st.upgrade.cap : st.cap;
+  return cap;
+}
+export const inGrid = (x, z) => x >= 0 && z >= 0 && x < GW && z < GH;
 
 // ---- Cuadrícula ----------------------------------------------------------
 export function inBounds(x, z) {
@@ -98,8 +117,14 @@ export function parcelReachable(s, p) {
 
 // Mapa de bloqueos (edificios, troncos). Se recalcula al comprar tierra.
 export function buildGrid(s) {
-  const blocked = new Uint8Array(W * H);
-  const mark = (x, z) => { if (inBounds(x, z)) blocked[z * W + x] = 1; };
+  const blocked = new Uint8Array(GW * GH);
+  const mark = (x, z) => { if (inGrid(x, z)) blocked[z * GW + x] = 1; };
+  // v4: la manigua (agua, mogotes, árboles en pie) y el batey
+  for (const k of MANIGUA.water) blocked[k] = 1;
+  for (const k of MANIGUA.hills) blocked[k] = 1;
+  for (const p of MANIGUA.plants) if (!(s.chopped && s.chopped[p.id])) mark(p.x, p.z);
+  for (let z = BATEY.ceiba.z; z < BATEY.ceiba.z + BATEY.ceiba.h; z++) for (let x = BATEY.ceiba.x; x < BATEY.ceiba.x + BATEY.ceiba.w; x++) mark(x, z);
+  for (const [x, z] of BATEY.lamps) mark(x, z);
   for (const b of Object.values(BUILDINGS)) {
     for (let z = b.z; z < b.z + b.h; z++) for (let x = b.x; x < b.x + b.w; x++) mark(x, z);
   }
@@ -128,9 +153,12 @@ export function buildGrid(s) {
 }
 
 export function walkable(s, grid, x, z) {
-  if (!isOwned(s, x, z)) return false;
-  if (grid.blocked[z * W + x]) return false;
-  return true;
+  if (!inGrid(x, z)) return false;
+  if (grid.blocked[z * GW + x]) return false;
+  if (inFarm(x, z)) return isOwned(s, x, z);
+  if (isAnyRoad(x, z)) return true;
+  const zn = zoneAt(x, z);
+  return !!zn && zoneOpen(s, zn);
 }
 
 // ---- Guardado ------------------------------------------------------------
@@ -163,8 +191,16 @@ export function load() {
     s.kitchen = { ...base.kitchen, ...d.kitchen };
     s.built = { ...(d.built || {}) };
     s.cleared = Array.isArray(d.cleared) ? d.cleared : [];
+    // v4: saves viejos sin manigua ni batey
+    s.wood = Math.max(0, Math.floor(+d.wood || 0));
+    s.chopped = d.chopped && typeof d.chopped === 'object' ? d.chopped : {};
+    s.fruit = d.fruit && typeof d.fruit === 'object' ? d.fruit : {};
+    s.wild = Array.isArray(d.wild) ? d.wild : [];
+    s.carry = Array.isArray(d.carry) ? d.carry : [];
+    s.tame = d.tame || {};
+    s.hints = d.hints || {};
     if (!Array.isArray(d.trucks)) { s.trucks = null; s.truck = d.truck; }
-    for (const k of Object.keys(s.inv)) s.inv[k] = Math.max(0, Math.floor(+s.inv[k] || 0));
+    for (const k of Object.keys(ITEMS)) s.inv[k] = Math.max(0, Math.floor(+s.inv[k] || 0));
     s.money = Math.max(0, Math.floor(+s.money || 0));
     // trabajadores de saves viejos
     s.workers = (d.workers || []).map((w) => ({ ...w, role: w.role === 'cocinero' ? 'cocinera' : w.role, lvl: w.lvl || 1 }));

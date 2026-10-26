@@ -1,13 +1,17 @@
 // Economía, mapa y progresión de La Finca. Todo en una cuadrícula W×H (1 tile = 1 unidad).
 // v3.1: el mapa creció (4×): la finca original queda arriba a la izquierda y la tierra se extiende al este y al sur.
-export const W = 46;
+export const W = 46; // la finca (tierra comprable)
 export const H = 40;
+// v4: cuadrícula global (finca + camino del sur + manigua + batey + campos + central); ver zones.js
+export const GW = 88;
+export const GH = 80;
+export const WOOD_CAP = 500;
 
 export const SAVE_KEY = 'lafinca-v2';
 
 // Niveles: XP acumulada necesaria para llegar a cada nivel (índice = nivel).
 export const LEVEL_XP = [0, 0, 20, 55, 110, 190, 300, 450, 650, 900, 1200];
-export const MAX_LEVEL = 30;
+export const MAX_LEVEL = 40;
 export function xpForLevel(l) {
   if (l < LEVEL_XP.length) return LEVEL_XP[l];
   const k = l - LEVEL_XP.length + 1; // 1 = nivel 11
@@ -27,8 +31,14 @@ export const ITEMS = {
   melao: { name: 'Melao de caña', plural: 'Botellas de melao', sell: 80, xp: 7 },
   azucar: { name: 'Azúcar', plural: 'Sacos de azúcar', sell: 125, xp: 10 },
   puros: { name: 'Tabacos', plural: 'Cajas de tabacos', sell: 260, xp: 18 },
+  // v4: de la manigua
+  mango: { name: 'Mango', plural: 'Mangos', sell: 8, xp: 1 },
+  guayaba: { name: 'Guayaba', plural: 'Guayabas', sell: 10, xp: 1 },
+  coco: { name: 'Coco', plural: 'Cocos', sell: 14, xp: 2 },
+  jutia: { name: 'Jutía', plural: 'Jutías', sell: 40, xp: 4 },
+  jibaro: { name: 'Puerco jíbaro', plural: 'Puercos jíbaros', sell: 70, xp: 6 },
 };
-export const SELLABLE = ['egg', 'tomato', 'cane', 'tobacco', 'ketchup', 'guarapo', 'leche', 'queso', 'carne', 'melao', 'azucar', 'puros'];
+export const SELLABLE = ['egg', 'tomato', 'cane', 'tobacco', 'ketchup', 'guarapo', 'leche', 'queso', 'carne', 'melao', 'azucar', 'puros', 'mango', 'guayaba', 'coco', 'jutia', 'jibaro'];
 
 export const CROPS = {
   tomato: { name: 'Tomate', seedName: 'Semilla de tomate', seed: 5, grow: 60, level: 1, item: 'tomato', xpPlant: 1 },
@@ -55,6 +65,7 @@ export const PRICES = {
 };
 export const STORAGE_CAPS = [20, 40, 80, 150, 250];
 export const STORAGE_LEVELS = [2, 5, 9, 14];
+export const STORAGE_WOOD = [0, 0, 15, 30]; // v4: las ampliaciones grandes llevan leña
 export const WATER_BOOST = 0.3; // regar quita 30 % del tiempo restante
 export const ABONO_FACTOR = 0.8;
 export const ORDER_BONUS = 1.45;
@@ -83,11 +94,16 @@ export const WORKERS = {
     look: { shirt: 0xf0ece0, hat: null, scarf: 0xd94a3a, skin: 0xb07850, skirt: 0xb8574a } },
   camionero: { who: 'Chucho', name: 'Camionero', tag: 'Vende a los camiones por ti', detail: 'Espera en el andén, trae del bohío lo que pide el camión, lo carga y cobra. Si piden lo que no hay, espera un poco y lo despide. Puede vender lo que sobra.', price: 45, level: 2, icon: 'truck',
     look: { shirt: 0x5f7f4f, hat: 0x3a3028, scarf: 0xe0b84a, skin: 0xe0b08a } },
+  lenador: { who: 'Tato', name: 'Leñero', detail: 'Va a la manigua con su machete, tumba guásimas y marabú y trae la leña al bohío.', price: 120, level: 4, icon: 'wood', zone: 'manigua',
+    look: { shirt: 0x8a5a3a, hat: 0xc9a86a, scarf: 0x2f5d3a, skin: 0x9a6440 } },
 };
+// Tope de trabajadores: 4 + lo que den las casas del batey (bohío +1, casa de zinc +2)
+export const WORKER_BASE_CAP = 4;
+export const LENADOR_LOAD = 3; // árboles que tumba antes de volver con la leña
 // Camionero: segundos que espera mercancía antes de despedir un camión; cuántos de cada cosa guarda al vender sobrantes.
 export const CAM_WAIT = 20;
 export const CAM_KEEP = [5, 10, 20, 40];
-export const WORKER_ORDER = ['recolector', 'regador', 'sembrador', 'cosechador', 'cocinera', 'camionero'];
+export const WORKER_ORDER = ['recolector', 'regador', 'sembrador', 'cosechador', 'cocinera', 'camionero', 'lenador'];
 // Mejora de rapidez: nivel → (multiplicador de velocidad al caminar, segundos de trabajo, espera entre tareas)
 export const WORKER_SPEED = [null, { walk: 2.6, work: 1.4, rest: 1.6 }, { walk: 3.3, work: 0.9, rest: 0.9 }, { walk: 4.1, work: 0.55, rest: 0.4 }];
 export const workerUpgradePrice = (role, lvl) => Math.round(WORKERS[role].price * (lvl === 1 ? 0.8 : 1.6) + 20);
@@ -132,16 +148,28 @@ const BASE_PARCELS = [
 // kind: animal (produce solo, se recoge), proc (recetas), boost (mejora), dock (segundo andén de carga).
 export const STRUCTURES = {
   anden: { name: 'Segundo andén', detail: 'Se cargan dos camiones a la vez.', price: 450, level: 6, kind: 'dock', parcel: 'esquinita', x: 17, z: 14, w: 2, h: 2 },
-  vacas: { name: 'Corral de vacas', detail: 'Dos vacas dan 2 cantinas de leche cada 2 min.', price: 700, level: 8, kind: 'animal', parcel: 'potrero', x: 23, z: 2, w: 4, h: 3, animal: 'cow', n: 2, produce: { item: 'leche', qty: 2, time: 120 } },
-  chivos: { name: 'Corral de chivos', detail: 'Las chivas dan queso cada 2 min y medio.', price: 820, level: 9, kind: 'animal', parcel: 'loma', x: 23, z: 13, w: 3, h: 3, animal: 'goat', n: 3, produce: { item: 'queso', qty: 1, time: 150 } },
-  pozo: { name: 'Pozo con molino', detail: 'Regar quita 45 % del tiempo restante (antes 30 %).', price: 600, level: 10, kind: 'boost', parcel: 'platanal', x: 2, z: 20, w: 2, h: 2 },
-  cerdos: { name: 'Chiquero', detail: 'Los puercos dan una pieza de carne cada 4 min.', price: 1000, level: 11, kind: 'animal', parcel: 'arrozal', x: 11, z: 19, w: 3, h: 3, animal: 'pig', n: 3, produce: { item: 'carne', qty: 1, time: 240 } },
-  trapiche: { name: 'Trapiche', detail: 'Muele caña: melao y azúcar.', price: 1300, level: 12, kind: 'proc', parcel: 'trapiche', x: 19, z: 20, w: 3, h: 2 },
-  gallinero2: { name: 'Gallinero grande', detail: 'Más gallinas: 4 huevos cada minuto y medio, en su cesta.', price: 900, level: 13, kind: 'animal', parcel: 'monte', x: 30, z: 4, w: 3, h: 3, animal: 'hen', n: 4, produce: { item: 'egg', qty: 4, time: 90 } },
-  fogon2: { name: 'Segundo fogón', detail: 'Otro fogón para kétchup y guarapo.', price: 1100, level: 14, kind: 'proc', parcel: 'sabana', x: 30, z: 16, w: 2, h: 2 },
-  casaTabaco: { name: 'Casa de curar tabaco', detail: 'Tuerce las hojas en tabacos.', price: 1800, level: 15, kind: 'proc', parcel: 'vega_sur', x: 3, z: 28, w: 3, h: 2 },
+  vacas: { wood: 6, name: 'Corral de vacas', detail: 'Dos vacas dan 2 cantinas de leche cada 2 min.', price: 700, level: 8, kind: 'animal', parcel: 'potrero', x: 23, z: 2, w: 4, h: 3, animal: 'cow', n: 2, produce: { item: 'leche', qty: 2, time: 120 } },
+  chivos: { wood: 6, name: 'Corral de chivos', detail: 'Las chivas dan queso cada 2 min y medio.', price: 820, level: 9, kind: 'animal', parcel: 'loma', x: 23, z: 13, w: 3, h: 3, animal: 'goat', n: 3, produce: { item: 'queso', qty: 1, time: 150 } },
+  pozo: { wood: 8, name: 'Pozo con molino', detail: 'Regar quita 45 % del tiempo restante (antes 30 %).', price: 600, level: 10, kind: 'boost', parcel: 'platanal', x: 2, z: 20, w: 2, h: 2 },
+  cerdos: { wood: 12, name: 'Chiquero', detail: 'Los puercos dan una pieza de carne cada 4 min.', price: 1000, level: 11, kind: 'animal', parcel: 'arrozal', x: 11, z: 19, w: 3, h: 3, animal: 'pig', n: 3, produce: { item: 'carne', qty: 1, time: 240 } },
+  trapiche: { wood: 20, name: 'Trapiche', detail: 'Muele caña: melao y azúcar.', price: 1300, level: 12, kind: 'proc', parcel: 'trapiche', x: 19, z: 20, w: 3, h: 2 },
+  gallinero2: { wood: 12, name: 'Gallinero grande', detail: 'Más gallinas: 4 huevos cada minuto y medio, en su cesta.', price: 900, level: 13, kind: 'animal', parcel: 'monte', x: 30, z: 4, w: 3, h: 3, animal: 'hen', n: 4, produce: { item: 'egg', qty: 4, time: 90 } },
+  fogon2: { wood: 10, name: 'Segundo fogón', detail: 'Otro fogón para kétchup y guarapo.', price: 1100, level: 14, kind: 'proc', parcel: 'sabana', x: 30, z: 16, w: 2, h: 2 },
+  casaTabaco: { wood: 20, name: 'Casa de curar tabaco', detail: 'Tuerce las hojas en tabacos.', price: 1800, level: 15, kind: 'proc', parcel: 'vega_sur', x: 3, z: 28, w: 3, h: 2 },
 };
+// v4: obras del batey (zone en vez de parcel). Casas: bohío (+1 trabajador), se mejoran a casa de zinc (+2).
+const HOUSES = [[1, 43, 5, 120, 8], [5, 43, 5, 150, 10], [9, 43, 6, 190, 12], [18, 43, 7, 240, 14], [22, 43, 8, 300, 16], [26, 43, 10, 380, 18], [18, 53, 12, 480, 20], [22, 53, 14, 600, 22]];
+HOUSES.forEach(([x, z, level, price, wood], i) => {
+  STRUCTURES[`casa${i + 1}`] = { name: `Casa ${i + 1} del batey`, detail: 'Un bohío para los trabajadores: +1 al tope. Se mejora a casa de zinc (+2).', price, wood, level, kind: 'house', zone: 'batey', x, z, w: 3, h: 3, cap: 1,
+    upgrade: { level: Math.max(9, level + 2), price: Math.round(price * 2.2), wood: wood + 10, cap: 2, name: 'Casa de zinc' } };
+});
+Object.assign(STRUCTURES, {
+  bodega: { name: 'La bodega', detail: 'La tiendita del batey: semillas y gallinas 15 % más baratas.', price: 250, wood: 12, level: 6, kind: 'civic', zone: 'batey', x: 18, z: 48, w: 4, h: 3, effect: { discount: 0.15 } },
+  escuela: { name: 'La escuelita', detail: 'Los niños del batey aprenden y tú también: +10 % de XP.', price: 900, wood: 30, level: 12, kind: 'civic', zone: 'batey', x: 24, z: 48, w: 4, h: 3, effect: { xp: 0.1 } },
+  iglesia: { name: 'La iglesita', detail: 'Campanas los domingos: +5 % en los pedidos de los camiones.', price: 1200, wood: 40, level: 14, kind: 'civic', zone: 'batey', x: 1, z: 53, w: 4, h: 4, effect: { pay: 0.05 } },
+});
 export const STRUCTURE_ORDER = ['anden', 'vacas', 'chivos', 'pozo', 'cerdos', 'trapiche', 'gallinero2', 'fogon2', 'casaTabaco'];
+export const BATEY_ORDER = ['casa1', 'casa2', 'casa3', 'bodega', 'casa4', 'casa5', 'casa6', 'escuela', 'casa7', 'iglesia', 'casa8'];
 export const OBSTACLES = {
   rock: { name: 'Piedras', verb: 'Quitar las piedras', base: 6, xp: 2 },
   marabu: { name: 'Marabú', verb: 'Chapear el marabú', base: 10, xp: 3 },
