@@ -3,3 +3,4 @@
 import './central/index.js'; // campos grandes, central azucarero y tren cañero
 import './granja/index.js'; // gallinero por niveles, surcos, potrero ampliable y batey más grande
 import './mambi/index.js'; // campaña mambisa (después del central)
+import './mambi/castro.js'; // contraataques del Régimen (después de la campaña)

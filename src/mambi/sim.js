@@ -22,6 +22,7 @@ export function ensureMambi(s) {
     intro: !!d.intro,
     // Por ciudad (reservado para contraataques del Régimen): dueño y guarnición mambisa que la defiende.
     garrison: Object.fromEntries(Object.entries(obj(d.garrison)).filter(([id]) => CITY_BY_ID[id]).map(([id, g]) => [id, { owner: obj(g).owner === 'regimen' ? 'regimen' : 'mambi', troops: int(obj(g).troops) }])),
+    castro: d.castro, // contraataques del Régimen (src/mambi/castro.js)
   };
   if (!s.res) s.res = {};
   s.res.viveres = int(s.res.viveres);
