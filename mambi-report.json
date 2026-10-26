@@ -21,15 +21,141 @@
       "manzanillo"
     ],
     "farm": true,
-    "rent": 14404,
+    "rent": 14403,
     "freed2": [
       "manzanillo",
       "bayamo"
     ],
     "perf": {
-      "fps": 22,
-      "calls": 30,
-      "tris": 14618
+      "fps": 30,
+      "calls": 29,
+      "tris": 14582
+    },
+    "backToFarm": true,
+    "farmLoopRunning": true,
+    "afterReload": {
+      "freed": 2,
+      "farms": 1,
+      "army": 38,
+      "viveres": 2573
+    },
+    "ok": true
+  },
+  "ipad": {
+    "errors": [],
+    "hiddenAtStart": true,
+    "lockedAtStart": true,
+    "unlocked": true,
+    "btnVisible": true,
+    "mapOpen": true,
+    "intro": true,
+    "army": {
+      "inf": 5,
+      "cab": 3,
+      "cart": 1
+    },
+    "viveresGain": 24,
+    "citySheet": "Manzanillo · Oriente",
+    "tactics": 3,
+    "inBattle": true,
+    "battleDone": true,
+    "freed": [
+      "manzanillo"
+    ],
+    "farm": true,
+    "rent": 14403,
+    "freed2": [
+      "manzanillo",
+      "bayamo"
+    ],
+    "perf": {
+      "fps": 34,
+      "calls": 24,
+      "tris": 14342
+    },
+    "backToFarm": true,
+    "farmLoopRunning": true,
+    "afterReload": {
+      "freed": 2,
+      "farms": 1,
+      "army": 38,
+      "viveres": 2573
+    },
+    "ok": true
+  },
+  "phone": {
+    "errors": [],
+    "hiddenAtStart": true,
+    "lockedAtStart": true,
+    "unlocked": true,
+    "btnVisible": true,
+    "mapOpen": true,
+    "intro": true,
+    "army": {
+      "inf": 5,
+      "cab": 3,
+      "cart": 1
+    },
+    "viveresGain": 24,
+    "citySheet": "Manzanillo · Oriente",
+    "tactics": 3,
+    "inBattle": true,
+    "battleDone": true,
+    "freed": [
+      "manzanillo"
+    ],
+    "farm": true,
+    "rent": 14402,
+    "freed2": [
+      "manzanillo",
+      "bayamo"
+    ],
+    "perf": {
+      "fps": 61,
+      "calls": 17,
+      "tris": 13798
+    },
+    "backToFarm": true,
+    "farmLoopRunning": true,
+    "afterReload": {
+      "freed": 2,
+      "farms": 1,
+      "army": 38,
+      "viveres": 2573
+    },
+    "ok": true
+  },
+  "phone-land": {
+    "errors": [],
+    "hiddenAtStart": true,
+    "lockedAtStart": true,
+    "unlocked": true,
+    "btnVisible": true,
+    "mapOpen": true,
+    "intro": true,
+    "army": {
+      "inf": 5,
+      "cab": 3,
+      "cart": 1
+    },
+    "viveresGain": 24,
+    "citySheet": "Manzanillo · Oriente",
+    "tactics": 3,
+    "inBattle": true,
+    "battleDone": true,
+    "freed": [
+      "manzanillo"
+    ],
+    "farm": true,
+    "rent": 14402,
+    "freed2": [
+      "manzanillo",
+      "bayamo"
+    ],
+    "perf": {
+      "fps": 58,
+      "calls": 28,
+      "tris": 14526
     },
     "backToFarm": true,
     "farmLoopRunning": true,

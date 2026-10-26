@@ -1,0 +1,696 @@
+{
+ "phone": {
+  "sin-partida": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-media": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-vieja": {
+   "entered": true,
+   "level": 5,
+   "money": 300,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "madera": 12,
+   "ok": true,
+   "errors": []
+  },
+  "sin-extras": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "extras-dañados": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "json-roto": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "rescued": "{\"v\":2,\"level\":9,",
+   "ok": true,
+   "errors": []
+  },
+  "sin-sonido-ni-fullscreen": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "almacen-lleno": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "webgl-falla": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "text": "La finca no pudo abrir Tu partida sigue guardada en este equipo: no se borró nada. Toca Reintentar. Si vuelve a pasar, toca Empezar nueva: tu partida queda guar",
+   "saveKept": true,
+   "ok": true,
+   "errors": [
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.",
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context."
+   ]
+  },
+  "juego-sin-cargar": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "importar-codigo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  },
+  "importar-archivo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  }
+ },
+ "phone-land": {
+  "sin-partida": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-media": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-vieja": {
+   "entered": true,
+   "level": 5,
+   "money": 300,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "madera": 12,
+   "ok": true,
+   "errors": []
+  },
+  "sin-extras": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "extras-dañados": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "json-roto": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "rescued": "{\"v\":2,\"level\":9,",
+   "ok": true,
+   "errors": []
+  },
+  "sin-sonido-ni-fullscreen": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "almacen-lleno": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "webgl-falla": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "text": "La finca no pudo abrir Tu partida sigue guardada en este equipo: no se borró nada. Toca Reintentar. Si vuelve a pasar, toca Empezar nueva: tu partida queda guar",
+   "saveKept": true,
+   "ok": true,
+   "errors": [
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.",
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context."
+   ]
+  },
+  "juego-sin-cargar": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "importar-codigo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  },
+  "importar-archivo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  }
+ },
+ "ipad": {
+  "sin-partida": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-media": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-vieja": {
+   "entered": true,
+   "level": 5,
+   "money": 300,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "madera": 12,
+   "ok": true,
+   "errors": []
+  },
+  "sin-extras": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "extras-dañados": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "json-roto": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "rescued": "{\"v\":2,\"level\":9,",
+   "ok": true,
+   "errors": []
+  },
+  "sin-sonido-ni-fullscreen": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "almacen-lleno": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "webgl-falla": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "text": "La finca no pudo abrir Tu partida sigue guardada en este equipo: no se borró nada. Toca Reintentar. Si vuelve a pasar, toca Empezar nueva: tu partida queda guar",
+   "saveKept": true,
+   "ok": true,
+   "errors": [
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.",
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context."
+   ]
+  },
+  "juego-sin-cargar": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "importar-codigo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  },
+  "importar-archivo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  }
+ },
+ "ipad-mac": {
+  "sin-partida": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-media": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-vieja": {
+   "entered": true,
+   "level": 5,
+   "money": 300,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "madera": 12,
+   "ok": true,
+   "errors": []
+  },
+  "sin-extras": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "extras-dañados": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "json-roto": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "rescued": "{\"v\":2,\"level\":9,",
+   "ok": true,
+   "errors": []
+  },
+  "sin-sonido-ni-fullscreen": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "almacen-lleno": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "webgl-falla": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "text": "La finca no pudo abrir Tu partida sigue guardada en este equipo: no se borró nada. Toca Reintentar. Si vuelve a pasar, toca Empezar nueva: tu partida queda guar",
+   "saveKept": true,
+   "ok": true,
+   "errors": [
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.",
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context."
+   ]
+  },
+  "juego-sin-cargar": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "importar-codigo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  },
+  "importar-archivo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  }
+ },
+ "android": {
+  "sin-partida": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-media": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-vieja": {
+   "entered": true,
+   "level": 5,
+   "money": 300,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "madera": 12,
+   "ok": true,
+   "errors": []
+  },
+  "sin-extras": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "extras-dañados": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "json-roto": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "rescued": "{\"v\":2,\"level\":9,",
+   "ok": true,
+   "errors": []
+  },
+  "sin-sonido-ni-fullscreen": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "almacen-lleno": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "webgl-falla": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "text": "La finca no pudo abrir Tu partida sigue guardada en este equipo: no se borró nada. Toca Reintentar. Si vuelve a pasar, toca Empezar nueva: tu partida queda guar",
+   "saveKept": true,
+   "ok": true,
+   "errors": [
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.",
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context."
+   ]
+  },
+  "juego-sin-cargar": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": [
+    "Failed to load resource: net::ERR_FAILED"
+   ]
+  },
+  "importar-codigo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  },
+  "importar-archivo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  }
+ },
+ "desktop": {
+  "sin-partida": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-media": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "partida-vieja": {
+   "entered": true,
+   "level": 5,
+   "money": 300,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "madera": 12,
+   "ok": true,
+   "errors": []
+  },
+  "sin-extras": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "extras-dañados": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "json-roto": {
+   "entered": true,
+   "level": 1,
+   "money": 10,
+   "rescue": false,
+   "btn": "Entrar a la finca",
+   "rescued": "{\"v\":2,\"level\":9,",
+   "ok": true,
+   "errors": []
+  },
+  "sin-sonido-ni-fullscreen": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "almacen-lleno": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "ok": true,
+   "errors": []
+  },
+  "webgl-falla": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "text": "La finca no pudo abrir Tu partida sigue guardada en este equipo: no se borró nada. Toca Reintentar. Si vuelve a pasar, toca Empezar nueva: tu partida queda guar",
+   "saveKept": true,
+   "ok": true,
+   "errors": [
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context.",
+    "THREE.WebGLRenderer: THREE.WebGLRenderer: Error creating WebGL context."
+   ]
+  },
+  "juego-sin-cargar": {
+   "entered": false,
+   "rescue": true,
+   "btn": "Entrar a la finca",
+   "ok": true,
+   "errors": [
+    "Failed to load resource: net::ERR_FAILED"
+   ]
+  },
+  "importar-codigo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  },
+  "importar-archivo": {
+   "entered": true,
+   "level": 14,
+   "money": 4321,
+   "rescue": false,
+   "btn": "Continuar la finca",
+   "preview": "¿Usar esta partida? Nivel 14 · 4321 pesos 0 trabajadores · g",
+   "ok": true,
+   "errors": []
+  }
+ }
+}

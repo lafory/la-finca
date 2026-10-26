@@ -83,14 +83,31 @@ export function encodeFile(save, at) {
   return JSON.stringify(envelope(save, at), null, 1);
 }
 
-// Archivo .lafinca (JSON). También acepta un archivo de texto con un código LF1 dentro.
-export function decodeFile(text) {
-  const t = String(text || '').trim();
-  if (t.startsWith('LF')) return decodeCode(t);
-  let env;
-  try { env = JSON.parse(t); } catch { throw new CodeError('Ese archivo no es una partida de La Finca.'); }
-  return checkEnvelope(env);
+// Limpia lo que añaden iOS/Notas/Mensajes: BOM, espacios invisibles, guiones tipográficos.
+function clean(text) {
+  return String(text || '').replace(/[\uFEFF\u200B-\u200D\u2060\u00A0]/g, ' ').replace(/[\u2010-\u2015\u2212]/g, '-').trim();
 }
+
+// Código LF1 o archivo .lafinca (JSON), venga como venga: con otra extensión (.json/.txt),
+// con texto alrededor (compartido por Mensajes/Notas) o con saltos de línea en medio.
+export function decodeAny(text) {
+  const t = clean(text);
+  if (!t) throw new CodeError('Está vacío: no hay ninguna partida dentro.');
+  const m = t.match(/LF\d+\.[0-9A-Za-z_\-.\s]+/);
+  if (m && !t.startsWith('{')) return decodeCode(m[0]);
+  let env;
+  try { env = JSON.parse(t); } catch {
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    try { env = a >= 0 && b > a ? JSON.parse(t.slice(a, b + 1)) : null; } catch { env = null; }
+  }
+  if (env && typeof env === 'object' && env.app === undefined && validSave(env)) return { app: 'la-finca', f: 1, at: null, save: env };
+  if (env && typeof env === 'object') return checkEnvelope(env);
+  if (/^LF/i.test(t)) return decodeCode(t);
+  throw new CodeError('Ese archivo no es una partida de La Finca.');
+}
+
+// Archivo .lafinca (JSON). También acepta un archivo de texto con un código LF1 dentro.
+export const decodeFile = decodeAny;
 
 export function fileName(save, at = Date.now()) {
   const d = new Date(at);

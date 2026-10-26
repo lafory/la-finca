@@ -5,10 +5,13 @@ export class Sound {
     this.nextTime = 0; this.step = 0; this.timer = null;
   }
   unlock() {
+    try { this.unlockInner(); } catch (e) { console.warn('[sonido]', e); }
+  }
+  unlockInner() {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
-      this.ctx = new AC({ latencyHint: 'interactive' });
+      try { this.ctx = new AC({ latencyHint: 'interactive' }); } catch { this.ctx = new AC(); }
       this.master = this.ctx.createGain(); this.master.gain.value = 0.9; this.master.connect(this.ctx.destination);
       this.sfxBus = this.ctx.createGain(); this.sfxBus.gain.value = 0.8; this.sfxBus.connect(this.master);
       this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = 0.0; this.musicBus.connect(this.master);
@@ -17,7 +20,7 @@ export class Sound {
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') this.ctx.resume()?.catch?.(() => {});
     this.setMusic(this.musicOn);
   }
   tone(freq, dur, type = 'triangle', vol = 0.08, delay = 0, bus = this.sfxBus, glide = 0) {

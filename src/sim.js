@@ -39,7 +39,7 @@ export class Sim {
     this.lastUseTarget = null;
     this.leaving = [];
     this.initTrucks();
-    for (const m of SIM_MODULES) m.init?.(this);
+    for (const m of SIM_MODULES) { try { m.init?.(this); } catch (e) { console.warn('[módulo] init', m.id, e); } }
   }
 
   // ------------------------------------------------------------ utilidades
@@ -965,7 +965,7 @@ export class Sim {
     // trabajadores
     for (const w of this.workers) { this.updateWorker(w, dt); w.rec.x = w.x; w.rec.z = w.z; }
     this.updateV4(dt);
-    for (const m of SIM_MODULES) m.update?.(this, dt);
+    for (const m of SIM_MODULES) { if (!m.update || m.broken) continue; try { m.update(this, dt); } catch (e) { m.errs = (m.errs || 0) + 1; if (m.errs === 1) console.warn('[módulo] update', m.id, e); if (m.errs > 30) m.broken = true; } }
     // gallinas deambulan (separadas entre sí)
     for (const c of s.chickens) {
       let rt = this.chickRT.get(c.id);

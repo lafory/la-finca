@@ -176,12 +176,24 @@ export function save(s) {
   }
 }
 
-export function load() {
+export const RESCUE_KEY = 'lafinca-v2-rescate';
+// Una partida que no se pudo leer NO se pierde: se copia aparte antes de empezar otra (Ajustes → Restaurar).
+function keepRescue(raw) {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const old = localStorage.getItem(RESCUE_KEY);
+    if (old === raw) return;
+    if (old) localStorage.setItem(`${RESCUE_KEY}-${Date.now()}`, old);
+    localStorage.setItem(RESCUE_KEY, raw);
+  } catch { /* sin espacio: no se puede hacer más */ }
+}
+export function load() {
+  let raw = null;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
-    if (!d || d.v !== 2) return null;
+    if (!d || typeof d !== 'object' || d.v !== 2) { keepRescue(raw); return null; }
     CLOCK.offset = +d.clockOffset || 0;
     const base = newGame();
     // Fusiona con valores por defecto para tolerar saves viejos.
@@ -192,7 +204,16 @@ export function load() {
     s.settings = { ...base.settings, ...d.settings };
     s.stats = { ...base.stats, ...d.stats };
     s.kitchen = { ...base.kitchen, ...d.kitchen };
-    s.built = { ...(d.built || {}) };
+    // Campos básicos siempre con forma válida (partidas viejas, a medias o editadas)
+    const arr = (v, def) => (Array.isArray(v) ? v.filter((x) => x != null) : def);
+    s.parcels = arr(d.parcels, []);
+    s.plots = arr(d.plots, base.plots).filter((p) => typeof p === 'object' && Number.isFinite(+p.x) && Number.isFinite(+p.z));
+    s.chickens = arr(d.chickens, base.chickens).filter((c) => typeof c === 'object');
+    s.eggs = arr(d.eggs, []).filter((e) => typeof e === 'object');
+    s.player = d.player && Number.isFinite(+d.player.x) && Number.isFinite(+d.player.z) ? { x: +d.player.x, z: +d.player.z } : base.player;
+    s.level = Math.max(1, Math.floor(+d.level || 1));
+    s.xp = Math.max(0, +d.xp || 0);
+    s.built = d.built && typeof d.built === 'object' ? { ...d.built } : {};
     s.cleared = Array.isArray(d.cleared) ? d.cleared : [];
     // v4: saves viejos sin manigua ni batey
     s.res = { ...resDefaults(), ...(d.res || {}) };
@@ -204,17 +225,19 @@ export function load() {
     s.fruit = d.fruit && typeof d.fruit === 'object' ? d.fruit : {};
     s.wild = Array.isArray(d.wild) ? d.wild : [];
     s.carry = Array.isArray(d.carry) ? d.carry : [];
-    s.tame = d.tame || {};
-    s.hints = d.hints || {};
+    s.tame = d.tame && typeof d.tame === 'object' ? d.tame : {};
+    s.hints = d.hints && typeof d.hints === 'object' ? d.hints : {};
     if (!Array.isArray(d.trucks)) { s.trucks = null; s.truck = d.truck; }
     for (const k of Object.keys(ITEMS)) s.inv[k] = Math.max(0, Math.floor(+s.inv[k] || 0));
     s.money = Math.max(0, Math.floor(+s.money || 0));
     // trabajadores de saves viejos
-    s.workers = (d.workers || []).map((w) => ({ ...w, role: w.role === 'cocinero' ? 'cocinera' : w.role, lvl: w.lvl || 1 }));
+    s.workers = arr(d.workers, []).filter((w) => typeof w === 'object' && w.role).map((w) => ({ ...w, role: w.role === 'cocinero' ? 'cocinera' : w.role, lvl: w.lvl || 1 }));
     // v4: cada trabajador con id propio (los viejos son el original de su oficio)
     for (const w of s.workers) { if (!w.id) w.id = w.role; if (w.n == null) w.n = 0; }
     return s;
-  } catch {
+  } catch (e) {
+    console.warn('[partida] no se pudo leer', e);
+    keepRescue(raw);
     return null;
   }
 }

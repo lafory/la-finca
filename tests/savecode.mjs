@@ -12,7 +12,7 @@ async function run(name, browserType, ctxOpts, launch = {}) {
   const errors = [];
   const watch = (page) => { page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); }); page.on('pageerror', (e) => errors.push('pageerror: ' + e.message)); };
   const press = async (page, sel) => { if (ctxOpts.hasTouch) await page.tap(sel); else await page.click(sel); await sleep(250); };
-  const open = async (ctx) => { const p = await ctx.newPage(); watch(p); await p.goto(BASE); await sleep(1500); await press(p, '#start'); await sleep(800); return p; };
+  const open = async (ctx) => { const p = await ctx.newPage(); watch(p); p.on('filechooser', () => {}); await p.goto(BASE); await sleep(1500); await press(p, '#start'); await sleep(800); return p; };
   const settings = async (p) => { await p.evaluate(() => window.__finca.ui.openSettings()); await sleep(300); };
   const r = {};
   // Teléfono A: finca con progreso
@@ -21,6 +21,7 @@ async function run(name, browserType, ctxOpts, launch = {}) {
   await a.evaluate(() => { const s = window.__finca.sim.s; s.money = 4321; s.level = 6; s.xp = Math.max(s.xp, 2000); });
   await settings(a);
   r.sectionShown = await a.evaluate(() => [...document.querySelectorAll('#sheet-body [data-act]')].map((b) => b.dataset.act).filter((x) => /code|file/.test(x)));
+  r.fileBtn = await a.evaluate(() => { const i = document.querySelector('label.filebtn #file-in'); return !!i && !i.hasAttribute('accept'); });
   await press(a, '[data-act="code-copy"]'); await sleep(400);
   const code = await a.$eval('#code-out', (t) => t.value);
   r.copyMsg = await a.$eval('#modal p', (p) => p.textContent);
@@ -56,14 +57,14 @@ async function run(name, browserType, ctxOpts, launch = {}) {
   r.afterRestore = await b.evaluate(() => ({ money: window.__finca.sim.s.money, level: window.__finca.sim.s.level }));
   // cargar archivo
   await settings(b);
-  const [fc] = await Promise.all([b.waitForEvent('filechooser'), press(b, '[data-act="file-load"]')]);
+  const [fc] = await Promise.all([b.waitForEvent('filechooser'), press(b, 'label.filebtn')]);
   await fc.setFiles(file); await sleep(500);
   r.filePreview = await b.$eval('#modal', (m) => m.innerText.replace(/\s+/g, ' ')).catch(() => null);
   await Promise.all([b.waitForEvent('load'), press(b, '[data-act="code-apply"]')]);
   await sleep(1500); await press(b, '#start'); await sleep(600);
   r.afterFile = await b.evaluate(() => ({ money: window.__finca.sim.s.money, level: window.__finca.sim.s.level }));
   r.before = before; r.errors = errors;
-  r.ok = r.codeOk && r.sectionShown.length === 4 && /Copiado|Mantén/.test(r.copyMsg) && /\.lafinca$/.test(r.fileName) && !!r.badErr
+  r.ok = r.codeOk && r.sectionShown.length === 3 && r.fileBtn && /Copiado|Mantén/.test(r.copyMsg) && /\.lafinca$/.test(r.fileName) && !!r.badErr
     && /Nivel 6/.test(r.preview) && r.afterPaste.money === 4321 && r.afterPaste.level === 6 && !!r.backupRow
     && r.afterRestore.money === before.money && r.afterRestore.level === before.level
     && /Nivel 6/.test(r.filePreview || '') && r.afterFile.money === 4321 && !errors.length;

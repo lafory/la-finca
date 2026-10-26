@@ -37,3 +37,15 @@ test('archivo .lafinca', () => {
   assert.throws(() => decodeFile('nada'), CodeError);
   assert.match(fileName(save, Date.UTC(2026, 9, 25, 12)), /^la-finca-nivel7-2026-10-25\.lafinca$/);
 });
+
+test('decodeAny: código con texto alrededor, guiones tipográficos, BOM y JSON pelado', async () => {
+  const { decodeAny } = await import('../src/savecode.js');
+  const save = { v: 2, level: 7, money: 99, parcels: [], inv: {} };
+  const c = encodeCode(save);
+  assert.deepEqual(decodeAny(`Mi finca:\n${c}\n`).save, save);
+  assert.deepEqual(decodeAny('\uFEFF' + encodeFile(save)).save, save);
+  assert.deepEqual(decodeAny(JSON.stringify(save)).save, save);
+  assert.deepEqual(decodeAny(c.replace(/-/g, '\u2010')).save, save);
+  assert.throws(() => decodeAny(''), /vacío/i);
+  assert.throws(() => decodeAny('{"a":1}'), CodeError);
+});

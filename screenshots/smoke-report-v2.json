@@ -26,7 +26,7 @@
       "after": 9.8,
       "ok": true
     },
-    "eggs": 4,
+    "eggs": 5,
     "load": {
       "order": {
         "egg": 3
@@ -41,16 +41,16 @@
       "before": [
         8,
         9,
-        17
+        15
       ],
       "afterSkip": [
         9,
-        17
+        15
       ],
       "after": [
         9,
-        17,
-        18
+        15,
+        17
       ],
       "frontChanged": true,
       "refilled": true,
@@ -72,10 +72,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 60,
+      "fps": 11.6,
       "quality": "alta",
       "calls": 59,
-      "tris": 185570
+      "tris": 184594
     }
   },
   "phone": {
@@ -105,7 +105,7 @@
       "after": 14.4,
       "ok": true
     },
-    "eggs": 5,
+    "eggs": 6,
     "load": {
       "order": {
         "egg": 3
@@ -126,8 +126,8 @@
       ],
       "after": [
         9,
-        14,
-        16
+        15,
+        17
       ],
       "frontChanged": true,
       "refilled": true,
@@ -149,10 +149,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 12.2,
+      "fps": 12.5,
       "quality": "media",
       "calls": 87,
-      "tris": 185807
+      "tris": 185999
     }
   },
   "ipad": {
@@ -200,12 +200,12 @@
       ],
       "afterSkip": [
         9,
-        17
+        19
       ],
       "after": [
         9,
-        17,
-        19
+        19,
+        20
       ],
       "frontChanged": true,
       "refilled": true,
@@ -230,7 +230,7 @@
       "fps": 60,
       "quality": "media",
       "calls": 76,
-      "tris": 184564
+      "tris": 184996
     }
   },
   "phone-landscape": {
@@ -260,7 +260,7 @@
       "after": 9,
       "ok": true
     },
-    "eggs": 3,
+    "eggs": 5,
     "load": {
       "order": {
         "egg": 3
@@ -281,8 +281,8 @@
       ],
       "after": [
         9,
-        16,
-        17
+        15,
+        16
       ],
       "frontChanged": true,
       "refilled": true,
@@ -304,10 +304,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 12.2,
+      "fps": 12.6,
       "quality": "media",
       "calls": 59,
-      "tris": 171841
+      "tris": 170869
     }
   }
 }

@@ -46,7 +46,11 @@ class Game {
     this.clock = new THREE.Timer();
     this.fps = { frames: 0, t: 0, value: 60 };
     this.setupTitle();
-    for (const m of GAME_MODULES) m.attach?.(this);
+    // Cada módulo (central, granja, mambí) por separado: si uno falla, la finca abre sin él.
+    this.modules = [];
+    for (const m of GAME_MODULES) {
+      try { m.attach?.(this); this.modules.push(m); } catch (e) { console.warn('[módulo] no se pudo iniciar', e); }
+    }
     window.__finca = this; // ganchos para pruebas automatizadas
     this.renderer = this.world.renderer;
     this.renderer.setAnimationLoop(() => this.frame());
@@ -108,16 +112,23 @@ class Game {
     const btn = document.getElementById('start');
     btn.textContent = this.hadSave ? 'Continuar la finca' : 'Entrar a la finca';
     document.getElementById('flag').innerHTML = ICON.flag;
+    // «Entrar» SIEMPRE entra: cada paso extra (sonido, pantalla completa, avisos) va aparte y sus fallos se ignoran.
+    const safe = (f) => { try { f(); } catch (e) { console.warn('[entrar]', e); } };
     btn.addEventListener('click', () => {
-      this.sound.unlock();
-      if (this.ui.isTouch && CAN_FULLSCREEN) this.ui.toggleFullscreen(true); // Android, iPad: pantalla completa al entrar
-      else if (NEEDS_A2HS_HINT) setTimeout(() => this.ui.showA2hsHint(), 1200); // iPhone Safari
+      if (this.started) return;
+      this.started = true;
+      window.__fincaStarted = true;
       t.classList.add('gone');
       setTimeout(() => t.remove(), 600);
-      this.started = true;
-      this.sound.play('horn');
-      this.offlineSummary();
-      setTimeout(() => this.resize(), 300);
+      safe(() => this.sound.unlock());
+      safe(() => {
+        if (this.ui.isTouch && CAN_FULLSCREEN) this.ui.toggleFullscreen(true); // Android, iPad: pantalla completa al entrar (sin esperar)
+        else if (NEEDS_A2HS_HINT) setTimeout(() => safe(() => this.ui.showA2hsHint()), 1200); // iPhone Safari
+      });
+      safe(() => this.sound.play('horn'));
+      safe(() => this.offlineSummary());
+      safe(() => { if (sessionStorage.getItem('lafinca-rescued')) { sessionStorage.removeItem('lafinca-rescued'); this.ui.toast('Finca nueva. Tu partida anterior quedó guardada: Ajustes → Guardar partida → Restaurar.'); } });
+      setTimeout(() => safe(() => this.resize()), 300);
     });
   }
 
@@ -370,7 +381,10 @@ class Game {
     }
     this.rig.update(dt);
     this.world.update(dt, time);
-    for (const m of GAME_MODULES) m.frame?.(this, dt, time);
+    for (const m of this.modules) {
+      if (!m.frame) continue;
+      try { m.frame(this, dt, time); } catch (e) { m.errs = (m.errs || 0) + 1; if (m.errs === 1) console.warn('[módulo] falló un cuadro', e); if (m.errs > 30) this.modules = this.modules.filter((x) => x !== m); }
+    }
     this.world.updateSky(dt, this.started ? (this.gameDt || dt) : 0, this.started ? this.ffSpeed : 1);
     this.world.ffSpeed = this.ffSpeed;
     this.world.render(this.rig.camera, this.rig);
@@ -381,4 +395,11 @@ class Game {
   }
 }
 
-new Game();
+// Si la finca no se puede crear (partida dañada, WebGL sin memoria, etc.) se muestra un aviso en español con
+// «Reintentar» / «Empezar nueva» (definido en index.html); la partida guardada no se borra.
+try {
+  new Game();
+} catch (e) {
+  console.warn('[arranque]', e);
+  if (window.__fincaRescue) window.__fincaRescue(e); else throw e;
+}

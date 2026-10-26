@@ -1,0 +1,124 @@
+{
+  "ipadpro": {
+    "isIOS": true,
+    "input": {
+      "accept": null,
+      "display": "block",
+      "onScreen": true,
+      "covers": true,
+      "hitIsInput": true
+    },
+    "shared": [
+      {
+        "names": [
+          "la-finca-nivel1-2026-10-26.lafinca"
+        ],
+        "ok": true
+      }
+    ],
+    "picks": {
+      "la-finca-nivel9.lafinca": true,
+      "la-finca-nivel9.lafinca.json": true,
+      "la-finca-nivel9.txt": true
+    },
+    "sameTwice": true,
+    "badFile": "No se pudo cargar Ese archivo no es una partida de La Finca. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "emptyFile": "No se pudo cargar El archivo está vacío. Si está en iCloud, ábrelo primero en la app Archivos para que se descargue. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "clipErr": "No pude leer el portapapeles. Mantén el dedo en el cuadro, toca «Pegar» y luego «Revisar».",
+    "pastePreview": true,
+    "after": {
+      "money": 7777,
+      "level": 9
+    },
+    "errors": [],
+    "ok": true
+  },
+  "ipad7": {
+    "isIOS": true,
+    "input": {
+      "accept": null,
+      "display": "block",
+      "onScreen": true,
+      "covers": true,
+      "hitIsInput": true
+    },
+    "shared": [
+      {
+        "names": [
+          "la-finca-nivel1-2026-10-26.lafinca"
+        ],
+        "ok": true
+      }
+    ],
+    "picks": {
+      "la-finca-nivel9.lafinca": true,
+      "la-finca-nivel9.lafinca.json": true,
+      "la-finca-nivel9.txt": true
+    },
+    "sameTwice": true,
+    "badFile": "No se pudo cargar Ese archivo no es una partida de La Finca. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "emptyFile": "No se pudo cargar El archivo está vacío. Si está en iCloud, ábrelo primero en la app Archivos para que se descargue. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "clipErr": "No pude leer el portapapeles. Mantén el dedo en el cuadro, toca «Pegar» y luego «Revisar».",
+    "pastePreview": true,
+    "after": {
+      "money": 7777,
+      "level": 9
+    },
+    "errors": [],
+    "ok": true
+  },
+  "iphone": {
+    "isIOS": true,
+    "input": {
+      "accept": null,
+      "display": "block",
+      "onScreen": true,
+      "covers": true,
+      "hitIsInput": true
+    },
+    "download": "la-finca-nivel1-2026-10-26.lafinca",
+    "picks": {
+      "la-finca-nivel9.lafinca": true,
+      "la-finca-nivel9.lafinca.json": true,
+      "la-finca-nivel9.txt": true
+    },
+    "sameTwice": true,
+    "badFile": "No se pudo cargar Ese archivo no es una partida de La Finca. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "emptyFile": "No se pudo cargar El archivo está vacío. Si está en iCloud, ábrelo primero en la app Archivos para que se descargue. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "clipErr": "No pude leer el portapapeles. Mantén el dedo en el cuadro, toca «Pegar» y luego «Revisar».",
+    "pastePreview": true,
+    "after": {
+      "money": 7777,
+      "level": 9
+    },
+    "errors": [],
+    "ok": true
+  },
+  "desktop": {
+    "isIOS": false,
+    "input": {
+      "accept": null,
+      "display": "block",
+      "onScreen": true,
+      "covers": true,
+      "hitIsInput": true
+    },
+    "download": "la-finca-nivel1-2026-10-26.lafinca",
+    "picks": {
+      "la-finca-nivel9.lafinca": true,
+      "la-finca-nivel9.lafinca.json": true,
+      "la-finca-nivel9.txt": true
+    },
+    "sameTwice": true,
+    "badFile": "No se pudo cargar Ese archivo no es una partida de La Finca. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "emptyFile": "No se pudo cargar El archivo está vacío. Si está en iCloud, ábrelo primero en la app Archivos para que se descargue. Elige el archivo de La Finca (termina en .lafinca; si iPad lo guardó como .json o .txt también vale). También puedes usar Pegar código. Pegar código Cerrar",
+    "clipErr": "No pude leer el portapapeles. Mantén el dedo en el cuadro, toca «Pegar» y luego «Revisar».",
+    "pastePreview": true,
+    "after": {
+      "money": 7777,
+      "level": 9
+    },
+    "errors": [],
+    "ok": true
+  }
+}

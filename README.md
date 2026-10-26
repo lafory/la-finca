@@ -30,6 +30,8 @@ node tests/showcase.mjs     # capturas de una finca avanzada
 node tests/fullscreen.mjs   # pantalla completa: Android (al tocar «Entrar»), botón, computadora
 node tests/ios.mjs          # iPhone/iPad Safari (WebKit): cabe en pantalla, pista «Añadir a pantalla de inicio»
 node --test tests/savecode.test.mjs && node tests/savecode.mjs   # guardar partida: código y archivo .lafinca
+node tests/ipadfile.mjs   # «Cargar archivo» en iPad (UA de Mac), iPhone y computadora
+node tests/entrar.mjs     # «Entrar» siempre entra: partidas viejas/dañadas/importadas, sin sonido, sin WebGL, almacén lleno
 node tests/granja.mjs       # granja grande: gallinero 1–4, surcos, potrero, batey → screenshots/granja-*.png
 node tests/central.mjs      # campos grandes, central y tren (usa ?dev=1)
 ```
@@ -90,7 +92,10 @@ Alternativa sin Vite para servir `dist/`: `npx serve dist -l 4173` o `python3 -m
   - **Batey más grande:** calles nuevas, 4 solares más (casas 9–12), placita del dominó (−5 %), consultorio (+5 % XP), panadería
     (+5 % en pedidos) y un tercer nivel de casa: **mampostería** (+3 trabajadores).
 - **Guardar partida** (Ajustes): copiar/pegar un código `LF1.…` o descargar/cargar un archivo `.lafinca`; antes de reemplazar se guarda
-  una copia que se puede restaurar.
+  una copia que se puede restaurar. «Cargar archivo» es el `<input type=file>` real bajo el dedo (iPad ancla ahí su selector), sin `accept`, y reconoce la partida por el contenido (`.lafinca`, `.lafinca.json`, `.txt` o un código LF1 pegado); en iPhone/iPad «Descargar archivo» abre la hoja de compartir (Guardar en Archivos).
+- **Arranque a prueba de fallos:** «Entrar» entra aunque falle el sonido o la pantalla completa; cada módulo (central, granja, mambí)
+  se inicia por separado; una partida que no se puede leer se guarda aparte (`lafinca-v2-rescate`, Ajustes → Restaurar) en vez de
+  perderse; si la finca no puede abrir se muestra el error con «Reintentar» / «Empezar nueva» (sin borrar la partida).
 - **Calidad gráfica:** Ajustes → Auto / Alta / Media / Baja. En Auto baja sola si el cuadro tarda > 25 ms.
 - Pantalla completa: botón ⛶ arriba (Android/escritorio); en iPhone, "Añadir a pantalla de inicio" abre a pantalla completa.
 

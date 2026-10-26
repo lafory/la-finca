@@ -47,7 +47,7 @@ export function registerUnlock(level, text) { UNLOCKS.push({ level, text }); }
 // ---- guardado: migraciones (s = estado nuevo ya mezclado, d = lo guardado). Guarda tu estado en s.ext[tuId].
 export const MIGRATIONS = [];
 export function registerMigration(fn) { MIGRATIONS.push(fn); }
-export function runMigrations(s, d) { for (const f of MIGRATIONS) f(s, d); }
+export function runMigrations(s, d) { for (const f of MIGRATIONS) { try { f(s, d); } catch (e) { console.warn('[migración]', e); } } }
 
 // ---- juego: módulos con acceso al Game (vistas propias, botones, cámara). attach(game) al crear la partida; frame(game, dt, time) cada cuadro
 // ---- ajustes de la finca (opcionales): henCap(s, base) → tope de gallinas; layFactor(s) → factor del tiempo entre huevos
