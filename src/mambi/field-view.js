@@ -125,6 +125,16 @@ const COLORS = {
   plaza: [0xf6e6bc, 0xedd59a, 0xf3dca8],
 };
 
+// El Régimen va de gris. Las otras fincas van de color, con sombrero, para no confundirlas.
+const FOE_CLOTH = {
+  regimen: { machete: [0x8d9194, null], fusil: [0x7c8084, null], cab: [0x7c8084, null], art: [0x8a8e92, null], flag: 0x8a8d90, horse: 1 },
+  ocre: { machete: [0xe2b15a, 0xf0d7a0], fusil: [0xc4783a, 0xe6c07a], cab: [0xd4894a, 0xc9a86a], art: [0xa85a28, 0xe6c07a], flag: 0xc4783a, horse: 2 },
+  azul: { machete: [0x7ea0d0, 0xf2e2c0], fusil: [0x3d6ea8, 0xf2e2c0], cab: [0x2f5d96, 0xd9c08a], art: [0x274e80, 0xf2e2c0], flag: 0x3d6ea8, horse: 0 },
+  morado: { machete: [0xb08ad0, 0xf2e2c0], fusil: [0x6b4c9a, 0xf2e2c0], cab: [0x5a3d88, 0xd9c08a], art: [0x4a3270, 0xf2e2c0], flag: 0x6b4c9a, horse: 2 },
+  teja: { machete: [0xe08a6a, 0xf2e2c0], fusil: [0xb4533a, 0xf0d0b0], cab: [0x9a4030, 0xd9c08a], art: [0x8a3828, 0xf0d0b0], flag: 0xb4533a, horse: 1 },
+  amigo: { machete: [0xd7e6c4, 0xe6c07a], fusil: [0x3f7a4e, 0xe6c07a], cab: [0x2f6b45, 0xd9c08a], art: [0x245538, 0xe6c07a], flag: 0x2f6b45, horse: 0 },
+};
+
 export class FieldView {
   constructor(renderer) {
     this.renderer = renderer;
@@ -142,7 +152,8 @@ export class FieldView {
   }
 
   ensure(battle) {
-    const id = `${battle.cityId}|${battle.terrain}`;
+    const foe = battle.foe || 'regimen';
+    const id = `${battle.cityId}|${battle.terrain}|${foe}`;
     if (this.builtFor === id && this.scene) return;
     this.dispose();
     const scene = (this.scene = new THREE.Scene());
@@ -227,15 +238,16 @@ export class FieldView {
     scene.add(this.bushes);
 
     this.meshes = {};
+    const cloth = FOE_CLOTH[foe] || FOE_CLOTH.regimen;
     const specs = [
       ['player', 'machete', fighter(0xeee4c8, 0xd9c08a, 'machete')],
       ['player', 'fusil', fighter(0xe7f0d8, 0xd9c08a, 'fusil')],
       ['player', 'cab', riders(0xeee4c8, 0xc9a86a, 0)],
       ['player', 'art', cannon(0xeee4c8, 0xd9c08a)],
-      ['enemy', 'machete', fighter(0x8d9194, null, 'machete')],
-      ['enemy', 'fusil', fighter(0x7c8084, null, 'fusil')],
-      ['enemy', 'cab', riders(0x7c8084, null, 1)],
-      ['enemy', 'art', cannon(0x8a8e92, null)],
+      ['enemy', 'machete', fighter(cloth.machete[0], cloth.machete[1], 'machete')],
+      ['enemy', 'fusil', fighter(cloth.fusil[0], cloth.fusil[1], 'fusil')],
+      ['enemy', 'cab', riders(cloth.cab[0], cloth.cab[1], cloth.horse)],
+      ['enemy', 'art', cannon(cloth.art[0], cloth.art[1])],
     ];
     for (const [side, kind, geo] of specs) {
       const mesh = new THREE.InstancedMesh(geo, std, 24);
@@ -272,7 +284,7 @@ export class FieldView {
     pole.position.set(px, 0, pz);
     scene.add(pole);
     this.flagCuba = new THREE.Mesh(M.flagGeo(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, side: THREE.DoubleSide }));
-    this.flagGray = new THREE.Mesh(M.part(new THREE.PlaneGeometry(0.9, 0.45, 4, 2).translate(0.45, 0, 0), 0x8a8d90), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, side: THREE.DoubleSide }));
+    this.flagGray = new THREE.Mesh(M.part(new THREE.PlaneGeometry(0.9, 0.45, 4, 2).translate(0.45, 0, 0), cloth.flag), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, side: THREE.DoubleSide }));
     this.flagCuba.position.set(px, 2.15, pz);
     this.flagGray.position.set(px, 2.15, pz);
     this.flagCuba.scale.setScalar(1.3);

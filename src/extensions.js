@@ -5,4 +5,5 @@ import './granja/index.js'; // gallinero por niveles, surcos, potrero ampliable 
 import './mambi/index.js'; // campaña mambisa (después del central)
 import './mambi/castro.js'; // contraataques del Régimen (después de la campaña)
 import './mambi/field-ui.js'; // campo de batalla táctico (atacar y defender)
+import './mambi/war-ui.js'; // invasiones: otras fincas y código de un amigo
 import './provincias/index.js'; // fincas de provincia grandes (copia de la principal con lo de cada región)

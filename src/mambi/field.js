@@ -153,6 +153,12 @@ export function spawn(b, o) {
 export function unitName(u) {
   if (!u) return '';
   if (u.side === 'enemy') {
+    if (u.banner) {
+      if (u.kind === 'cab') return `Jinetes de ${u.banner}`;
+      if (u.kind === 'art') return `Cañón de ${u.banner}`;
+      if (u.kind === 'machete') return `Macheteros de ${u.banner}`;
+      return `Fusileros de ${u.banner}`;
+    }
     if (u.kind === 'cab') return 'Jinetes grises';
     if (u.kind === 'art') return 'Cañón del Régimen';
     if (u.kind === 'machete') return 'Guardias al machete';
@@ -215,7 +221,8 @@ function placeEnemies(b, power) {
       return s;
     });
     const men = Math.max(4, Math.round(parts[i] / (kind === 'cab' ? 10 : kind === 'art' ? 14 : 4)));
-    spawn(b, { side: 'enemy', kind, men, pool: 'foe', power: parts[i], x: tile.x, y: tile.y });
+    const u = spawn(b, { side: 'enemy', kind, men, pool: 'foe', power: parts[i], x: tile.x, y: tile.y });
+    if (b.foeName) u.banner = b.foeName;
   }
 }
 
@@ -231,9 +238,12 @@ export function createBattle(spec) {
   const b = {
     mode: spec.mode, cityId: spec.cityId, city: spec.city || spec.cityId, terrain,
     tactic: spec.tactic || null, kind: spec.kind || null,
+    war: spec.war || null, foe: spec.foe || (spec.war ? 'ocre' : 'regimen'),
+    foeName: spec.foeName || '', friend: !!spec.friend, rivalId: spec.rivalId || null,
+    enemyPower: spec.enemy | 0,
     ground: makeGround(terrain), works: new Map(), units: [],
     plaza: { x: 17, y: 2 },
-    seed: seedOf(`${spec.cityId}|${spec.mode}|${terrain}`),
+    seed: seedOf(`${spec.cityId}|${spec.mode}|${terrain}|${spec.foe || ''}|${spec.foeName || ''}`),
     phase: 'deploy', turn: 1, maxTurn: spec.mode === 'attack' ? 14 : 10,
     cols: COLS, rows: ROWS,
   };
@@ -244,16 +254,46 @@ export function createBattle(spec) {
     const bar = 2 + ((a.cart || 0) >= 2 ? 1 : 0) + (spec.tactic === 'asedio' ? 1 : 0);
     b.chunk = ch;
     b.stock = { inf: a.inf | 0, cab: a.cab | 0, cart: a.cart | 0, guns: a.cart | 0, trench, bar, mil: [] };
+    if (spec.war === 'invade') {
+      b.stock.campInf = b.stock.inf;
+      b.stock.campCab = b.stock.cab;
+      b.stock.campCart = b.stock.cart;
+    }
   } else {
     const g = spec.garrison || { inf: 0, cab: 0 };
-    const ch = chunks(g.inf, g.cab);
+    const camp = spec.camp || { inf: 0, cab: 0, cart: 0 };
+    const cinf = Math.max(0, camp.inf | 0), ccab = Math.max(0, camp.cab | 0), ccart = Math.max(0, camp.cart | 0);
+    const split = spec.war === 'repel' && (cinf > 0 || ccab > 0 || ccart > 0);
+    const ch = chunks((g.inf | 0) + (split ? cinf : 0), (g.cab | 0) + (split ? ccab : 0));
     const mil = splitPower(spec.militia || 0).map((p) => ({ kind: 'fusil', power: p, men: Math.max(3, Math.round(p / 4)), pool: 'mil' }));
     const fort = spec.defenses?.fortin || 0;
     const tr = spec.defenses?.trinchera || 0;
     b.chunk = ch;
-    b.stock = { inf: g.inf | 0, cab: g.cab | 0, cart: 0, guns: fort, trench: 3 + tr * 4, bar: 2 + fort * 3, mil };
+    b.stock = {
+      inf: (g.inf | 0) + (split ? cinf : 0),
+      cab: (g.cab | 0) + (split ? ccab : 0),
+      cart: split ? ccart : 0,
+      guns: fort + (split ? ccart : 0),
+      trench: 3 + tr * 4, bar: 2 + fort * 3, mil,
+    };
+    if (split) {
+      b.stock.garInf = g.inf | 0;
+      b.stock.garCab = g.cab | 0;
+      b.stock.campInf = cinf;
+      b.stock.campCab = ccab;
+      b.stock.campCart = ccart;
+    }
+    b.budget = cloneBudget(b.stock);
+    if (split) {
+      b.budget.ginf = g.inf | 0;
+      b.budget.gcab = g.cab | 0;
+      b.budget.cinf = cinf;
+      b.budget.ccab = ccab;
+      b.budget.ccart = ccart;
+      b.budget.fortGuns = fort;
+    }
   }
-  b.budget = cloneBudget(b.stock);
+  if (!b.budget) b.budget = cloneBudget(b.stock);
   placeEnemies(b, spec.enemy | 0);
   return b;
 }
@@ -319,6 +359,15 @@ export function placeUnit(b, kind, x, y) {
     const owns = (b.stock.guns || 0) > 0;
     if (!owns) return b.mode === 'attack' ? 'Hace falta una carreta para traer el cañón.' : 'El fortín no tiene cañón. Constrúyelo en la ciudad.';
     if (B.guns <= 0) return 'Ya colocaste toda la artillería.';
+    if (B.ginf != null) {
+      let pool = 'fort';
+      if ((B.fortGuns || 0) > 0) { B.fortGuns--; pool = 'fort'; }
+      else if ((B.ccart || 0) > 0) { B.ccart--; B.cart = Math.max(0, B.cart - 1); pool = 'cart'; }
+      else return 'Ya colocaste toda la artillería.';
+      B.guns--;
+      spawn(b, { side: 'player', kind: 'art', men: 1, pool, x, y });
+      return null;
+    }
     B.guns--;
     if (b.mode === 'attack') B.cart = Math.max(0, B.cart - 1);
     const pool = b.mode === 'defense' ? 'fort' : 'cart';
@@ -333,16 +382,34 @@ export function placeUnit(b, kind, x, y) {
   }
   if (kind === 'cab') {
     if (B.cab <= 0) return 'Ya no te quedan jinetes por colocar.';
-    const men = Math.min(b.chunk.cab, B.cab);
+    let pool = 'cab';
+    let cap = B.cab;
+    if (B.ginf != null) {
+      if ((B.gcab || 0) > 0) { pool = 'gcab'; cap = B.gcab; }
+      else { pool = 'cab'; cap = B.ccab || 0; }
+    }
+    const men = Math.min(b.chunk.cab, cap, B.cab);
+    if (men <= 0) return 'Ya no te quedan jinetes por colocar.';
     B.cab -= men;
-    spawn(b, { side: 'player', kind: 'cab', men, pool: 'cab', x, y });
+    if (pool === 'gcab') B.gcab -= men;
+    else if (B.ginf != null) B.ccab -= men;
+    spawn(b, { side: 'player', kind: 'cab', men, pool, x, y });
     return null;
   }
   if (kind !== 'machete' && kind !== 'fusil') return 'Esa tropa no existe.';
   if (B.inf <= 0) return 'Ya no te queda infantería por colocar.';
-  const men = Math.min(b.chunk.inf, B.inf);
+  let pool = 'inf';
+  let cap = B.inf;
+  if (B.ginf != null) {
+    if ((B.ginf || 0) > 0) { pool = 'ginf'; cap = B.ginf; }
+    else { pool = 'inf'; cap = B.cinf || 0; }
+  }
+  const men = Math.min(b.chunk.inf, cap, B.inf);
+  if (men <= 0) return 'Ya no te queda infantería por colocar.';
   B.inf -= men;
-  spawn(b, { side: 'player', kind, men, pool: 'inf', x, y });
+  if (pool === 'ginf') B.ginf -= men;
+  else if (B.ginf != null) B.cinf -= men;
+  spawn(b, { side: 'player', kind, men, pool, x, y });
   return null;
 }
 
@@ -371,10 +438,12 @@ export function liftUnit(b, id) {
   const u = b.units[i];
   b.units.splice(i, 1);
   const B = b.budget;
-  if (u.pool === 'inf') B.inf += u.men;
-  else if (u.pool === 'cab') B.cab += u.men;
-  else if (u.pool === 'cart') { B.cart++; B.guns++; }
-  else if (u.pool === 'fort') B.guns++;
+  if (u.pool === 'ginf') { B.inf += u.men; B.ginf += u.men; }
+  else if (u.pool === 'gcab') { B.cab += u.men; B.gcab += u.men; }
+  else if (u.pool === 'inf') { B.inf += u.men; if (B.cinf != null) B.cinf += u.men; }
+  else if (u.pool === 'cab') { B.cab += u.men; if (B.ccab != null) B.ccab += u.men; }
+  else if (u.pool === 'cart') { B.cart++; B.guns++; if (B.ccart != null) B.ccart++; }
+  else if (u.pool === 'fort') { B.guns++; if (B.fortGuns != null) B.fortGuns++; }
   else if (u.pool === 'mil') B.mil.push({ kind: 'fusil', power: u.power, men: u.men, pool: 'mil' });
   return null;
 }
@@ -738,18 +807,23 @@ export function casualties(b) {
     if (u.pool === 'inf') lost.inf += n;
     else if (u.pool === 'cab') lost.cab += n;
     else if (u.pool === 'cart' && !u.alive && !u.retreated) lost.cart += 1;
-    else if (u.pool === 'gar') { /* no se usa */ }
+    else if (u.pool === 'ginf') lost.garInf += n;
+    else if (u.pool === 'gcab') lost.garCab += n;
   }
-  // defensa: la guarnición es pool inf/cab igual, pero NO es el ejército de campaña
-  if (b.mode === 'defense') {
+  // defensa del Régimen: la guarnición es pool inf/cab, pero NO es el ejército de campaña
+  if (b.mode === 'defense' && b.budget.ginf == null) {
     lost.garInf = lost.inf; lost.garCab = lost.cab;
     lost.inf = 0; lost.cab = 0; lost.cart = 0;
   }
-  lost.inf = Math.min(b.stock.inf, lost.inf);
-  lost.cab = Math.min(b.stock.cab, lost.cab);
+  const campInf = b.stock.campInf ?? b.stock.inf;
+  const campCab = b.stock.campCab ?? b.stock.cab;
+  const garInfCap = b.stock.garInf ?? b.stock.inf;
+  const garCabCap = b.stock.garCab ?? b.stock.cab;
+  lost.inf = Math.min(campInf, lost.inf);
+  lost.cab = Math.min(campCab, lost.cab);
   lost.cart = Math.min(b.stock.cart, lost.cart);
-  lost.garInf = Math.min(b.stock.inf, lost.garInf);
-  lost.garCab = Math.min(b.stock.cab, lost.garCab);
+  lost.garInf = Math.min(garInfCap, lost.garInf);
+  lost.garCab = Math.min(garCabCap, lost.garCab);
   return lost;
 }
 

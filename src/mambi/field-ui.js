@@ -18,7 +18,7 @@ const ORD = { avanzar: '→', flanquear: '⤷', carga: '!', retirada: '↩', esp
 const STYLE = `
 #field{position:absolute;inset:0;z-index:6;pointer-events:none}
 #field.hidden{display:none}
-#mambi.field-on .mb-top,#mambi.field-on .mb-title,#mambi.field-on #mb-cities,#mambi.field-on .mb-zoom,#mambi.field-on #mb-bottom,#mambi.field-on .mb-skip,#mambi.field-on .mb-banner,#mambi.field-on #cs-mbanner,#mambi.field-on #cs-marks,#mambi.field-on #cs-skip{display:none!important}
+#mambi.field-on .mb-top,#mambi.field-on .mb-title,#mambi.field-on #mb-cities,#mambi.field-on .mb-zoom,#mambi.field-on #mb-bottom,#mambi.field-on .mb-skip,#mambi.field-on .mb-banner,#mambi.field-on #cs-mbanner,#mambi.field-on #cs-marks,#mambi.field-on #cs-skip,#mambi.field-on #war-mbanner{display:none!important}
 #field-stage{position:absolute;inset:0;pointer-events:auto;touch-action:none}
 .fd-top{position:absolute;left:calc(8px + var(--sal,0px));right:calc(8px + var(--sar,0px));top:calc(6px + var(--sat,0px));z-index:4;pointer-events:none;display:flex;flex-direction:column;gap:4px;align-items:stretch}
 .fd-card{pointer-events:auto;background:rgba(246,234,208,.96);border:2px solid #5a4636;border-radius:16px;padding:8px 10px;color:#2a1f15;box-shadow:0 3px 0 rgba(60,40,20,.25)}
@@ -301,6 +301,19 @@ export class FieldUI {
     this.begin();
   }
 
+  openWar(spec) {
+    const sent = spec.war === 'invade' ? (spec.army || { inf: 0, cab: 0, cart: 0 }) : (spec.camp || { inf: 0, cab: 0, cart: 0 });
+    const why = spec.war === 'invade' ? this.sim.warCanSend(sent) : this.sim.warCanRepel(spec.cityId, sent);
+    if (why) { this.toast(why); this.g.sound?.play('error'); return; }
+    const m = this.g.mambi;
+    if (!m.open) m.openMap();
+    this.ui.closeSheet();
+    const mode = spec.war === 'invade' ? 'attack' : 'defense';
+    this.battle = createBattle({ ...spec, mode });
+    this.hold = false;
+    this.begin();
+  }
+
   begin() {
     this.active = true;
     this.busy = false;
@@ -314,6 +327,7 @@ export class FieldUI {
     this.clock = performance.now();
     this.view.fit(this.battle, 'player');
     this.g.setSpeed?.(1);
+    try { this.sim.warHold = true; } catch { /* sin guerra */ }
     this.paint();
     this.g.sound?.play('tap');
   }
@@ -326,6 +340,7 @@ export class FieldUI {
       this.g.mambi.el.classList.remove('field-on');
     }
     this.root.classList.add('hidden');
+    try { if (this.sim) this.sim.warHold = false; } catch { /* sin guerra */ }
     this.battle = null;
     this.arm = null;
     this.picked = new Set();
@@ -345,12 +360,16 @@ export class FieldUI {
     const mine = this.pickedUnits();
     const deploy = b.phase === 'deploy';
     title.textContent = deploy
-      ? `Campo de ${b.city}`
+      ? (b.war === 'invade' ? `Invasión · ${b.city}` : b.war === 'repel' ? `Defensa · ${b.city}` : `Campo de ${b.city}`)
       : `Turno ${b.turn} · ${b.city}`;
     hint.textContent = deploy
-      ? (b.mode === 'attack'
-        ? 'Arrastra para mover la vista. Pellizca o usa +/− para acercar. Coloca la tropa abajo: el cañaveral cubre, el muro tapa y el río frena.'
-        : 'Arrastra la vista y pellizca para acercar. Defiende la plaza. El cañaveral y el muro cubren; el río les frena.')
+      ? (b.war === 'invade'
+        ? `Vas contra la finca de ${b.foeName}. No son del Régimen: van de otro color. El cañaveral cubre, el muro tapa y el río frena.`
+        : b.war === 'repel'
+          ? `La tropa de ${b.foeName} viene a saquear. Si pierdes, la ciudad sigue libre: solo paran la renta un rato.`
+          : (b.mode === 'attack'
+            ? 'Arrastra para mover la vista. Pellizca o usa +/− para acercar. Coloca la tropa abajo: el cañaveral cubre, el muro tapa y el río frena.'
+            : 'Arrastra la vista y pellizca para acercar. Defiende la plaza. El cañaveral y el muro cubren; el río les frena.'))
       : (this.arm
         ? `${describeOrders(this.arm.t)} Toca una casilla amarilla, o la orden otra vez para que ella elija.`
         : (mine.length > 1
@@ -374,7 +393,7 @@ export class FieldUI {
       html += `<p class="fd-sel">${mineNow.length ? `${mineNow.length} marcada${mineNow.length > 1 ? 's' : ''} · Quitar las devuelve` : (why || 'Cuando la tropa esté colocada, empieza.')}</p>`;
       html += `<div class="fd-row">`;
       html += `<button class="btn" data-act="fdauto">Formar la tropa</button>`;
-      html += `<button class="btn primary" data-act="fdstart">${b.mode === 'attack' ? '¡Al ataque!' : 'A defender'}</button>`;
+      html += `<button class="btn primary" data-act="fdstart">${b.war === 'invade' ? '¡A invadir!' : b.mode === 'attack' ? '¡Al ataque!' : 'A defender'}</button>`;
       if (mineNow.length) html += `<button class="btn" data-act="fdlift">Quitar</button>`;
       html += `<button class="btn" data-act="fdquick">Resolver rápido</button>`;
       html += `<button class="btn" data-act="fdcancel">Volver</button>`;
@@ -493,7 +512,11 @@ export class FieldUI {
       b.turn = 1;
       this.arm = null;
       this.tool = null;
-      this.log = [b.mode === 'attack' ? 'Da una orden y toca Ejecutar. La plaza es la bandera.' : 'Aguanta la plaza o rompe la columna.'];
+      this.log = [b.war === 'invade'
+        ? `La finca de ${b.foeName} está al norte. La plaza es la bandera.`
+        : b.war === 'repel'
+          ? `La tropa de ${b.foeName} viene del sur. Aguanta la plaza.`
+          : (b.mode === 'attack' ? 'Da una orden y toca Ejecutar. La plaza es la bandera.' : 'Aguanta la plaza o rompe la columna.')];
       this.g.sound?.play('horn');
       this.view.fit(b, 'all');
       this.paint();
@@ -612,6 +635,19 @@ export class FieldUI {
     if (!b) return;
     const win = result === 'win';
     const lost = casualties(b);
+    if (b.war) {
+      const sent = b.war === 'invade'
+        ? { inf: b.stock.inf, cab: b.stock.cab, cart: b.stock.cart }
+        : { inf: b.stock.campInf || 0, cab: b.stock.campCab || 0, cart: b.stock.campCart || 0 };
+      const spec = {
+        war: b.war, win, lost, sent, rivalId: b.rivalId, cityId: b.cityId, foeName: b.foeName,
+        friend: !!b.friend, enemyPower: b.enemyPower, field: true, tactic: b.tactic,
+      };
+      this.close();
+      const r = this.sim.warApply(spec);
+      if (r && !r.cancelled) this.g.war?.resultModal(r);
+      return;
+    }
     if (b.mode === 'attack') {
       const res = this.sim.mbBattle(b.cityId, b.tactic, 0.5, { win, lost });
       const city = b.cityId;
@@ -632,6 +668,24 @@ export class FieldUI {
   quick() {
     const b = this.battle;
     if (!b || this.busy) return;
+    if (b.war) {
+      if (b.phase === 'deploy') {
+        const sent = b.war === 'invade'
+          ? { inf: b.stock.inf, cab: b.stock.cab, cart: b.stock.cart }
+          : { inf: b.stock.campInf || 0, cab: b.stock.campCab || 0, cart: b.stock.campCart || 0 };
+        const spec = {
+          war: b.war, rivalId: b.rivalId, cityId: b.cityId, foeName: b.foeName,
+          friend: !!b.friend, enemyPower: b.enemyPower, tactic: b.tactic, sent,
+        };
+        this.cancel();
+        const r = this.sim.warQuick(spec);
+        if (r && !r.cancelled) this.g.war?.resultModal(r);
+        return;
+      }
+      const ahead = strength(b, 'player') >= strength(b, 'enemy');
+      this.finish(ahead ? 'win' : 'lose');
+      return;
+    }
     if (b.phase === 'deploy') {
       const mode = b.mode, cityId = b.cityId, tactic = b.tactic;
       this.cancel();
