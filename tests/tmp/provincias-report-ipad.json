@@ -1,0 +1,267 @@
+{
+ "ipad": {
+  "errors": [],
+  "farms": {
+   "manzanillo": {
+    "pid": "granma",
+    "btn": {
+     "x": 36,
+     "y": 328,
+     "hits": true
+    },
+    "go": {
+     "x": 641.0390625,
+     "y": 891.75,
+     "hits": true
+    },
+    "inside": {
+     "city": "manzanillo",
+     "prov": "granma",
+     "crops": [],
+     "sel": "arroz",
+     "chip": "Manzanillo",
+     "plots": 18,
+     "landmark": true,
+     "tint": "d8f0c0",
+     "zonesCentral": 0
+    },
+    "walked": 3,
+    "plotTap": true,
+    "planted": "arroz",
+    "harvested": [
+     "arroz"
+    ],
+    "cookBtn": {
+     "x": 621.1640625,
+     "y": 957.75,
+     "hits": true
+    },
+    "cooking": "arrozLeche",
+    "made": 1,
+    "recipe": "arrozLeche",
+    "loadBtn": {
+     "x": 277,
+     "y": 851,
+     "hits": true
+    },
+    "sold": 300,
+    "hireBtn": {
+     "x": 593.578125,
+     "y": 788.8125,
+     "hits": true
+    },
+    "workers": [
+     "sembrador"
+    ],
+    "drawCalls": 93,
+    "ok": true
+   },
+   "baracoa": {
+    "pid": "baracoa",
+    "btn": {
+     "x": 36,
+     "y": 268,
+     "hits": true
+    },
+    "go": {
+     "x": 641.0390625,
+     "y": 963,
+     "hits": true
+    },
+    "inside": {
+     "city": "baracoa",
+     "prov": "baracoa",
+     "crops": [],
+     "sel": "cacao",
+     "chip": "Baracoa",
+     "plots": 18,
+     "landmark": true,
+     "tint": "c0e8b0",
+     "zonesCentral": 0
+    },
+    "walked": 3,
+    "plotTap": true,
+    "planted": "cacao",
+    "harvested": [
+     "cacao"
+    ],
+    "cookBtn": {
+     "x": 621.1640625,
+     "y": 963,
+     "hits": true
+    },
+    "cooking": "chorote",
+    "made": 1,
+    "recipe": "chorote",
+    "loadBtn": {
+     "x": 277,
+     "y": 851,
+     "hits": true
+    },
+    "sold": 300,
+    "hireBtn": {
+     "x": 593.578125,
+     "y": 788.8125,
+     "hits": true
+    },
+    "workers": [
+     "sembrador"
+    ],
+    "drawCalls": 95,
+    "ok": true
+   },
+   "matanzas": {
+    "pid": "matanzas",
+    "btn": {
+     "x": 36,
+     "y": 268,
+     "hits": true
+    },
+    "go": {
+     "x": 641.0390625,
+     "y": 1029,
+     "hits": true
+    },
+    "inside": {
+     "city": "matanzas",
+     "prov": "matanzas",
+     "crops": [],
+     "sel": "naranja",
+     "chip": "Matanzas",
+     "plots": 18,
+     "landmark": true,
+     "tint": "d8ecc8",
+     "zonesCentral": 0
+    },
+    "walked": 3,
+    "plotTap": true,
+    "planted": "naranja",
+    "harvested": [
+     "naranja"
+    ],
+    "cookBtn": {
+     "x": 621.1640625,
+     "y": 963,
+     "hits": true
+    },
+    "cooking": "jugo",
+    "made": 1,
+    "recipe": "jugo",
+    "loadBtn": {
+     "x": 277,
+     "y": 851,
+     "hits": true
+    },
+    "sold": 300,
+    "hireBtn": {
+     "x": 593.578125,
+     "y": 788.8125,
+     "hits": true
+    },
+    "workers": [
+     "sembrador"
+    ],
+    "drawCalls": 94,
+    "ok": true
+   }
+  },
+  "migration": {
+   "conv": 1,
+   "cells": 0,
+   "money": 508993,
+   "modal": true,
+   "refund": 8993
+  },
+  "migrationOk": true,
+  "mainCrops": [
+   "Tomate"
+  ],
+  "founded": [
+   "bayamo:1",
+   "manzanillo:2",
+   "baracoa:2",
+   "matanzas:2"
+  ],
+  "backBtn": {
+   "x": 641.0390625,
+   "y": 683.75,
+   "hits": true
+  },
+  "mainSame": true,
+  "mainCentral": 4,
+  "saved": {
+   "bayamo": null,
+   "manzanillo": {
+    "workers": 1,
+    "sown": 5,
+    "city": "manzanillo",
+    "money": false
+   },
+   "baracoa": {
+    "workers": 1,
+    "sown": 5,
+    "city": "baracoa",
+    "money": false
+   },
+   "matanzas": {
+    "workers": 1,
+    "sown": 5,
+    "city": "matanzas",
+    "money": false
+   }
+  },
+  "savedOk": true,
+  "mem": [
+   {
+    "city": "manzanillo",
+    "calls": 94,
+    "geo": 61,
+    "tex": 9,
+    "heap": null
+   },
+   {
+    "city": null,
+    "calls": 82,
+    "geo": 65,
+    "tex": 9,
+    "heap": null
+   },
+   {
+    "city": "baracoa",
+    "calls": 97,
+    "geo": 62,
+    "tex": 9,
+    "heap": null
+   },
+   {
+    "city": "matanzas",
+    "calls": 96,
+    "geo": 62,
+    "tex": 9,
+    "heap": null
+   },
+   {
+    "city": null,
+    "calls": 82,
+    "geo": 65,
+    "tex": 9,
+    "heap": null
+   }
+  ],
+  "memOk": true,
+  "raid": {
+   "kind": "saqueo",
+   "held": false,
+   "stolen": 9,
+   "cacao": 14,
+   "raid": 600,
+   "truckStill": true,
+   "banner": true
+  },
+  "raidOk": true,
+  "kicked": true,
+  "blocked": true,
+  "occupiedOk": true,
+  "ok": true
+ }
+}

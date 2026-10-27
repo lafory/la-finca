@@ -38,9 +38,9 @@
   "samples": 40,
   "camStatus": [
    "Va a buscar en el bohío lo que pide el camión",
-   "Va a buscar en el bohío lo que pide el camión"
+   "Juntando la mercancía"
   ],
-  "sold": 2,
+  "sold": 1,
   "afterReload": 5,
   "ok": true
  },
@@ -82,10 +82,10 @@
   "dupSamples": 0,
   "samples": 40,
   "camStatus": [
-   "Va a buscar en el bohío lo que pide el camión",
+   "Cargando el camión",
    "Cargando el camión"
   ],
-  "sold": 4,
+  "sold": 3,
   "afterReload": 5,
   "ok": true
  }

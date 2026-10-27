@@ -5,7 +5,7 @@
     "citySection": true,
     "attack": {
       "city": "bayamo",
-      "power": 19,
+      "power": 17,
       "secs": 180
     },
     "sheetWarn": true,
@@ -45,7 +45,72 @@
       "freed": true,
       "owner": "jugador",
       "retaken": 1,
-      "rate": 112
+      "rate": 0,
+      "farm": true
+    },
+    "offline": {
+      "report": 4,
+      "attacks": 6,
+      "lost": 1,
+      "raids": 1,
+      "freed": 2,
+      "next": 355
+    },
+    "offlineModal": true,
+    "reportCleared": true,
+    "offlineCapOk": true,
+    "reloadSame": true,
+    "noReportAgain": true,
+    "ok": true
+  },
+  "ipad": {
+    "errors": [],
+    "noAttackYet": true,
+    "citySection": true,
+    "attack": {
+      "city": "bayamo",
+      "power": 17,
+      "secs": 180
+    },
+    "sheetWarn": true,
+    "mapBanner": true,
+    "mapMarker": true,
+    "farmBanner": true,
+    "defendOpens": true,
+    "garrison": {
+      "inf": 20,
+      "cab": 4
+    },
+    "trinchera": 1,
+    "chance": 1,
+    "defenseAnim": true,
+    "defenseDone": true,
+    "heldModal": true,
+    "afterHold": {
+      "attack": null,
+      "held": 1,
+      "freed": [
+        "manzanillo",
+        "bayamo"
+      ]
+    },
+    "lostModal": true,
+    "lost": {
+      "freed": false,
+      "owner": "regimen",
+      "farmKept": true,
+      "rate": 0,
+      "next": "manzanillo",
+      "gray": true,
+      "occLabel": true
+    },
+    "occupiedNote": true,
+    "retaken": {
+      "freed": true,
+      "owner": "jugador",
+      "retaken": 1,
+      "rate": 0,
+      "farm": true
     },
     "offline": {
       "report": 4,
@@ -62,13 +127,13 @@
     "noReportAgain": true,
     "ok": true
   },
-  "ipad": {
+  "desktop": {
     "errors": [],
     "noAttackYet": true,
     "citySection": true,
     "attack": {
       "city": "bayamo",
-      "power": 19,
+      "power": 16,
       "secs": 180
     },
     "sheetWarn": true,
@@ -108,15 +173,16 @@
       "freed": true,
       "owner": "jugador",
       "retaken": 1,
-      "rate": 112
+      "rate": 0,
+      "farm": true
     },
     "offline": {
       "report": 4,
       "attacks": 6,
-      "lost": 2,
-      "raids": 0,
-      "freed": 1,
-      "next": 355
+      "lost": 1,
+      "raids": 1,
+      "freed": 2,
+      "next": 349
     },
     "offlineModal": true,
     "reportCleared": true,

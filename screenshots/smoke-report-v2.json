@@ -44,12 +44,12 @@
       ],
       "afterSkip": [
         9,
-        18
+        17
       ],
       "after": [
         9,
-        18,
-        20
+        17,
+        19
       ],
       "frontChanged": true,
       "refilled": true,
@@ -71,10 +71,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 60,
+      "fps": 12,
       "quality": "alta",
       "calls": 59,
-      "tris": 185514
+      "tris": 186350
     }
   },
   "phone": {
@@ -104,7 +104,7 @@
       "after": 14.4,
       "ok": true
     },
-    "eggs": 3,
+    "eggs": 4,
     "load": {
       "order": {
         "egg": 3
@@ -121,16 +121,14 @@
         9
       ],
       "afterSkip": [
-        8,
-        9,
-        15
+        9
       ],
       "after": [
-        8,
         9,
-        15
+        16,
+        17
       ],
-      "frontChanged": false,
+      "frontChanged": true,
       "refilled": true,
       "parkedAfter": true
     },
@@ -150,10 +148,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 12.1,
+      "fps": 12.2,
       "quality": "media",
       "calls": 87,
-      "tris": 188575
+      "tris": 187207
     }
   },
   "ipad": {
@@ -183,7 +181,7 @@
       "after": 12,
       "ok": true
     },
-    "eggs": 4,
+    "eggs": 3,
     "load": {
       "order": {
         "egg": 3
@@ -201,12 +199,12 @@
       ],
       "afterSkip": [
         9,
-        19
+        18
       ],
       "after": [
         9,
-        19,
-        20
+        18,
+        19
       ],
       "frontChanged": true,
       "refilled": true,
@@ -231,7 +229,7 @@
       "fps": 60,
       "quality": "media",
       "calls": 76,
-      "tris": 185604
+      "tris": 184428
     }
   },
   "phone-landscape": {
@@ -261,7 +259,7 @@
       "after": 9,
       "ok": true
     },
-    "eggs": 4,
+    "eggs": 6,
     "load": {
       "order": {
         "egg": 3
@@ -283,7 +281,7 @@
       "after": [
         9,
         14,
-        15
+        16
       ],
       "frontChanged": true,
       "refilled": true,
@@ -294,10 +292,30 @@
       "seedsAfter": 3,
       "money": 30
     },
+    "plantDbg": {
+      "q": {
+        "x": 302.60995406664773,
+        "y": 99.84573082647796,
+        "ok": true
+      },
+      "el": "<canvas id=\"game\" aria-label=\"La finca\" data-engine=\"three.js r186\" width=\"844\" height=\"390\"></canvas>",
+      "seeds": {
+        "tomato": 3,
+        "cane": 0,
+        "tobacco": 0
+      },
+      "sel": "tomato",
+      "p": [
+        14.5,
+        9.5
+      ],
+      "task": "null",
+      "dist": 19.21483524694017
+    },
     "crops": {
-      "planted": 1,
-      "harvests": 1,
-      "tomatoes": 1
+      "planted": 0,
+      "harvests": 0,
+      "tomatoes": 0
     },
     "reload": {
       "btn": "Continuar la finca",
@@ -305,10 +323,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 12.4,
+      "fps": 12.2,
       "quality": "media",
       "calls": 59,
-      "tris": 170845
+      "tris": 171085
     }
   }
 }

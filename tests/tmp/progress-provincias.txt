@@ -1,0 +1,19 @@
+[01:48 EDT] Start: main bedcc59 (+ informes 74dd233). Design: farm profile applied before Sim/World creation; regional farm = full state in s.ext.mambi.farms[id].full; shared money/xp/level/res/settings/ext.mambi/ext.central via accessors; switch = save + reload (clean world rebuild, no leaks).
+[01:48 EDT] WIP commit: src/provincias/{data,models,index}.js; zones ZONE_FILTER, state SAVE_HOOK+normalizeState, sim makeOrder generic + FARM_HOOKS.demand, world CROP_KEYS from CROP_ORDER + ANIMAL_GEOS, models CROP_GEOS, central mainOnly, saveui current() = root save, castro texts.
+[01:48 EDT] tests/provincias.mjs desktop run 1: farms ok (granma/baracoa/matanzas: walk, plant, harvest, cook, truck, hire), migration ok (+8993 refund), main same, saved ok, raid ok, occupied ok, 0 errors; memOk false (heap GC noise) -> gc() before measure. Switch button moved into #explore column.
+[02:16 EDT] provincias.mjs desktop (chromium, gc): TODO BIEN, memOk true (draw calls 84-87 provincia / 67 principal, geo 52-55 estable, tex 9, heap 24-30 MB), 0 errores.
+[02:16 EDT] provincias.mjs phone (WebKit iPhone 13): TODO BIEN, 0 errores, draw calls 93-96 / 81. ipad (WebKit iPad gen 7): TODO BIEN.
+[02:16 EDT] docs/PROVINCIAS.md; tests/regional.mjs retirada (FORCE=1 para correrla). Commit 5956b5a. Regresiones corriendo (/tmp/reg.sh).
+[02:26 EDT] smoke.mjs: exit 0 (424 s).
+[02:41 EDT] savecode.mjs: exit 1 (desktop: no llegó 'load' tras code-apply en 30 s). Depurado a mano (tests/tmp/dbg-save.mjs): code-apply sí recarga, sin errores; se vuelve a correr sola al final. entrar.mjs: phone, phone-land, ipad, ipad-mac ok 12 casos.
+[02:51 EDT] entrar.mjs: phone/phone-land/ipad/ipad-mac ok; android falló (almacen-lleno, importar-*) + goto timeout — coincidió con mis corridas de depuración en paralelo (CPU); se repite sola. granja.mjs: exit 0.
+[03:04 EDT] mambi.mjs y castro.mjs fallaron solo por lo esperado del diseño viejo (renta>0, «Más tierra» 1→3). Pruebas actualizadas: fincas conv=2, 3 botones «Ir a la finca», sin mbup; castro: al recuperar la ciudad la finca sigue (sin renta).
+[03:04 EDT] Botón «Renta» del mapa se esconde si todas las fincas son grandes y no hay renta vieja. Build + commit. workers/camionero/central corriendo.
+[03:06 EDT] workers.mjs: exit 0 (390 s). camionero corriendo solo; luego central, mambi, castro, savecode, entrar android uno por uno.
+[03:09 EDT] camionero.mjs: 4 pantallas, todas las comprobaciones true, 0 errores.
+[03:18 EDT] central.mjs (?dev=1): exit 0, 4 pantallas, 0 errores, etapa 4, tren, pedido pagado.
+[03:24 EDT] mambi.mjs (actualizada): exit 0, 6 pantallas (incl. iphone-webkit, ipad-webkit) ok, 0 errores.
+[03:28 EDT] castro.mjs (actualizada): exit 0, todo en verde (phone, ipad, desktop).
+[03:29 EDT] savecode.mjs sola: exit 0 (desktop + iphone13 ok, 0 errores) — la falla anterior era por CPU.
+[03:33 EDT] entrar.mjs ONLY=android: ok 12 casos.
+[03:36 EDT] entrar.mjs ONLY=desktop: ok 12 casos. Todas las regresiones en verde. Siguiente: fetch/rebase/push.

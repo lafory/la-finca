@@ -11,7 +11,7 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 12
+    "eggsLeft": 11
   },
   "phone": {
     "errors": [],
@@ -39,7 +39,7 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 11
+    "eggsLeft": 9
   },
   "phone-landscape": {
     "errors": [],
@@ -53,6 +53,6 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 11
+    "eggsLeft": 9
   }
 }

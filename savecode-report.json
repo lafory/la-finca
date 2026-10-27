@@ -7,21 +7,21 @@
   ],
   "fileBtn": true,
   "copyMsg": "¡Copiado! Pégalo en otro teléfono en Ajustes → Pegar código.",
-  "codeLen": 1821,
+  "codeLen": 1931,
   "codeOk": true,
   "fileName": "la-finca-nivel6-2026-10-27.lafinca",
   "badErr": "El código está cortado o le falta un pedazo.",
-  "preview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 00:28 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "preview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 03:28 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
   "afterPaste": {
    "money": 4321,
    "level": 6
   },
-  "backupRow": "↺ Copia anterior Nivel 1 · 10 pesos · 27 oct 2026, 00:28 Restaurar",
+  "backupRow": "↺ Copia anterior Nivel 1 · 10 pesos · 27 oct 2026, 03:28 Restaurar",
   "afterRestore": {
    "money": 10,
    "level": 1
   },
-  "filePreview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 00:28 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "filePreview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 03:28 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
   "afterFile": {
    "money": 4321,
    "level": 6
@@ -41,21 +41,21 @@
   ],
   "fileBtn": true,
   "copyMsg": "¡Copiado! Pégalo en otro teléfono en Ajustes → Pegar código.",
-  "codeLen": 1807,
+  "codeLen": 1981,
   "codeOk": true,
   "fileName": "la-finca-nivel6-2026-10-27.lafinca",
   "badErr": "El código está cortado o le falta un pedazo.",
-  "preview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 00:29 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "preview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 03:29 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
   "afterPaste": {
    "money": 4321,
    "level": 6
   },
-  "backupRow": "↺ Copia anterior Nivel 1 · 10 pesos · 27 oct 2026, 00:29 Restaurar",
+  "backupRow": "↺ Copia anterior Nivel 1 · 10 pesos · 27 oct 2026, 03:29 Restaurar",
   "afterRestore": {
    "money": 10,
    "level": 1
   },
-  "filePreview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 00:29 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
+  "filePreview": "¿Usar esta partida? Nivel 6 · 4321 pesos 0 trabajadores · guardada el 27 oct 2026, 03:29 Reemplaza tu finca de ahora (nivel 1, 10 pesos). Se guarda una copia de la de ahora y la puedes restaurar en Ajustes. Cancelar Usar esta partida",
   "afterFile": {
    "money": 4321,
    "level": 6
