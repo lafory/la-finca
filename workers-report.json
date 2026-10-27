@@ -2,13 +2,13 @@
  "desktop": {
   "errors": [],
   "cap1": 4,
-  "cap8": 6,
+  "cap8": 5,
   "prices": [
    30,
-   55,
-   75,
+   120,
+   270,
    45,
-   80
+   180
   ],
   "workers": [
    "recolector:recolector:0",
@@ -24,7 +24,7 @@
    0,
    1
   ],
-  "capText": "Trabajadores 5/6",
+  "capText": "Trabajadores 5/5",
   "chips": [
    "Chucho",
    "Reinaldo",
@@ -33,27 +33,27 @@
    "Ramón"
   ],
   "overCap": false,
-  "count": 6,
+  "count": 5,
   "dupSamples": 0,
   "samples": 40,
   "camStatus": [
    "Va a buscar en el bohío lo que pide el camión",
-   "Juntando la mercancía"
+   "Va a buscar en el bohío lo que pide el camión"
   ],
   "sold": 2,
-  "afterReload": 6,
+  "afterReload": 5,
   "ok": true
  },
  "phone": {
   "errors": [],
   "cap1": 4,
-  "cap8": 6,
+  "cap8": 5,
   "prices": [
    30,
-   55,
-   75,
+   120,
+   270,
    45,
-   80
+   180
   ],
   "workers": [
    "recolector:recolector:0",
@@ -69,7 +69,7 @@
    0,
    1
   ],
-  "capText": "Trabajadores 5/6",
+  "capText": "Trabajadores 5/5",
   "chips": [
    "Chucho",
    "Reinaldo",
@@ -78,15 +78,15 @@
    "Ramón"
   ],
   "overCap": false,
-  "count": 6,
+  "count": 5,
   "dupSamples": 0,
   "samples": 40,
   "camStatus": [
-   "Cargando el camión",
+   "Va a buscar en el bohío lo que pide el camión",
    "Cargando el camión"
   ],
-  "sold": 3,
-  "afterReload": 6,
+  "sold": 4,
+  "afterReload": 5,
   "ok": true
  }
 }

@@ -20,14 +20,14 @@
         "planted": 1,
         "buildSheet": "Lote libre · Manzanillo",
         "tapBuild": {
-          "x": 291.359375,
+          "x": 295.5625,
           "y": 607.75,
           "hits": true
         },
         "built": true,
         "rent": 1734,
         "perf": {
-          "fps": 30,
+          "fps": 32,
           "calls": 22,
           "tris": 77436
         },
@@ -58,7 +58,7 @@
         "built": true,
         "landUp": 1,
         "perf": {
-          "fps": 36,
+          "fps": 35,
           "calls": 21,
           "tris": 72472
         },
@@ -81,7 +81,7 @@
         },
         "planted": 1,
         "perf": {
-          "fps": 28,
+          "fps": 27,
           "calls": 22,
           "tris": 128032
         },
@@ -181,14 +181,14 @@
         "planted": 1,
         "buildSheet": "Lote libre · Manzanillo",
         "tapBuild": {
-          "x": 586.359375,
+          "x": 590.5625,
           "y": 1029,
           "hits": true
         },
         "built": true,
         "rent": 1734,
         "perf": {
-          "fps": 18,
+          "fps": 16,
           "calls": 22,
           "tris": 77436
         },
@@ -219,7 +219,7 @@
         "built": true,
         "landUp": 1,
         "perf": {
-          "fps": 21,
+          "fps": 18,
           "calls": 21,
           "tris": 72472
         },
@@ -227,7 +227,7 @@
       },
       "baracoa": {
         "tapBadge": {
-          "x": 342.6953125,
+          "x": 342.6015625,
           "y": 560.796875,
           "hits": true
         },
@@ -336,14 +336,14 @@
         "lotSheet": "Lote libre · Manzanillo",
         "tapPlant": {
           "x": 830.8203125,
-          "y": 517,
+          "y": 517.0833740234375,
           "hits": true
         },
         "planted": 1,
         "buildSheet": "Lote libre · Manzanillo",
         "tapBuild": {
-          "x": 819.3984375,
-          "y": 749,
+          "x": 823.4453125,
+          "y": 748.5684204101562,
           "hits": true
         },
         "built": true,
@@ -367,7 +367,7 @@
         "lotSheet": "Lote libre · Bayamo",
         "tapPlant": {
           "x": 819.296875,
-          "y": 511.8145751953125,
+          "y": 511.88543701171875,
           "hits": true
         },
         "planted": 1,
@@ -380,7 +380,7 @@
         "built": true,
         "landUp": 1,
         "perf": {
-          "fps": 7,
+          "fps": 6,
           "calls": 21,
           "tris": 72472
         },
@@ -398,7 +398,7 @@
         "lotSheet": "Lote libre · Baracoa",
         "tapPlant": {
           "x": 830.8203125,
-          "y": 517,
+          "y": 517.08740234375,
           "hits": true
         },
         "planted": 1,

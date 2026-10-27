@@ -26,30 +26,29 @@
       "after": 9.8,
       "ok": true
     },
-    "eggs": 3,
+    "eggs": 4,
     "load": {
       "order": {
         "egg": 3
       },
       "money": 35,
       "sold": 1,
-      "tut": 1,
+      "tut": 2,
       "queueLen": 2
     },
     "skip": {
       "parkedBefore": true,
       "before": [
         8,
-        9,
-        17
+        9
       ],
       "afterSkip": [
         9,
-        17
+        18
       ],
       "after": [
         9,
-        17,
+        18,
         20
       ],
       "frontChanged": true,
@@ -75,7 +74,7 @@
       "fps": 60,
       "quality": "alta",
       "calls": 59,
-      "tris": 186062
+      "tris": 185514
     }
   },
   "phone": {
@@ -105,7 +104,7 @@
       "after": 14.4,
       "ok": true
     },
-    "eggs": 5,
+    "eggs": 3,
     "load": {
       "order": {
         "egg": 3
@@ -122,15 +121,16 @@
         9
       ],
       "afterSkip": [
+        8,
         9,
-        16
+        15
       ],
       "after": [
+        8,
         9,
-        16,
-        17
+        15
       ],
-      "frontChanged": true,
+      "frontChanged": false,
       "refilled": true,
       "parkedAfter": true
     },
@@ -150,10 +150,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 60,
+      "fps": 12.1,
       "quality": "media",
       "calls": 87,
-      "tris": 187207
+      "tris": 188575
     }
   },
   "ipad": {
@@ -183,31 +183,30 @@
       "after": 12,
       "ok": true
     },
-    "eggs": 5,
+    "eggs": 4,
     "load": {
       "order": {
         "egg": 3
       },
       "money": 35,
       "sold": 1,
-      "tut": 1,
+      "tut": 2,
       "queueLen": 2
     },
     "skip": {
       "parkedBefore": true,
       "before": [
         8,
-        9,
-        22
+        9
       ],
       "afterSkip": [
         9,
-        22
+        19
       ],
       "after": [
         9,
-        22,
-        25
+        19,
+        20
       ],
       "frontChanged": true,
       "refilled": true,
@@ -231,8 +230,8 @@
     "perf": {
       "fps": 60,
       "quality": "media",
-      "calls": 81,
-      "tris": 185436
+      "calls": 76,
+      "tris": 185604
     }
   },
   "phone-landscape": {
@@ -262,31 +261,29 @@
       "after": 9,
       "ok": true
     },
-    "eggs": 5,
+    "eggs": 4,
     "load": {
       "order": {
         "egg": 3
       },
       "money": 35,
       "sold": 1,
-      "tut": 1,
+      "tut": 2,
       "queueLen": 2
     },
     "skip": {
       "parkedBefore": true,
       "before": [
         8,
-        9,
-        17
+        9
       ],
       "afterSkip": [
-        9,
-        17
+        9
       ],
       "after": [
         9,
-        17,
-        18
+        14,
+        15
       ],
       "frontChanged": true,
       "refilled": true,
@@ -308,10 +305,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 60,
+      "fps": 12.4,
       "quality": "media",
       "calls": 59,
-      "tris": 173165
+      "tris": 170845
     }
   }
 }

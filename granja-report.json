@@ -49,8 +49,8 @@
   },
   "batey": {
    "built": 18,
-   "cap0": 21,
-   "cap1": 27,
+   "cap0": 20,
+   "cap1": 26,
    "up": [
     [
      true,
@@ -82,7 +82,7 @@
    "plowed": 16,
    "plowedPlots": 16,
    "tier": 3,
-   "wcap": 27
+   "wcap": 26
   },
   "errors": [],
   "ok": true
@@ -137,8 +137,8 @@
   },
   "batey": {
    "built": 18,
-   "cap0": 21,
-   "cap1": 27,
+   "cap0": 20,
+   "cap1": 26,
    "up": [
     [
      true,
@@ -170,7 +170,7 @@
    "plowed": 16,
    "plowedPlots": 16,
    "tier": 3,
-   "wcap": 27
+   "wcap": 26
   },
   "errors": [],
   "ok": true
