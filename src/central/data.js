@@ -23,9 +23,9 @@ export const ALMACEN_CAP = 4000; // con la etapa 4
 // ---------------------------------------------------------------- campos de 6×6
 // Cultivo en bloque: se siembra y se cosecha entero. seed = costo por bloque, yield = unidades por bloque.
 export const FIELD_CROPS = {
-  cane: { name: 'Caña', level: 25, seed: 360, grow: 480, yield: 108, xpPlant: 30, xpHarvest: 110, verb: 'Sembrar caña' },
-  tobacco: { name: 'Tabaco', level: 27, seed: 720, grow: 720, yield: 72, xpPlant: 40, xpHarvest: 140, verb: 'Sembrar tabaco' },
-  tomato: { name: 'Tomate', level: 29, seed: 180, grow: 240, yield: 144, xpPlant: 20, xpHarvest: 70, verb: 'Sembrar tomate' },
+  cane: { name: 'Caña', level: 25, seed: 360, grow: 480, yield: 108, xpPlant: 30, xpHarvest: 160, verb: 'Sembrar caña' },
+  tobacco: { name: 'Tabaco', level: 27, seed: 720, grow: 720, yield: 72, xpPlant: 40, xpHarvest: 200, verb: 'Sembrar tabaco' },
+  tomato: { name: 'Tomate', level: 29, seed: 180, grow: 240, yield: 144, xpPlant: 20, xpHarvest: 100, verb: 'Sembrar tomate' },
 };
 export const FIELD_CROP_ORDER = ['cane', 'tobacco', 'tomato'];
 export const PLANT_WORK = 12; // s de juego: la cuadrilla y el tractor siembran
@@ -41,16 +41,17 @@ const FIELD_LIST = [
   [0, 3, 31, 15500], [1, 3, 33, 17500], [2, 2, 34, 19500], [2, 3, 35, 22000],
   [3, 1, 36, 25000], [3, 0, 37, 28000], [3, 2, 38, 32000], [3, 3, 39, 36000],
 ];
-export const FIELDS = FIELD_LIST.map(([c, r, level, price], i) => ({ id: `f${i + 1}`, n: i + 1, x: FIELD_XS[c], z: FIELD_ZS[r], level, price }));
+export const FIELD_PRICE_MUL = 1.5; // balance oct 2026: campos ×1,5 (docs/BALANCE.md)
+export const FIELDS = FIELD_LIST.map(([c, r, level, price], i) => ({ id: `f${i + 1}`, n: i + 1, x: FIELD_XS[c], z: FIELD_ZS[r], level, price: Math.round((price * FIELD_PRICE_MUL) / 100) * 100 }));
 export const FIELD_BY_ID = Object.fromEntries(FIELDS.map((f) => [f.id, f]));
 
 // ---------------------------------------------------------------- central azucarero (obra en 4 etapas)
-// wood = madera (s.res.madera, la misma de la manigua). dur = s de juego de obra.
+// wood = madera (s.res.madera, la misma de la manigua). items = caña o azúcar de la canasta (balance oct 2026). dur = s de juego de obra.
 export const STAGES = [
-  { id: 'cimientos', name: 'Cimientos y patio', detail: 'Se desbroza el terreno y se echan los cimientos de ladrillo.', level: 32, price: 15000, wood: 120, dur: 90 },
-  { id: 'via', name: 'Vía estrecha y locomotora', detail: 'Vía de los campos al central y una locomotora de vapor con 4 vagones cañeros.', level: 33, price: 25000, wood: 150, dur: 120 },
-  { id: 'calderas', name: 'Casa de calderas y chimenea', detail: 'El basculador, los molinos y las calderas: muele la caña en azúcar y melaza.', level: 34, price: 40000, wood: 200, dur: 150 },
-  { id: 'estacion', name: 'Almacenes, estación y destilería', detail: 'Almacenes grandes, estación con pedidos del tren y destilería de ron.', level: 35, price: 60000, wood: 250, dur: 180 },
+  { id: 'cimientos', name: 'Cimientos y patio', detail: 'Se desbroza el terreno y se echan los cimientos de ladrillo.', level: 32, price: 15000, wood: 120, items: { cane: 60 }, dur: 90 },
+  { id: 'via', name: 'Vía estrecha y locomotora', detail: 'Vía de los campos al central y una locomotora de vapor con 4 vagones cañeros.', level: 33, price: 25000, wood: 150, items: { azucar: 20 }, dur: 120 },
+  { id: 'calderas', name: 'Casa de calderas y chimenea', detail: 'El basculador, los molinos y las calderas: muele la caña en azúcar y melaza.', level: 34, price: 40000, wood: 200, items: { azucar: 35 }, dur: 150 },
+  { id: 'estacion', name: 'Almacenes, estación y destilería', detail: 'Almacenes grandes, estación con pedidos del tren y destilería de ron.', level: 35, price: 60000, wood: 250, items: { azucar: 50 }, dur: 180 },
 ];
 export const WOOD_PRICE = 30; // aserrío: pesos por madera si no alcanza la de la manigua
 

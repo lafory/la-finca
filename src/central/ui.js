@@ -2,6 +2,7 @@
 import { ICON } from '../icons.js';
 import { now } from '../state.js';
 import { fmtTime, fmtClock } from '../sim.js';
+import { ITEMS } from '../data.js';
 import {
   IND, IND_ORDER, WHOLESALE, FIELD_CROPS, FIELD_CROP_ORDER, FIELDS, FIELD_BY_ID, STAGES, WOOD_PRICE, MILL, STILL, TRAIN,
   CAMPOS_LEVEL, CENTRAL_LEVEL, BLOCKS, STOPS,
@@ -146,7 +147,7 @@ export class CentralUI {
         else if (lock) btn = `<button class="btn locked" disabled>Nivel ${st.level}</button>`;
         else btn = this.btnPrice(st.price, 'censtage', '', 'Construir · ', st.wood);
         const p = cur && c.building ? Math.round(Math.min(1, (now() - c.building.at) / c.building.dur) * 100) : 0;
-        out += `<div class="row ${done ? 'sel' : lock || !cur ? 'dim' : ''}"><div class="row-ico">${i === 1 ? ICON.train : ICON.factory}</div><div class="row-main"><b>${i + 1}. ${st.name}</b><small>${st.detail}${cur && c.building ? ` · obra al ${p} %` : ''}</small></div>${btn}</div>`;
+        out += `<div class="row ${done ? 'sel' : lock || !cur ? 'dim' : ''}"><div class="row-ico">${i === 1 ? ICON.train : ICON.factory}</div><div class="row-main"><b>${i + 1}. ${st.name}</b><small>${st.detail}${st.items ? ` · También: ${Object.entries(st.items).map(([k, n]) => `${n} ${ITEMS[k].plural.toLowerCase()}`).join(', ')}.` : ''}${cur && c.building ? ` · obra al ${p} %` : ''}</small></div>${btn}</div>`;
       });
       if (c.stage >= 3) {
         const busy = sim.millBusy();

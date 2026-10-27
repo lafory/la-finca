@@ -11,20 +11,21 @@
 //  - Con ⏩: el reloj de juego corre FF_K veces más rápido (cultivos, gallinas, corrales, cocinas), pero las acciones y los
 //    camiones siguen en tiempo real.
 import { LEVEL_XP, xpForLevel, ITEMS, CROPS, RECIPES, PRICES, STORAGE_CAPS, STORAGE_LEVELS, EGG_INTERVAL, ORDER_BONUS, TRUCK_RESPAWN,
-  WORKERS, STRUCTURES, PARCELS, START_PLOTS, WATER_BOOST, MAX_LEVEL, workerHirePrice } from '../src/data.js';
+  WORKERS, STRUCTURES, PARCELS, START_PLOTS, WATER_BOOST, MAX_LEVEL, workerHirePrice, WORKER_LEVEL_CAP, xpForLevelV1 } from '../src/data.js';
 import { FIELD_CROPS, FIELDS, STAGES, MILL, WHOLESALE, PLANT_WORK, HARVEST_WORK, CAMPOS_LEVEL, TRAIN_ORDER, WOOD_PRICE } from '../src/central/data.js';
 
 const ACT = 22 * 0.6; // acciones/min útiles de un jugador típico en el móvil (22 tocando sin parar × 60 % de eficiencia: menús, mirar, dudar)
 const ORDER_SEC = 14; // s por pedido de camión (llegar, cargar, irse) + TRUCK_RESPAWN
 const ITEMS_PER_ORDER = 3.2;
 const FF_K = 6; // media efectiva del ⏩ (x5/x20 a ratos)
-const TARGETS = [2, 5, 10, 15, 20, 25, 32, 40];
+const FF_MIX = 2; // jugador "típico": usa el ⏩ a ratos (reloj ~2× de media)
+const TARGETS = [2, 5, 10, 15, 20, 25, 32, 35, 40];
 const STEP = 10; // s
 const WORKER_TASKS = 7; // tareas/min de un trabajador (camina + 1,4 s de trabajo + 1,6 s de descanso)
 const HOUSE_LEVELS = [5, 5, 6, 7, 8, 10, 12, 14];
 
 function sim(ff, xpFor = xpForLevel, tweak = {}) {
-  const k = ff ? FF_K : 1;
+  const k = typeof ff === 'number' ? ff : ff ? FF_K : 1;
   const s = { level: 1, xp: 0, money: 50, chickens: 3, plots: START_PLOTS.length, storage: 0, coop: false, abono: false,
     parcels: new Set(), built: new Set(), workers: new Set(), hands: 0, staff: 0, fields: 0, stage: 0, wood: 0 };
   const reached = { 1: 0 };
@@ -94,17 +95,17 @@ function sim(ff, xpFor = xpForLevel, tweak = {}) {
     const L = s.level;
     const chickenPrice = Math.round(PRICES.chicken * PRICES.chickenStep ** (s.chickens - 3));
     const cap = (s.coop ? 8 : 4);
-    const buy = (price, fn, xpGain = 0) => { if (s.money >= price) { s.money -= price; fn(); if (xpGain) buyXp(xpGain); return true; } return false; };
+    const buy = (price, fn, xpGain = 0) => { if (s.money >= price) { if (t <= 3600) s.maxIdle = Math.max(s.maxIdle || 0, t - (s.lastBuy || 0)); s.lastBuy = t; s.money -= price; fn(); if (xpGain) buyXp(xpGain); return true; } return false; };
     if (L >= 3 && !s.coop && buy(PRICES.coop, () => { s.coop = true; })) continue;
     if (s.chickens < cap && buy(chickenPrice, () => s.chickens++)) continue;
     if (s.storage < 4 && L >= STORAGE_LEVELS[s.storage] && buy(PRICES.storage[s.storage], () => s.storage++)) continue;
     if (L >= 4 && !s.abono && buy(PRICES.abono, () => { s.abono = true; })) continue;
     const wOrder = ['recolector', 'camionero', 'sembrador', 'regador', 'cosechador', 'cocinera'];
     const w = wOrder.find((r) => !s.workers.has(r) && WORKERS[r].level <= L && s.money >= workerHirePrice(r, 0) * 3);
-    const wcap = 4 + Math.floor(L / (tweak.levelCap ?? 4)) + HOUSE_LEVELS.filter((h) => h <= L).length;
+    const wcap = 4 + Math.floor(L / (tweak.levelCap ?? WORKER_LEVEL_CAP)) + HOUSE_LEVELS.filter((h) => h <= L).length;
     if (w && s.staff < wcap && buy(workerHirePrice(w, 0) * (tweak.hireMul ?? 1), () => { s.workers.add(w); s.staff++; if (['sembrador', 'regador', 'cosechador'].includes(w)) s.hands++; })) continue;
     // más manos para el campo si hay tope y sobran canteros sin atender
-    if (s.workers.has('cosechador') && s.staff < wcap && s.plots / Math.max(1, s.hands) > 14) { const extra = s.hands - 2; if (buy(workerHirePrice('sembrador', Math.max(1, extra)) * (tweak.hireMul ?? 1) * (tweak.extraHire ? (1 + extra) : 1), () => { s.hands++; s.staff++; })) continue; }
+    if (s.workers.has('cosechador') && s.staff < wcap && s.plots / Math.max(1, s.hands) > 14) { const extra = s.hands - 2; if (buy(workerHirePrice('sembrador', Math.max(1, extra)) * (tweak.hireMul ?? 1), () => { s.hands++; s.staff++; })) continue; }
     const p = PARCELS.find((p) => !s.parcels.has(p.id) && p.level <= L);
     if (p && buy(p.price, () => { s.parcels.add(p.id); s.plots += Array.isArray(p.plots) ? p.plots.length : p.plots; }, 10 + p.level * 2)) continue;
     const st = Object.entries(STRUCTURES).find(([id, v]) => !s.built.has(id) && v.level <= L && v.kind !== 'house' && (!v.parcel || s.parcels.has(v.parcel)));
@@ -112,24 +113,18 @@ function sim(ff, xpFor = xpForLevel, tweak = {}) {
     const f = FIELDS[s.fields];
     if (L >= CAMPOS_LEVEL && f && f.level <= L && buy(f.price, () => s.fields++)) continue;
     const sg = STAGES[s.stage];
-    if (sg && sg.level <= L && buy(sg.price + sg.wood * WOOD_PRICE, () => s.stage++, 200 + (s.stage + 1) * 100)) continue;
+    if (sg && sg.level <= L && buy(sg.price + sg.wood * WOOD_PRICE + Object.entries(sg.items || {}).reduce((a, [k, n]) => a + n * ITEMS[k].sell, 0), () => s.stage++, 200 + (s.stage + 1) * 100)) continue;
     if (t % 3600 < STEP) log.push({ h: t / 3600, level: L, money: Math.round(s.money), plots: s.plots, chickens: s.chickens, fields: s.fields });
   }
   return { reached, log, final: s };
 }
 
-// ---- propuesta (NO aplicada al juego): curva más empinada desde el nivel 6 y XP del tabaco más baja; ver docs/BALANCE.md
-export function xpProposed(l) {
-  const BASE = [0, 0, 20, 55, 110, 190, 320, 520, 800, 1150, 1600];
-  if (l < BASE.length) return BASE[l];
-  const k = l - 10;
-  return Math.round(1600 + 900 * k + 260 * k * k + 9 * k * k * k);
-}
-const PROPOSED_TWEAK = { cropXp: { tobacco: 0.6 }, levelCap: 5, extraHire: true };
+// ---- antes: la curva vieja (xpForLevelV1) solo como referencia de XP; los tiempos "antes" están en docs/BALANCE.md
+// (se midieron con las tablas viejas, commit 7562f48). Para probar otra curva: pasar xpFor a sim().
 const fmt = (sec) => (sec === undefined ? '—' : sec < 3600 ? `${Math.round(sec / 60)} min` : `${(sec / 3600).toFixed(1)} h`);
-const a = sim(false), b = sim(true);
-const pa = sim(false, xpProposed, PROPOSED_TWEAK), pb = sim(true, xpProposed, PROPOSED_TWEAK);
-const rows = TARGETS.map((L) => ({ level: L, xp: xpForLevel(L), normal: a.reached[L], ff: b.reached[L], xpNew: xpProposed(L), newNormal: pa.reached[L], newFf: pb.reached[L] }));
+const a = sim(false), b = sim(true), m = sim(FF_MIX);
+export { sim };
+const rows = TARGETS.map((L) => ({ level: L, xpOld: xpForLevelV1(L), xp: xpForLevel(L), normal: a.reached[L], mix: m.reached[L], ff: b.reached[L] }));
 // muros: niveles cuyo tramo tarda >2,5× la media de los 3 anteriores; demasiado rápido: <25 % de la media
 function walls(reached) {
   const out = [];
@@ -143,15 +138,17 @@ function walls(reached) {
   }
   return out;
 }
-const res = { wallsProposed: walls(pa.reached), assumptions: { ACT, ORDER_SEC, ITEMS_PER_ORDER, FF_K }, rows, wallsNormal: walls(a.reached), wallsFF: walls(b.reached),
-  perLevel: Array.from({ length: MAX_LEVEL }, (_, i) => i + 1).map((L) => ({ L, xp: xpForLevel(L), normal: fmt(a.reached[L]), ff: fmt(b.reached[L]) })) };
-if (process.argv.includes('--json')) console.log(JSON.stringify(res, null, 2));
+const res = { firstHourMaxNoBuy: { normal: fmt(a.final.maxIdle), mix: fmt(m.final.maxIdle), ff: fmt(b.final.maxIdle) }, assumptions: { ACT, ORDER_SEC, ITEMS_PER_ORDER, FF_K, FF_MIX }, rows, wallsNormal: walls(a.reached), wallsFF: walls(b.reached),
+  wallsMix: walls(m.reached), perLevel: Array.from({ length: MAX_LEVEL }, (_, i) => i + 1).map((L) => ({ L, xp: xpForLevel(L), normal: fmt(a.reached[L]), mix: fmt(m.reached[L]), ff: fmt(b.reached[L]) })) };
+const IS_MAIN = import.meta.url === `file://${process.argv[1]}` || import.meta.url.endsWith(String(process.argv[1]).replace(/^.*\/tests\//, '/tests/'));
+if (!IS_MAIN) { /* importado (p. ej. para afinar curvas) */ } else if (process.argv.includes('--json')) console.log(JSON.stringify(res, null, 2));
 else {
-  console.log('Nivel | XP total | sin ⏩ | con ⏩  ||  propuesta: XP | sin ⏩ | con ⏩');
-  for (const r of rows) console.log(`${String(r.level).padStart(5)} | ${String(r.xp).padStart(8)} | ${fmt(r.normal).padStart(8)} | ${fmt(r.ff).padStart(8)}  ||  ${String(r.xpNew).padStart(8)} | ${fmt(r.newNormal).padStart(8)} | ${fmt(r.newFf).padStart(8)}`);
-  console.log('\nMuros / tramos raros (sin ⏩):', res.wallsNormal);
+  console.log('Nivel | XP vieja | XP total | sin ⏩ | típico | con ⏩');
+  for (const r of rows) console.log(`${String(r.level).padStart(5)} | ${String(r.xpOld).padStart(8)} | ${String(r.xp).padStart(8)} | ${fmt(r.normal).padStart(8)} | ${fmt(r.mix).padStart(8)} | ${fmt(r.ff).padStart(8)}`);
+  console.log('\nPrimera hora, máximo sin poder comprar nada:', res.firstHourMaxNoBuy);
+  console.log('Muros / tramos raros (sin ⏩):', res.wallsNormal);
+  console.log('Muros / tramos raros (típico):', res.wallsMix);
   console.log('Muros / tramos raros (con ⏩):', res.wallsFF);
-  console.log('Muros / tramos raros (propuesta, sin ⏩):', res.wallsProposed);
-  console.log('\nPor nivel:'); for (const p of res.perLevel) console.log(`  ${p.L}: ${p.xp} xp · ${p.normal} · ${p.ff}`);
+  console.log('\nPor nivel:'); for (const p of res.perLevel) console.log(`  ${p.L}: ${p.xp} xp · ${p.normal} · ${p.mix} · ${p.ff}`);
 }
 void LEVEL_XP; void STORAGE_CAPS;

@@ -1,6 +1,6 @@
 import {
   W, H, SAVE_KEY, START_AREA, ROAD, PARCELS, START_PLOTS, BUILDINGS, PEN, TRUCK_TILES,
-  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST, GW, GH, WORKER_BASE_CAP, ITEMS, WORKER_LEVEL_CAP,
+  EGG_INTERVAL, START_PALMS, FLAGPOLE, STORAGE_CAPS, STRUCTURES, OBSTACLE_LIST, GW, GH, WORKER_BASE_CAP, ITEMS, WORKER_LEVEL_CAP, XP_CURVE, migrateXp, xpForLevel,
 } from './data.js';
 import { zoneAt, zoneOpen, isAnyRoad, MANIGUA, BATEY, inFarm } from './zones.js';
 import { resDefaults, runMigrations, FARM_HOOKS } from './registry.js';
@@ -16,6 +16,7 @@ export function newGame() {
     money: 10,
     xp: 0,
     level: 1,
+    xpCurve: XP_CURVE,
     inv: Object.fromEntries(Object.keys(ITEMS).map((k) => [k, 0])),
     seeds: { tomato: 2, cane: 0, tobacco: 0 },
     selectedSeed: 'tomato',
@@ -213,6 +214,10 @@ export function load() {
     s.player = d.player && Number.isFinite(+d.player.x) && Number.isFinite(+d.player.z) ? { x: +d.player.x, z: +d.player.z } : base.player;
     s.level = Math.max(1, Math.floor(+d.level || 1));
     s.xp = Math.max(0, +d.xp || 0);
+    // balance oct 2026: curva de XP nueva. Mismo nivel y mismo % de avance; nunca baja de nivel ni queda XP negativa.
+    if ((+d.xpCurve || 1) < XP_CURVE) s.xp = migrateXp(s.level, s.xp);
+    s.xp = Math.max(s.xp, xpForLevel(s.level));
+    s.xpCurve = XP_CURVE;
     s.built = d.built && typeof d.built === 'object' ? { ...d.built } : {};
     s.cleared = Array.isArray(d.cleared) ? d.cleared : [];
     // v4: saves viejos sin manigua ni batey
