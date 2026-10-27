@@ -6,6 +6,7 @@ import { patchMaterial } from '../shaders.js';
 import { CITY_BY_ID } from './data.js';
 import { CELL, GRID, typeOf, key } from './regional-data.js';
 import { plotBaseGeo, stageGeo, buildingGeo, workerGeo, readyGeo } from './regional-models.js';
+import { TYPE_KIT, createInstanced, createModel, disposeKit } from './regional-kit.js';
 
 const MAXC = 36;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpE = new THREE.Euler();
@@ -16,6 +17,7 @@ export const cellCenter = (x, z) => [(x + 0.5) * CELL, (z + 0.5) * CELL];
 export class RegionalScene {
   constructor(game, id) {
     this.g = game; this.id = id; this.T = typeOf(id);
+    this.kit = TYPE_KIT[CITY_BY_ID[id].farm[0]] || null; // modelos pulidos del kit (si el tipo los tiene)
     this.renderer = game.world.renderer;
     this.scene = new THREE.Scene();
     this.cam = new THREE.PerspectiveCamera(30, 1, 0.5, 200);
@@ -48,7 +50,10 @@ export class RegionalScene {
     this.workers = this.add(new THREE.InstancedMesh(this.geo(workerGeo(2)), this.mat, 6)); this.workers.castShadow = true; this.workers.frustumCulled = false;
     this.ready = this.add(new THREE.InstancedMesh(this.geo(readyGeo()), new THREE.MeshBasicMaterial({ color: 0xffd84a }), MAXC)); this.disposables.push(this.ready.material); this.ready.frustumCulled = false;
     this.bases = this.add(new THREE.InstancedMesh(this.geo(plotBaseGeo(T)), this.mat, MAXC)); this.bases.receiveShadow = true; this.bases.frustumCulled = false;
-    this.stages = [0, 1, 2].map((k) => { const m = this.add(new THREE.InstancedMesh(this.geo(stageGeo(T, k)), this.matFol, MAXC)); m.castShadow = true; m.frustumCulled = false; return m; });
+    if (this.kit) { // 4 etapas del kit (cada una ≤3 mallas instanciadas; el lote ya trae su suelo)
+      this.kstages = [0, 1, 2, 3].map((k) => this.add(createInstanced(this.kit.crop, MAXC, { stage: k, seed: 3, sea: true })));
+      this.bases.visible = false;
+    } else this.stages = [0, 1, 2].map((k) => { const m = this.add(new THREE.InstancedMesh(this.geo(stageGeo(T, k)), this.matFol, MAXC)); m.castShadow = true; m.frustumCulled = false; return m; });
     // lote libre: marco de estacas para tocar
     const lot = new M.Builder();
     lot.box(2.0, 0.02, 2.0, 0xb8a070, { m: 7 });
@@ -111,10 +116,14 @@ export class RegionalScene {
   }
   buildBuildings() {
     if (this.bld) { this.scene.remove(this.bld); this.bld.geometry.dispose(); }
+    for (const m of this.kitBld || []) m.dispose();
+    this.kitBld = [];
     const b = new M.Builder();
     for (const [k, c] of Object.entries(this.farm.cells)) {
       if (c.k !== 'b') continue;
       const [x, z] = k.split(',').map(Number), [cx, cz] = cellCenter(x, z);
+      const kind = this.kit?.build?.[c.b];
+      if (kind) { const m = createModel(kind, { growth: 1, seed: x + z * 7, sea: true }); m.position.set(cx, 0, cz); this.add(m); this.kitBld.push(m); continue; }
       b.merge(M.place(buildingGeo(c.b, this.T), cx, cz, 0));
     }
     this.bld = this.add(new THREE.Mesh(b.build(), this.mat)); this.bld.castShadow = true; this.bld.receiveShadow = true;
@@ -128,6 +137,7 @@ export class RegionalScene {
     this.gray = this.sim.rgBlock(this.id) === 'occ';
     const tint = this.gray ? 0x9a9c9e : 0xffffff;
     for (const m of [this.mat, this.matFol]) m.color.setHex(tint);
+    if (this.kit) { const km = this.kstages?.[0]?.meshes?.[0]?.material; if (km) for (const g of this.kstages) for (const mm of g.meshes) mm.material.color.setHex(tint); for (const m of this.kitBld || []) m.traverse((o) => o.material?.color?.setHex(tint)); }
   }
   fit() {
     const W = this.W, D = this.D;
@@ -175,7 +185,7 @@ export class RegionalScene {
     this.sync(false);
     this.placeCam(dt);
     const T = this.T, sim = this.sim, [cols, rows] = GRID[f.lvl], dur = T.prod.dur, t = this.time;
-    const n = [0, 0, 0]; let nb = 0, nl = 0, nr = 0;
+    const n = [0, 0, 0], kn = [0, 0, 0, 0]; let nb = 0, nl = 0, nr = 0;
     const plots = [];
     for (let z = 0; z < rows; z++) for (let x = 0; x < cols; x++) {
       const c = f.cells[key(x, z)], [cx, cz] = cellCenter(x, z);
@@ -184,12 +194,14 @@ export class RegionalScene {
       setI(this.bases, nb++, cx, 0.0, cz);
       const left = sim.rgLeft(this.id, x, z), st = left <= 0 ? 2 : left < dur * 0.5 ? 1 : 0;
       const bob = T.prod.boat ? Math.sin(t * 1.6 + x + z * 2) * 0.05 : 0;
-      setI(this.stages[st], n[st]++, cx, bob + (T.slope ? 0.2 : 0), cz, T.prod.animal ? Math.sin(t * 0.3 + x * 2 + z) * 0.4 : T.prod.boat ? Math.sin(t * 0.7 + x) * 0.08 : 0);
+      if (this.kit) { const ks = left <= 0 ? 3 : Math.min(2, Math.floor((1 - left / dur) * 3)); this.kstages[ks].setAt(kn[ks]++, cx, cz, 0, 1, T.prod.boat ? bob : 0); }
+      else setI(this.stages[st], n[st]++, cx, bob + (T.slope ? 0.2 : 0), cz, T.prod.animal ? Math.sin(t * 0.3 + x * 2 + z) * 0.4 : T.prod.boat ? Math.sin(t * 0.7 + x) * 0.08 : 0);
       if (st === 2 && !this.gray) setI(this.ready, nr++, cx, 2.1 + Math.sin(t * 3 + x + z) * 0.12, cz, t * 2);
       plots.push([cx, cz]);
     }
     this.lots.count = nl; this.bases.count = nb; this.ready.count = nr;
-    this.stages.forEach((m, i) => { m.count = n[i]; m.instanceMatrix.needsUpdate = true; });
+    if (this.kit) this.kstages.forEach((g, i) => { g.count = kn[i]; g.visible = kn[i] > 0; });
+    else this.stages.forEach((m, i) => { m.count = n[i]; m.instanceMatrix.needsUpdate = true; });
     for (const m of [this.lots, this.bases, this.ready]) m.instanceMatrix.needsUpdate = true;
     // jornaleros: van de lote en lote (sin bohío de jornaleros, solo uno)
     const nw = this.gray ? 0 : Math.min(6, sim.rgHas(this.id, 'casa') ? 2 + Math.floor(plots.length / 4) : 1);
@@ -208,6 +220,10 @@ export class RegionalScene {
     this.renderer.render(this.scene, this.cam);
   }
   dispose() {
+    for (const g of this.kstages || []) g.dispose();
+    for (const m of this.kitBld || []) m.dispose();
+    this.kstages = null; this.kitBld = null;
+    disposeKit();
     this.scene.traverse((o) => { if (o.isMesh && o.geometry) o.geometry.dispose(); if (o.isInstancedMesh) o.dispose(); });
     for (const d of this.disposables) d.dispose?.();
     this.disposables = [];

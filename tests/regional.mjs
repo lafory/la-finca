@@ -119,7 +119,7 @@ async function run(name) {
       if (plan.rent) { await ev((id) => { window.__finca.sim.rgFarm(id).bank += 1234; }, id); await sleep(300); const m0 = await money(); await tap('#rv-rent'); F.rent = (await money()) - m0; }
       await sleep(900);
       await shot(`2-visita-${id}`);
-      F.drawCalls = await ev(() => window.__finca.g?.world?.renderer?.info?.render?.calls ?? window.__finca.world?.renderer?.info?.render?.calls ?? null);
+      F.perf = await ev(async () => { const g = window.__finca; let f = 0; const t0 = performance.now(); await new Promise((r) => { const tick = () => { f++; if (performance.now() - t0 < 2000) requestAnimationFrame(tick); else r(); }; requestAnimationFrame(tick); }); const i = g.world.renderer.info.render; return { fps: Math.round(f / 2), calls: i.calls, tris: i.triangles }; });
       await tap('[data-act="mbvback"]'); await sleep(700);
       F.disposed = await ev(() => !!window.__rgLast?.disposed && !window.__finca.mambi.visit && !document.getElementById('mambi').querySelector('.rv-hide'));
       return F;
