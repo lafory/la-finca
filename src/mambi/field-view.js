@@ -101,6 +101,13 @@ function trenchGeo() {
   b.box(1.15, 0.16, 0.22, 0xc4b48a, { y: 0.16, z: 0.26 });
   return b.build();
 }
+function bushGeo() {
+  const b = new M.Builder();
+  b.cone(0.2, 0.32, 5, 0x3f6e2c, { y: 0.02 });
+  b.cone(0.12, 0.22, 5, 0xe2b04a, { x: 0.1, y: 0.16 });
+  b.cone(0.08, 0.16, 4, 0xf2e4c0, { x: -0.08, y: 0.18 });
+  return b.build();
+}
 function barGeo() {
   const b = new M.Builder();
   b.box(1.45, 0.28, 0.32, 0x8b5a32, { y: 0.12, rz: 0.08 });
@@ -110,12 +117,12 @@ function barGeo() {
 }
 
 const COLORS = {
-  tierra: [0x8c9a48, 0x7d8f45, 0x73883c],
-  camino: [0xc9a477, 0xb89268],
-  cana: [0x87a34a, 0x73943c],
-  rio: [0x3d92a0, 0x2f7f8e],
-  muro: [0xb7a890, 0xa89880],
-  plaza: [0xe7d7b0, 0xddc89a],
+  tierra: [0x9aaa4a, 0x7f9840, 0x6d8838, 0xb0a85a],
+  camino: [0xe4c48a, 0xc9a36a, 0xd7b47a],
+  cana: [0x7cb534, 0x5e9a2c, 0x8fc64a],
+  rio: [0x2f93b4, 0x47b4cc, 0x1f7ea0],
+  muro: [0xd2c2a4, 0xb7a488, 0xc4b49a],
+  plaza: [0xf6e6bc, 0xedd59a, 0xf3dca8],
 };
 
 export class FieldView {
@@ -126,6 +133,7 @@ export class FieldView {
     this.gfocus = { x: 0, z: 0 };
     this.dist = 32;
     this.gdist = 32;
+    this.mode = 'attack';
     this.shown = new Map();
     this.fading = new Map();
     this.bursts = [];
@@ -138,12 +146,15 @@ export class FieldView {
     if (this.builtFor === id && this.scene) return;
     this.dispose();
     const scene = (this.scene = new THREE.Scene());
-    scene.background = new THREE.Color(0xe7c398);
-    scene.fog = new THREE.Fog(0xe7c398, 42, 130);
-    scene.add(new THREE.HemisphereLight(0xfff1d4, 0x6a5438, 1.35));
-    const sun = new THREE.DirectionalLight(0xffd7a4, 1.85);
+    scene.background = new THREE.Color(0xf6c98a);
+    scene.fog = new THREE.Fog(0xf6c98a, 70, 190);
+    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x6a5438, 1.25));
+    const sun = new THREE.DirectionalLight(0xffd7a4, 1.7);
     sun.position.set(-18, 32, 14);
     scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x9ec4d8, 0.45);
+    fill.position.set(22, 14, -12);
+    scene.add(fill);
     const g = new THREE.BufferGeometry();
     const pos = [], col = [];
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
@@ -199,6 +210,22 @@ export class FieldView {
     palms.instanceMatrix.needsUpdate = true;
     scene.add(palms);
 
+    const bushes = [];
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      if (battle.ground[y][x] !== 'tierra') continue;
+      if (((x * 5 + y * 11) % 9) !== 0) continue;
+      if (Math.abs(x - battle.plaza.x) + Math.abs(y - battle.plaza.y) < 3) continue;
+      bushes.push([x, y]);
+    }
+    this.bushes = new THREE.InstancedMesh(bushGeo(), std, Math.max(1, bushes.length));
+    bushes.forEach(([x, y], i) => {
+      const [wx, wz] = tileWorld(x, y);
+      setI(this.bushes, i, wx, 0, wz, (x + y) * 0.4, 0.85);
+    });
+    this.bushes.count = bushes.length;
+    this.bushes.instanceMatrix.needsUpdate = true;
+    scene.add(this.bushes);
+
     this.meshes = {};
     const specs = [
       ['player', 'machete', fighter(0xeee4c8, 0xd9c08a, 'machete')],
@@ -233,11 +260,12 @@ export class FieldView {
     this.zoneMesh = new THREE.InstancedMesh(tile, this.zoneMat, 500);
     this.zoneMesh.count = 0; this.zoneMesh.frustumCulled = false; scene.add(this.zoneMesh);
 
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.72, 16), new THREE.MeshBasicMaterial({ color: 0xf2c14e, side: THREE.DoubleSide, transparent: true, opacity: 0.95 }));
-    ring.rotation.x = -Math.PI / 2;
-    ring.visible = false;
-    scene.add(ring);
-    this.ring = ring;
+    const ringGeo = new THREE.RingGeometry(0.62, 0.82, 20);
+    ringGeo.rotateX(-Math.PI / 2);
+    this.selRing = new THREE.InstancedMesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xf2c14e, side: THREE.DoubleSide, transparent: true, opacity: 0.95, depthWrite: false }), 32);
+    this.selRing.count = 0;
+    this.selRing.frustumCulled = false;
+    scene.add(this.selRing);
 
     const pole = new THREE.Mesh(M.flagPoleGeo ? M.flagPoleGeo(2.2) : new THREE.CylinderGeometry(0.04, 0.05, 2.2, 6), std);
     const [px, pz] = tileWorld(battle.plaza.x, battle.plaza.y);
@@ -290,23 +318,68 @@ export class FieldView {
     if (!n) return;
     this.gfocus.x = (minX + maxX) / 2;
     this.gfocus.z = (minZ + maxZ) / 2;
-    const span = Math.max(maxX - minX, (maxZ - minZ) * 1.15, TILE * 8);
-    this.gdist = Math.min(who === 'all' ? 62 : 40, Math.max(18, span * 0.92));
+    const span = Math.max(maxX - minX, (maxZ - minZ) * 1.2, TILE * 6);
+    this.gdist = Math.min(who === 'all' ? 86 : 48, Math.max(16, span * (who === 'all' ? 1.05 : 0.95)));
   }
 
-  zoom(f) { this.gdist = Math.max(14, Math.min(64, this.gdist * f)); }
-  pan(dx, dy) {
-    this.cam.updateMatrixWorld();
-    const e = this.cam.matrixWorld.elements;
-    const rx = e[0], rz = e[2], fx = -e[8], fz = -e[10];
-    const k = this.dist / 520;
-    this.gfocus.x -= (dx * rx + dy * fx) * k;
-    this.gfocus.z -= (dx * rz + dy * fz) * k;
-    const lim = COLS * TILE * 0.55;
-    this.gfocus.x = Math.max(-lim, Math.min(lim, this.gfocus.x));
-    this.gfocus.z = Math.max(-lim, Math.min(lim, this.gfocus.z));
+  zoomAt(factor, clientX, clientY, canvas) {
+    const before = clientX != null && canvas ? this.groundPoint(clientX, clientY, canvas) : null;
+    this.gdist = Math.max(12, Math.min(90, this.gdist * factor));
+    this.dist = this.gdist;
+    this.placeCam();
+    if (!before || !canvas) return;
+    const after = this.groundPoint(clientX, clientY, canvas);
+    if (!after) return;
+    this.gfocus.x += before.x - after.x;
+    this.gfocus.z += before.z - after.z;
+    this.clampFocus();
     this.focus.x = this.gfocus.x;
     this.focus.z = this.gfocus.z;
+    this.placeCam();
+  }
+
+  zoom(f) { this.zoomAt(f, null, null, null); }
+
+  pan(dx, dy, canvas) {
+    if (!canvas || (!dx && !dy)) return;
+    const r = canvas.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const a = this.groundPoint(cx, cy, canvas);
+    const b = this.groundPoint(cx + dx, cy + dy, canvas);
+    if (!a || !b) return;
+    this.gfocus.x += a.x - b.x;
+    this.gfocus.z += a.z - b.z;
+    this.clampFocus();
+    this.focus.x = this.gfocus.x;
+    this.focus.z = this.gfocus.z;
+  }
+
+  clampFocus() {
+    const limX = COLS * TILE * 0.62;
+    const limZ = ROWS * TILE * 0.7;
+    this.gfocus.x = Math.max(-limX, Math.min(limX, this.gfocus.x));
+    this.gfocus.z = Math.max(-limZ, Math.min(limZ, this.gfocus.z));
+  }
+
+  placeCam() {
+    const sign = this.mode === 'defense' ? -1 : 1;
+    const size = new THREE.Vector2();
+    this.renderer.getSize(size);
+    this.cam.aspect = size.x / Math.max(1, size.y);
+    this.cam.updateProjectionMatrix();
+    const lift = this.dist * 0.07 * sign;
+    this.cam.position.set(this.focus.x + this.dist * 0.16 * sign, this.dist * 0.78, this.focus.z + this.dist * 0.66 * sign);
+    this.cam.lookAt(this.focus.x, 0.3, this.focus.z + lift);
+    this.cam.updateMatrixWorld();
+  }
+
+  groundPoint(clientX, clientY, canvas) {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(ndc, this.cam);
+    if (!this.ray.ray.intersectPlane(_plane, _hit)) return null;
+    return { x: _hit.x, z: _hit.z };
   }
 
   pick(clientX, clientY, canvas) {
@@ -334,19 +407,12 @@ export class FieldView {
 
   render(battle, dt, time, opts) {
     this.ensure(battle);
-    const k = 1 - Math.exp(-Math.min(0.05, dt) * 8);
+    this.mode = battle.mode;
+    const k = 1 - Math.exp(-dt * 16);
     this.focus.x += (this.gfocus.x - this.focus.x) * k;
     this.focus.z += (this.gfocus.z - this.focus.z) * k;
     this.dist += (this.gdist - this.dist) * k;
-    const sign = battle.mode === 'defense' ? -1 : 1;
-    const size = new THREE.Vector2();
-    this.renderer.getSize(size);
-    this.cam.aspect = size.x / Math.max(1, size.y);
-    this.cam.updateProjectionMatrix();
-    // La barra de órdenes tapa el borde de abajo: mirar un poco hacia tu lado para que la tropa quede visible.
-    const lift = this.dist * 0.11 * sign;
-    this.cam.position.set(this.focus.x + this.dist * 0.16 * sign, this.dist * 0.8, this.focus.z + this.dist * 0.68 * sign);
-    this.cam.lookAt(this.focus.x, 0.35, this.focus.z + lift);
+    this.placeCam();
 
     const buckets = {};
     for (const key of Object.keys(this.meshes)) buckets[key] = [];
@@ -372,12 +438,13 @@ export class FieldView {
       const moving = Math.hypot(tx - s.x, tz - s.z) > 0.05;
       const bob = moving ? Math.abs(Math.sin(time * (u.kind === 'cab' ? 11 : 8) + u.id)) * 0.07 : 0;
       const ry = Math.atan2(-(u.fx || 0), -(u.fy || -1));
-      buckets[meshKey].push({ s, bob, ry, fade, kind: u.kind });
+      const sel = opts.selIds?.has?.(u.id);
+      buckets[meshKey].push({ s, bob, ry, fade, kind: u.kind, sel });
     }
     for (const [key, mesh] of Object.entries(this.meshes)) {
       const list = buckets[key];
       mesh.count = list.length;
-      list.forEach((o, i) => setI(mesh, i, o.s.x, o.bob, o.s.z, o.ry, (o.kind === 'cab' ? 1 : 0.92) * Math.max(0.05, o.fade)));
+      list.forEach((o, i) => setI(mesh, i, o.s.x, o.bob, o.s.z, o.ry, (o.kind === 'cab' ? 1.05 : 1) * (o.sel ? 1.12 : 1) * Math.max(0.05, o.fade)));
       mesh.instanceMatrix.needsUpdate = true;
     }
 
@@ -413,15 +480,16 @@ export class FieldView {
     this.zoneMesh.count = zi;
     this.zoneMesh.instanceMatrix.needsUpdate = true;
 
-    const sel = opts.sel;
-    this.ring.visible = !!(sel && sel.alive);
-    if (sel && sel.alive) {
-      const s = this.shown.get(sel.id);
-      const [wx, wz] = s ? [s.x, s.z] : tileWorld(sel.x, sel.y);
-      this.ring.position.set(wx, 0.12, wz);
-      const pulse = 1 + Math.sin(time * 5) * 0.06;
-      this.ring.scale.setScalar(pulse);
-    }
+    const chosen = opts.selUnits || [];
+    this.selRing.count = Math.min(chosen.length, 32);
+    chosen.forEach((u, i) => {
+      if (i >= 32 || !u.alive) return;
+      const s = this.shown.get(u.id);
+      const [wx, wz] = s ? [s.x, s.z] : tileWorld(u.x, u.y);
+      const pulse = 1 + Math.sin(time * 5 + i) * 0.06;
+      setI(this.selRing, i, wx, 0.14, wz, time * 0.6, pulse);
+    });
+    this.selRing.instanceMatrix.needsUpdate = true;
 
     const playerOn = alive(battle, 'player').some((u) => u.x === battle.plaza.x && u.y === battle.plaza.y);
     const enemyOn = alive(battle, 'enemy').some((u) => u.x === battle.plaza.x && u.y === battle.plaza.y);

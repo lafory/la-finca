@@ -26,7 +26,11 @@ const STYLE = `
 .fd-card p{margin:3px 0 0;font-size:13px;line-height:1.3}
 .fd-log{font-size:12.5px;line-height:1.3;color:#3a2a1e}
 .fd-log div{background:rgba(42,31,21,.88);color:#fff6e4;border-radius:10px;padding:4px 8px;margin-top:3px}
-.fd-zoom{position:absolute;right:calc(8px + var(--sar,0px));top:42%;z-index:4;display:flex;flex-direction:column;gap:8px;pointer-events:auto}
+.fd-zoom{position:absolute;right:calc(8px + var(--sar,0px));top:22%;z-index:4;display:flex;flex-direction:column;gap:8px;pointer-events:auto;align-items:center}
+.fd-zoom .round{width:52px;height:52px;font-size:26px;font-weight:800}
+.fd-box{position:absolute;border:2px solid #f2c14e;background:rgba(242,193,78,.22);z-index:5;pointer-events:none;display:none;border-radius:4px}
+.fd-kinds{display:flex;gap:6px;flex-wrap:wrap}
+.fd-kinds .btn{flex:1 1 18%;min-width:64px}
 .fd-bar{position:absolute;left:0;right:0;bottom:0;z-index:4;pointer-events:auto;background:rgba(246,234,208,.97);border-top:2px solid #5a4636;padding:8px 8px calc(8px + var(--sab,0px));display:flex;flex-direction:column;gap:6px;max-height:46dvh;overflow:auto;-webkit-overflow-scrolling:touch}
 .fd-tools{display:flex;gap:6px;flex-wrap:wrap}
 .fd-tools .btn{flex:1 1 46%}
@@ -40,8 +44,8 @@ const STYLE = `
 .fd-go .btn{flex:1 1 40%}
 .fd-bar{max-height:40dvh}
 .fd-sel{margin:0;font-size:13px;font-weight:700}
-.fd-tag{position:absolute;transform:translate(-50%,-120%);pointer-events:none;z-index:3;display:flex;flex-direction:column;align-items:center;gap:1px}
-.fd-tag b{font-size:11px;line-height:1;background:rgba(42,31,21,.88);color:#fff6e4;border-radius:8px;padding:2px 5px}
+.fd-tag{position:absolute;transform:translate(-50%,-120%);pointer-events:auto;z-index:3;display:flex;flex-direction:column;align-items:center;gap:1px;touch-action:none}
+.fd-tag b{font-size:12px;line-height:1;background:rgba(42,31,21,.88);color:#fff6e4;border-radius:8px;padding:5px 7px;min-width:26px;text-align:center}
 .fd-tag.player b{background:#3f6a2a}
 .fd-tag.enemy b{background:#6a3030}
 .fd-tag.on b{outline:2px solid #f2c14e}
@@ -64,7 +68,7 @@ export class FieldUI {
     this.battle = null;
     this.busy = false;
     this.tool = 'fusil';
-    this.sel = null;
+    this.picked = new Set();
     this.arm = null;
     this.log = [];
     this.hold = false;
@@ -79,14 +83,15 @@ export class FieldUI {
     root.className = 'hidden';
     root.innerHTML = `
       <div id="field-stage"></div>
+      <div id="field-box" class="fd-box"></div>
       <div id="field-tags"></div>
       <div class="fd-top">
         <div class="fd-card"><h2 id="fd-title">Campo de batalla</h2><p id="fd-hint"></p></div>
         <div class="fd-log" id="fd-log"></div>
       </div>
       <div class="fd-zoom">
-        <button class="round" data-act="fdzoom" data-f="0.82" aria-label="Acercar">+</button>
-        <button class="round" data-act="fdzoom" data-f="1.22" aria-label="Alejar">−</button>
+        <button class="round" type="button" data-zoom="0.78" aria-label="Acercar">+</button>
+        <button class="round" type="button" data-zoom="1.28" aria-label="Alejar">−</button>
         <button class="round" data-act="fdfit" data-who="player" aria-label="Ver mi tropa">Yo</button>
         <button class="round" data-act="fdfit" data-who="all" aria-label="Ver todo el campo">Todo</button>
       </div>
@@ -94,20 +99,48 @@ export class FieldUI {
     game.mambi.el.appendChild(root);
     this.stage = root.querySelector('#field-stage');
     this.tags = root.querySelector('#field-tags');
+    this.boxEl = root.querySelector('#field-box');
     this.bar = root.querySelector('#fd-bar');
     this.setupPointers();
+    this.setupZoom();
   }
 
   get sim() { return this.g.sim; }
 
+  setupZoom() {
+    const hold = (btn) => {
+      let timer = null;
+      const stop = () => { if (timer) clearInterval(timer); timer = null; };
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const f = +btn.dataset.zoom;
+        const go = () => this.view.zoomAt(f, null, null, this.g.canvas);
+        go();
+        timer = setInterval(go, 80);
+      });
+      btn.addEventListener('pointerup', stop);
+      btn.addEventListener('pointercancel', stop);
+      btn.addEventListener('pointerleave', stop);
+      btn.addEventListener('click', (e) => e.stopPropagation());
+    };
+    this.root.querySelectorAll('[data-zoom]').forEach(hold);
+  }
+
   setupPointers() {
     const st = this.stage;
     const pts = new Map();
-    let last = null, pinch = 0, moved = 0;
+    let last = null, pinch = 0, pinchMid = null, moved = 0, downAt = 0, downPos = null, panned = false, box = null;
+    const hideBox = () => { this.boxEl.style.display = 'none'; };
     st.addEventListener('pointerdown', (e) => {
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       last = [e.clientX, e.clientY];
       moved = 0;
+      panned = false;
+      box = null;
+      downAt = performance.now();
+      downPos = [e.clientX, e.clientY];
+      hideBox();
       st.setPointerCapture?.(e.pointerId);
       e.stopPropagation();
     });
@@ -118,29 +151,119 @@ export class FieldUI {
       if (pts.size >= 2) {
         const [a, c] = [...pts.values()];
         const d = Math.hypot(a[0] - c[0], a[1] - c[1]);
-        if (pinch) this.view.zoom(pinch / d);
+        const mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2;
+        if (pinch) this.view.zoomAt(Math.pow(pinch / d, 1.65), mx, my, this.g.canvas);
+        if (pinchMid) this.view.pan(mx - pinchMid[0], my - pinchMid[1], this.g.canvas);
         pinch = d;
+        pinchMid = [mx, my];
+        box = null;
+        hideBox();
+        moved = 40;
+        panned = true;
+        return;
+      }
+      const travel = downPos ? Math.hypot(e.clientX - downPos[0], e.clientY - downPos[1]) : 0;
+      const held = performance.now() - downAt;
+      if (!panned && !box && held > 240 && travel > 12) {
+        box = { x0: downPos[0], y0: downPos[1], x1: e.clientX, y1: e.clientY };
+      }
+      if (box) {
+        box.x1 = e.clientX;
+        box.y1 = e.clientY;
+        const host = this.root.getBoundingClientRect();
+        const x = Math.min(box.x0, box.x1) - host.left, y = Math.min(box.y0, box.y1) - host.top;
+        this.boxEl.style.display = 'block';
+        this.boxEl.style.left = `${x}px`;
+        this.boxEl.style.top = `${y}px`;
+        this.boxEl.style.width = `${Math.abs(box.x1 - box.x0)}px`;
+        this.boxEl.style.height = `${Math.abs(box.y1 - box.y0)}px`;
+        moved = 80;
         return;
       }
       const dx = e.clientX - last[0], dy = e.clientY - last[1];
       moved += Math.abs(dx) + Math.abs(dy);
-      if (moved > 6) this.view.pan(dx, dy);
+      if (moved > 8) {
+        panned = true;
+        this.view.pan(dx, dy, this.g.canvas);
+      }
       last = [e.clientX, e.clientY];
     });
     const end = (e) => {
       const was = moved;
+      const boxed = box;
       pts.delete(e.pointerId);
-      if (pts.size < 2) pinch = 0;
+      if (pts.size < 2) { pinch = 0; pinchMid = null; }
       e.stopPropagation();
-      if (e.type === 'pointerup' && was < 12) this.tap(e.clientX, e.clientY);
+      if (e.type !== 'pointerup') { box = null; hideBox(); return; }
+      if (boxed && Math.hypot(boxed.x1 - boxed.x0, boxed.y1 - boxed.y0) > 16) {
+        this.selectBox(boxed);
+        box = null;
+        hideBox();
+        return;
+      }
+      box = null;
+      hideBox();
+      if (was < 12) this.tap(e.clientX, e.clientY);
     };
     st.addEventListener('pointerup', end);
-    st.addEventListener('pointercancel', (e) => { pts.delete(e.pointerId); pinch = 0; e.stopPropagation(); });
-    st.addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); this.view.zoom(e.deltaY > 0 ? 1.1 : 0.9); }, { passive: false });
+    st.addEventListener('pointercancel', (e) => { pts.delete(e.pointerId); pinch = 0; pinchMid = null; box = null; hideBox(); e.stopPropagation(); });
+    st.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.view.zoomAt(Math.exp(e.deltaY * 0.0018), e.clientX, e.clientY, this.g.canvas);
+    }, { passive: false });
+    this.tags.addEventListener('pointerdown', (e) => e.stopPropagation());
+    this.tags.addEventListener('pointerup', (e) => {
+      const el = e.target.closest('.fd-tag');
+      if (!el || !this.active || this.busy) return;
+      e.stopPropagation();
+      this.toggleUnit(+el.dataset.uid);
+    });
   }
 
   toast(m) { this.ui.toast(m); }
-  selected() { return this.battle?.units.find((u) => u.id === this.sel) || null; }
+  pickedUnits() {
+    if (!this.battle) return [];
+    return this.battle.units.filter((u) => this.picked.has(u.id) && u.alive && u.side === 'player');
+  }
+  toggleUnit(id) {
+    const u = this.battle?.units.find((n) => n.id === id && n.alive);
+    if (!u) return;
+    if (u.side !== 'player') {
+      const g = this.battle.ground[u.y][u.x];
+      this.toast(`${unitName(u)} · vida ${u.hp}/${u.max}${g === 'cana' ? ' · el cañaveral lo cubre' : g === 'rio' ? ' · metido en el río' : ''}.`);
+      return;
+    }
+    if (this.picked.has(id)) this.picked.delete(id);
+    else this.picked.add(id);
+    this.arm = null;
+    this.g.sound?.play('tap');
+    this.paint();
+  }
+  selectBox(box) {
+    const canvas = this.g.canvas;
+    const r = canvas.getBoundingClientRect();
+    const x1 = Math.min(box.x0, box.x1) - r.left, x2 = Math.max(box.x0, box.x1) - r.left;
+    const y1 = Math.min(box.y0, box.y1) - r.top, y2 = Math.max(box.y0, box.y1) - r.top;
+    this.picked.clear();
+    for (const u of alive(this.battle, 'player')) {
+      const shown = this.view.shown.get(u.id);
+      const p = this.view.project(u.x, u.y, canvas, shown ? { x: shown.x, z: shown.z } : null);
+      if (p.vis && p.x >= x1 && p.x <= x2 && p.y >= y1 && p.y <= y2) this.picked.add(u.id);
+    }
+    this.arm = null;
+    this.g.sound?.play('tap');
+    this.toast(this.picked.size ? `${this.picked.size} tropas marcadas.` : 'No había tropa tuya en ese cuadro.');
+    this.paint();
+  }
+  nearUnit(x, y, side) {
+    let best = null, d = 1.35;
+    for (const u of alive(this.battle, side)) {
+      const k = Math.hypot(u.x - x, u.y - y);
+      if (k < d) { d = k; best = u; }
+    }
+    return best;
+  }
 
   openAttack(cityId, tactic) {
     const why = this.sim.mbCanAttack(cityId, tactic);
@@ -185,7 +308,7 @@ export class FieldUI {
     this.g.mambi.el.classList.add('field-on');
     this.root.classList.remove('hidden');
     this.tool = this.battle.budget.inf ? 'fusil' : this.battle.budget.cab ? 'cab' : 'mil';
-    this.sel = null;
+    this.picked = new Set();
     this.arm = null;
     this.log = [];
     this.clock = performance.now();
@@ -205,6 +328,7 @@ export class FieldUI {
     this.root.classList.add('hidden');
     this.battle = null;
     this.arm = null;
+    this.picked = new Set();
   }
 
   chip(k, label, n) {
@@ -218,20 +342,23 @@ export class FieldUI {
     const title = this.root.querySelector('#fd-title');
     const hint = this.root.querySelector('#fd-hint');
     const log = this.root.querySelector('#fd-log');
+    const mine = this.pickedUnits();
     const deploy = b.phase === 'deploy';
     title.textContent = deploy
       ? `Campo de ${b.city}`
       : `Turno ${b.turn} · ${b.city}`;
     hint.textContent = deploy
       ? (b.mode === 'attack'
-        ? 'Más grande que la finca. Coloca la tropa en tu zona (el borde de abajo): machete, fusil, caballería y cañón. El cañaveral cubre, el muro tapa el tiro y el río frena.'
-        : 'Defiende la plaza, al fondo de tu zona. Cava trincheras y pon barricadas: el cañaveral y el muro cubren, el río les frena el paso.')
+        ? 'Arrastra para mover la vista. Pellizca o usa +/− para acercar. Coloca la tropa abajo: el cañaveral cubre, el muro tapa y el río frena.'
+        : 'Arrastra la vista y pellizca para acercar. Defiende la plaza. El cañaveral y el muro cubren; el río les frena.')
       : (this.arm
-        ? `${describeOrders(this.arm.t)} Toca una casilla marcada, o la orden otra vez para que ellos elijan.`
-        : (b.mode === 'attack' ? 'Toma la plaza (la bandera) o dispersa a los guardias.' : 'Que no pisen la plaza. Si rompes la columna, la ciudad aguanta.'));
+        ? `${describeOrders(this.arm.t)} Toca una casilla amarilla, o la orden otra vez para que ella elija.`
+        : (mine.length > 1
+          ? `${mine.length} tropas marcadas. La orden vale para todas. Toca otra vez una marca para soltarla.`
+          : 'Toca varias tropas para marcarlas, o mantén el dedo y arrastra un cuadro. Arrastra para mover la vista.'));
     log.innerHTML = this.log.map((l) => `<div>${l}</div>`).join('');
     const B = b.budget;
-    const u = this.selected();
+    const mineNow = this.pickedUnits();
     let html = '';
     if (deploy) {
       html += `<div class="fd-tools">`;
@@ -244,18 +371,25 @@ export class FieldUI {
       html += this.chip('barricada', 'Barricada', `${B.bar}`);
       html += `</div>`;
       const why = canStart(b);
-      html += `<p class="fd-sel">${u && u.side === 'player' ? `${unitName(u)} · ${u.men} · tocada para quitar` : (why || 'Cuando la tropa esté colocada, empieza.')}</p>`;
+      html += `<p class="fd-sel">${mineNow.length ? `${mineNow.length} marcada${mineNow.length > 1 ? 's' : ''} · Quitar las devuelve` : (why || 'Cuando la tropa esté colocada, empieza.')}</p>`;
       html += `<div class="fd-row">`;
       html += `<button class="btn" data-act="fdauto">Formar la tropa</button>`;
       html += `<button class="btn primary" data-act="fdstart">${b.mode === 'attack' ? '¡Al ataque!' : 'A defender'}</button>`;
-      if (u && u.side === 'player') html += `<button class="btn" data-act="fdlift">Quitar</button>`;
+      if (mineNow.length) html += `<button class="btn" data-act="fdlift">Quitar</button>`;
       html += `<button class="btn" data-act="fdquick">Resolver rápido</button>`;
       html += `<button class="btn" data-act="fdcancel">Volver</button>`;
       html += `</div>`;
     } else if (this.busy) {
       html += `<p class="fd-sel">La tropa se mueve…</p>`;
     } else {
-      const mine = u && u.side === 'player' && u.alive;
+      const one = mineNow.length === 1 ? mineNow[0] : null;
+      html += `<div class="fd-kinds">`;
+      html += `<button class="btn" data-act="fdkind" data-k="machete">Machetes</button>`;
+      html += `<button class="btn" data-act="fdkind" data-k="fusil">Fusiles</button>`;
+      html += `<button class="btn" data-act="fdkind" data-k="cab">Jinetes</button>`;
+      html += `<button class="btn" data-act="fdkind" data-k="art">Cañones</button>`;
+      if (mineNow.length) html += `<button class="btn" data-act="fdclear">Soltar</button>`;
+      html += `</div>`;
       html += `<div class="fd-tools">`;
       for (const t of ['avanzar', 'flanquear', 'carga', 'retirada']) {
         const on = this.arm && this.arm.t === t ? ' on' : '';
@@ -263,7 +397,7 @@ export class FieldUI {
         html += `<button class="btn${on}" data-act="fdorder" data-k="${t}">${name}</button>`;
       }
       html += `</div>`;
-      html += `<p class="fd-sel">${mine ? `${unitName(u)} · ${u.hp}/${u.max}${u.order ? ` · orden: ${u.order.t}` : ' · sin orden (dispara si alcanza)'}` : 'Toca una tropa tuya y dale una orden. O manda a toda la tropa.'}</p>`;
+      html += `<p class="fd-sel">${mineNow.length > 1 ? `${mineNow.length} tropas · la orden es para ellas` : one ? `${unitName(one)} · ${one.hp}/${one.max}${one.order ? ` · orden: ${one.order.t}` : ' · sin orden'}` : 'Toca una o varias tropas, o un tipo (machetes, fusiles…).'}</p>`;
       html += `<div class="fd-all">`;
       html += `<button class="btn" data-act="fdall" data-k="avanzar">Todos avanzar</button>`;
       html += `<button class="btn" data-act="fdall" data-k="flanquear">Todos flanquear</button>`;
@@ -290,7 +424,7 @@ export class FieldUI {
     const b = this.battle;
     const u = unitAt(b, t.x, t.y);
     if (b.phase === 'deploy') {
-      if (u?.side === 'player') { this.sel = u.id; this.paint(); return; }
+      if (u?.side === 'player') { this.toggleUnit(u.id); return; }
       if (this.tool === 'trinchera' || this.tool === 'barricada') {
         const w = workAtTile(b, t.x, t.y);
         const why = w === this.tool ? liftWork(b, t.x, t.y) : placeWork(b, this.tool, t.x, t.y);
@@ -301,31 +435,28 @@ export class FieldUI {
       } else {
         const why = placeUnit(b, this.tool, t.x, t.y);
         if (why) { this.toast(why); this.g.sound?.play('error'); }
-        else { this.g.sound?.play('tap'); this.sel = b.units[b.units.length - 1].id; }
+        else { this.g.sound?.play('tap'); this.picked = new Set([b.units[b.units.length - 1].id]); }
       }
       this.paint();
       return;
     }
-    if (this.arm?.unit?.alive) {
-      const cells = reachable(b, this.arm.unit, this.arm.t);
-      if (cells.some((c) => c.x === t.x && c.y === t.y)) {
-        setOrder(b, this.arm.unit.id, this.arm.t, t.x, t.y);
+    const hit = u || this.nearUnit(t.x, t.y, 'player') || this.nearUnit(t.x, t.y, 'enemy');
+    if (this.arm && this.pickedUnits().length === 1) {
+      const unit = this.arm.unit;
+      const cells = reachable(b, unit, this.arm.t);
+      const own = hit && hit.id === unit.id;
+      if (!own && cells.some((c) => c.x === t.x && c.y === t.y && (c.x !== unit.x || c.y !== unit.y))) {
+        setOrder(b, unit.id, this.arm.t, t.x, t.y);
         this.arm = null;
         this.g.sound?.play('tap');
         this.paint();
         return;
       }
     }
-    if (u?.side === 'player') { this.sel = u.id; this.arm = null; this.paint(); return; }
-    if (u?.side === 'enemy') {
-      const g = b.ground[u.y][u.x];
-      this.sel = u.id;
-      this.toast(`${unitName(u)} · vida ${u.hp}/${u.max}${g === 'cana' ? ' · el cañaveral lo cubre' : g === 'rio' ? ' · metido en el río' : ''}.`);
-      this.paint();
-      return;
-    }
-    if (!u && !zone(b, t.x, t.y)) this.toast(tileLabel(b.ground[t.y][t.x]));
-    this.arm = null;
+    if (hit?.side === 'player') { this.toggleUnit(hit.id); return; }
+    if (hit?.side === 'enemy') { this.toggleUnit(hit.id); return; }
+    if (this.arm) { this.arm = null; this.paint(); return; }
+    if (!zone(b, t.x, t.y)) this.toast(tileLabel(b.ground[t.y][t.x]));
     this.paint();
   }
 
@@ -333,7 +464,7 @@ export class FieldUI {
     const b = this.battle;
     if (!b && a !== 'csfield' && a !== 'mbfield') return;
     if (a === 'fdtool') { this.tool = d.k; this.arm = null; this.paint(); return; }
-    if (a === 'fdzoom') { this.view.zoom(+d.f || 1); return; }
+    if (a === 'fdzoom') { this.view.zoomAt(+d.f || 1, null, null, this.g.canvas); return; }
     if (a === 'fdfit') { this.view.fit(b, d.who === 'all' ? 'all' : 'player'); return; }
     if (a === 'fdauto') {
       const why = autoDeploy(b);
@@ -344,9 +475,13 @@ export class FieldUI {
       return;
     }
     if (a === 'fdlift') {
-      const why = this.sel ? liftUnit(b, this.sel) : 'Toca una tropa tuya.';
-      if (why) this.toast(why);
-      this.sel = null;
+      const ids = this.pickedUnits().map((u) => u.id);
+      if (!ids.length) { this.toast('Toca las tropas que quieres quitar.'); return; }
+      for (const id of ids) {
+        const why = liftUnit(b, id);
+        if (why) this.toast(why);
+      }
+      this.picked.clear();
       this.paint();
       return;
     }
@@ -365,6 +500,16 @@ export class FieldUI {
       return;
     }
     if (a === 'fdorder') { this.armOrder(d.k); return; }
+    if (a === 'fdkind') {
+      this.picked.clear();
+      for (const u of alive(b, 'player')) if (u.kind === d.k) this.picked.add(u.id);
+      this.arm = null;
+      this.toast(this.picked.size ? `${this.picked.size} marcadas.` : 'No tienes de esas en el campo.');
+      this.g.sound?.play(this.picked.size ? 'tap' : 'error');
+      this.paint();
+      return;
+    }
+    if (a === 'fdclear') { this.picked.clear(); this.arm = null; this.paint(); return; }
     if (a === 'fdall') {
       const n = orderAll(b, d.k);
       this.arm = null;
@@ -377,15 +522,28 @@ export class FieldUI {
   }
 
   armOrder(t) {
-    const u = this.selected();
-    if (!u || u.side !== 'player' || !u.alive) { this.toast('Toca primero una tropa tuya.'); return; }
-    if (t === 'carga' && !KINDS[u.kind].melee) { this.toast('La carga al machete es de macheteros y caballería.'); this.g.sound?.play('error'); return; }
-    if (this.arm && this.arm.t === t && this.arm.unit.id === u.id) {
-      const why = setOrder(this.battle, u.id, t);
-      if (why) this.toast(why);
-      else this.g.sound?.play('tap');
-      this.arm = null;
-    } else this.arm = { t, unit: u };
+    const list = this.pickedUnits();
+    if (!list.length) { this.toast('Marca primero una o varias tropas.'); return; }
+    if (list.length === 1) {
+      const u = list[0];
+      if (t === 'carga' && !KINDS[u.kind].melee) { this.toast('La carga al machete es de macheteros y caballería.'); this.g.sound?.play('error'); return; }
+      if (this.arm && this.arm.t === t && this.arm.unit.id === u.id) {
+        const why = setOrder(this.battle, u.id, t);
+        if (why) this.toast(why);
+        else this.g.sound?.play('tap');
+        this.arm = null;
+      } else this.arm = { t, unit: u };
+      this.paint();
+      return;
+    }
+    let n = 0;
+    for (const u of list) {
+      const tt = t === 'carga' && !KINDS[u.kind].melee ? 'avanzar' : t;
+      if (setOrder(this.battle, u.id, tt) == null) n++;
+    }
+    this.arm = null;
+    this.g.sound?.play('tap');
+    this.toast(n ? `Orden a ${n} tropas. Toca Ejecutar.` : 'Esas tropas no pueden esa orden.');
     this.paint();
   }
 
@@ -505,13 +663,14 @@ export class FieldUI {
     if (!this.battle) return;
     this.tickAnim();
     if (!this.battle) return;
-    const sel = this.battle.units.find((u) => u.id === this.sel) || null;
+    const mine = this.pickedUnits();
     this.view.render(this.battle, dt, t / 1000, {
       anim: this.busy,
       marks: this.marks(),
       markColor: this.arm ? MARK[this.arm.t] : 0xf2c14e,
       zone: this.battle.phase === 'deploy',
-      sel,
+      selUnits: mine,
+      selIds: this.picked,
     });
     this.placeTags();
   }
@@ -535,10 +694,11 @@ export class FieldUI {
       el.style.left = `${p.x}px`;
       el.style.top = `${p.y}px`;
       const hp = Math.max(0, Math.round(100 * u.hp / u.max));
-      const sig = `${u.id}|${hp}|${u.order?.t || ''}|${u.side}|${this.sel === u.id ? 1 : 0}`;
+      const sig = `${u.id}|${hp}|${u.order?.t || ''}|${u.side}|${this.picked.has(u.id) ? 1 : 0}`;
       if (el.dataset.sig === sig) continue;
       el.dataset.sig = sig;
-      el.className = `fd-tag ${u.side}${this.sel === u.id ? ' on' : ''}`;
+      el.dataset.uid = String(u.id);
+      el.className = `fd-tag ${u.side}${this.picked.has(u.id) ? ' on' : ''}`;
       const mark = u.order ? (ORD[u.order.t] || '') : '';
       el.innerHTML = `<b>${LETTER[u.kind] || '?'}${mark}</b><i><span style="width:${hp}%"></span></i>`;
     }
@@ -563,7 +723,7 @@ registerGameModule({
 
 registerAct('mbfield', (ui, d) => ui.g.field?.openAttack(d.id, d.tactic));
 registerAct('csfield', (ui) => ui.g.field?.openDefense());
-for (const a of ['fdtool', 'fdzoom', 'fdfit', 'fdauto', 'fdlift', 'fdcancel', 'fdstart', 'fdorder', 'fdall', 'fdgo', 'fdquick']) {
+for (const a of ['fdtool', 'fdzoom', 'fdfit', 'fdauto', 'fdlift', 'fdcancel', 'fdstart', 'fdorder', 'fdall', 'fdgo', 'fdquick', 'fdkind', 'fdclear']) {
   registerAct(a, (ui, d) => ui.g.field?.act(a, d));
 }
 
