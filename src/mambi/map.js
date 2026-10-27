@@ -4,8 +4,11 @@ import * as THREE from 'three';
 import * as M from '../models.js';
 import { oxcartGeo } from '../central/models.js';
 import { CUBA, PINOS, SIERRAS, PROVINCES, provinceAt, CITIES, K, toMap, UNITS } from './data.js';
+import { typeOf } from './regional-data.js';
+import { mapFarmGeo } from './regional-models.js';
 
 const CELL = 0.9;
+const M_Builder = M.Builder;
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpE = new THREE.Euler();
 const setI = (mesh, i, x, y, z, ry = 0, s = 1) => { tmpQ.setFromEuler(tmpE.set(0, ry, 0)); tmpM.compose(tmpV.set(x, y, z), tmpQ, tmpS.set(s, s, s)); mesh.setMatrixAt(i, tmpM); };
 const std = (o = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0, ...o });
@@ -149,6 +152,22 @@ export class MambiScenes {
     this.ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.09, 6, 24), new THREE.MeshBasicMaterial({ color: 0xffd25a }));
     this.ring.rotation.x = Math.PI / 2;
     scene.add(this.ring);
+    // sitio de la finca regional de cada ciudad: hacia tierra adentro y lejos de las otras ciudades
+    this.inside = inside;
+    this.farmPos = {};
+    for (const cty of CITIES) {
+      const p = this.cityPos[cty.id]; let best = null;
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2 + 2.2, x = p.x + Math.cos(a) * 1.9, z = p.z + Math.sin(a) * 1.6;
+        let sc = inside(x, z) ? 0 : 10;
+        for (const o of CITIES) if (o.id !== cty.id) { const q = this.cityPos[o.id], d = Math.hypot(q.x - x, q.z - z); if (d < 3) sc += 3 - d; }
+        sc += Math.abs(Math.sin(a)) < 0.3 ? 0.2 : 0; // mejor al sur/norte que encima de la etiqueta
+        if (!best || sc < best.sc) best = { sc, x, z };
+      }
+      this.farmPos[cty.id] = new THREE.Vector3(best.x, Math.max(0.45, height(best.x, best.z)), best.z);
+    }
+    this.farmMat = std();
+    this.farmKey = '';
     this.recolor();
   }
   recolor() {
@@ -166,9 +185,32 @@ export class MambiScenes {
     });
     col.needsUpdate = true;
     for (const cty of CITIES) { const F = this.flags[cty.id]; F.cu.visible = freed.has(cty.id); F.gr.visible = !freed.has(cty.id); }
+    this.buildFarms();
     const nx = this.g.sim.mbNext();
     this.ring.visible = !!nx;
     if (nx) { const p = this.cityPos[nx.id]; this.ring.position.set(p.x, p.y + 0.05, p.z); }
+  }
+  // fincas regionales en el mapa: una finquita 3D por ciudad con finca; crece con lo sembrado y construido; gris si ocupada
+  buildFarms() {
+    const sim = this.g.sim, M = sim.mb(), b = new M_Builder();
+    const parts = [];
+    for (const id of Object.keys(M.farms)) {
+      const f = M.farms[id], T = typeOf(id), n = sim.rgPlots(id), k = sim.rgBuilt(id), occ = sim.rgBlock(id) === 'occ';
+      parts.push(`${id}:${n}:${k}:${f.lvl}:${occ}`);
+    }
+    const key = parts.join('|');
+    if (key === this.farmKey) return;
+    this.farmKey = key;
+    if (this.farmMesh) { this.map.remove(this.farmMesh); this.farmMesh.geometry.dispose(); }
+    for (const id of Object.keys(M.farms)) {
+      const f = M.farms[id], p = this.farmPos[id];
+      const g = mapFarmGeo(typeOf(id), sim.rgPlots(id), sim.rgBuilt(id), f.lvl, sim.rgBlock(id) === 'occ');
+      const s = 0.8 + 0.035 * Math.min(14, sim.rgScore(id));
+      g.scale(s, s, s); g.rotateY(-0.35); g.translate(p.x, p.y - 0.04, p.z);
+      b.merge(g);
+    }
+    this.farmMesh = new THREE.Mesh(b.build(), this.farmMat);
+    this.map.add(this.farmMesh);
   }
   ensure() { if (!this.built) { this.buildMap(); this.built = true; } }
   focus(id, dist) {

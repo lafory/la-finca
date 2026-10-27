@@ -131,7 +131,7 @@ async function run(name, { webkit: useWk, ...opts }) {
   res.taps.farmsSheet = await sheetTitle();
   await tap('#sheet-body [data-act="mbup"][data-id="manzanillo"]');
   await tap('#sheet-body [data-act="mbup"][data-id="manzanillo"]');
-  res.taps.maxShown = await ev(() => /Nivel máximo/.test(document.querySelector('#sheet-body [data-farm="manzanillo"]')?.textContent || ''));
+  res.taps.maxShown = await ev(() => /Tierra completa/.test(document.querySelector('#sheet-body [data-farm="manzanillo"]')?.textContent || ''));
   await shot('5d-fincas');
   await tap('#sheet-wrap [data-act="close"]');
   res.farmsAfter = await farms();

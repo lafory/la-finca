@@ -5,6 +5,7 @@ import {
   MAMBI_LEVEL, MAMBI_CENTRAL_STAGE, CITIES, CITY_BY_ID, UNITS, ARMY_BASE, ARMY_PER_CITY, CART_POWER, CART_SAFE, TACTICS,
   FARM_LEVELS, FARM_OFFLINE_CAP, LOOT_PER_GUARD, FOOD, GOODS,
 } from './data.js';
+import { normFarm } from './regional-sim.js';
 
 const int = (v) => Math.max(0, Math.floor(+v || 0));
 const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -13,7 +14,7 @@ export function ensureMambi(s) {
   s.ext ||= {};
   const d = obj(s.ext.mambi), a = obj(d.army), st = obj(d.stats);
   const farms = {};
-  for (const [id, f] of Object.entries(obj(d.farms))) if (CITY_BY_ID[id] && f) farms[id] = { lvl: Math.min(3, Math.max(1, int(f.lvl) || 1)), at: +f.at || now(), bank: Math.max(0, +f.bank || 0) };
+  for (const [id, f] of Object.entries(obj(d.farms))) if (CITY_BY_ID[id] && f && typeof f === 'object') farms[id] = normFarm(id, f);
   s.ext.mambi = {
     army: { inf: int(a.inf), cab: int(a.cab), cart: Math.min(UNITS.cart.max, int(a.cart)) },
     freed: Array.isArray(d.freed) ? d.freed.filter((id) => CITY_BY_ID[id]) : [],

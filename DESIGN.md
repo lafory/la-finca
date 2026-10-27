@@ -216,6 +216,23 @@ Extensión registrada en `src/extensions.js`. Estado en `s.ext.mambi` y víveres
   ron) con renta por minuto, también con la app cerrada (hasta 8 h), y 3 niveles.
 - Prueba: `tests/mambi.mjs` (4 pantallas).
 
+### 10i. Fincas regionales jugables (`src/mambi/regional-*.js`)
+- En el mapa de Cuba cada ciudad con finca tiene una **finquita 3D** (lotes del color del tipo, bohíos, palmas) que crece
+  con lo sembrado y construido, gris si la ciudad está ocupada, y un marcador tocable con el icono del tipo y los lotes.
+- **Visitar finca** (marcador, hoja de la ciudad o lista «Fincas») abre una escena isométrica propia con el mismo estilo
+  que la finca principal: cuadrícula de lotes (4×3 → 5×4 → 6×5 al comprar tierra). Tocar un lote libre: sembrar lo del
+  tipo (arrozal, potrero con reses, matas de cacao, cafetal en terrazas, maizal, cañaveral, vega de tabaco, bote de pesca,
+  naranjos) o construir sus 3 construcciones (bohío de jornaleros + 2 propias del tipo: secadero, molino, corral, vaquería,
+  casa de tabaco, escogida, muelle, salador, empacadora, destilería de ron ×2, bodega…). Tocar lo que brilla: cosechar al 100 %.
+- Lo sembrado es perenne: se cosecha y vuelve a crecer. Con el bohío de jornaleros, lo listo que lleva media vuelta sin
+  cosechar lo recogen ellos al 70 % (también con la app cerrada, hasta 8 h) y se junta como renta para «Cobrar».
+  Renta = lotes × cosecha × multiplicadores de las construcciones. Ocupada por el Régimen: todo se para. Saqueo: se llevan
+  la renta juntada y lo que estaba listo, y los jornaleros paran un rato.
+- Partidas viejas (nivel 1–3 sin lotes): se convierten a 4 lotes por nivel ya sembrados + bohío de jornaleros + las
+  construcciones del tipo según el nivel (renta parecida a la de antes). Fundar ahora da bohío + 2 lotes.
+- Escena: suelo, decorado y construcciones fusionados; lotes, etapas, destellos y jornaleros instanciados (~15 llamadas
+  de dibujo); se libera al volver al mapa. Prueba: `tests/regional.mjs` (WebKit iPhone, WebKit iPad y escritorio).
+
 ## 11. Hitos
 - v1 (este): todo lo anterior jugable, build estática para GitHub Pages (base relativa).
 - v2 (hecho): fila de camiones con saltar pedido, gráficos PBR procedurales, selector de calidad.

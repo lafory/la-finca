@@ -19,6 +19,7 @@ const k1 = (n) => (n >= 10000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : 
 const STYLE = `
 #mambi{position:absolute;inset:0;z-index:4;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
 #mambi.hidden{display:none}
+#mambi .rv-hide{display:none!important}
 #ui.mambi-on>*:not(#mambi):not(.sheet-wrap):not(.modal-wrap):not(.toasts){display:none!important}
 #mambi .mb-top{position:absolute;left:calc(8px + var(--sal,0px));right:calc(8px + var(--sar,0px));top:calc(8px + var(--sat,0px));display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 #mambi .mb-title{position:absolute;left:50%;transform:translateX(-50%);top:calc(104px + var(--sat,0px));font:700 14px/1.2 inherit;color:#fff7e0;background:rgba(42,31,21,.72);border:0;border-radius:14px;padding:6px 12px;white-space:nowrap;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;cursor:pointer}
@@ -282,7 +283,7 @@ export class MambiUI {
       let out = '';
       if (!free) {
         out += `<p class="note">Guardias del Régimen: <b>${c.guards}</b> · terreno: ${c.terrain}${c.terrain === 'monte' ? ' (bueno para emboscadas)' : ''}. Al liberarla: botín de ${k1(c.guards * 50)} pesos.</p>`;
-        out += this.farmRow(id);
+        if (!M.farms[id]) out += this.farmRow(id); else out += this.farmRow(id);
         out += this.armyLine();
         if (nx?.id === id) {
           const best = Math.max(...TACTIC_ORDER.map((t) => sim.mbChance(t, id)));
@@ -303,11 +304,11 @@ export class MambiUI {
     const sim = this.sim, c = CITY_BY_ID[id], g = GOODS[c.farm[0]], f = sim.mb().farms[id], ico = ICON[g.icon] || ICON.field;
     if (!f) {
       const r = sim.mbFarmRate(id, 1), why = sim.mbCanFarm(id);
-      return `<div class="row ${why ? '' : 'sel'}" data-farm="${id}"><div class="row-ico">${ico}</div><div class="row-main"><b>Fundar finca de ${g.name.toLowerCase()}${sim.mbFreed(id) ? '' : ` en ${c.name}`}</b><small>Cuesta ${c.farm[1].toLocaleString('es')} pesos · renta ≈ ${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto, también con el juego cerrado (hasta 8 h).${why ? `<span class="mb-why">${why}</span>` : ''}</small></div><button class="btn ${why ? 'poor' : 'primary'}" data-act="mbfarm" data-id="${id}" ${why ? 'disabled' : ''}>Fundar finca${ICON.coin}${k1(c.farm[1])}</button></div>`;
+      return `<div class="row ${why ? '' : 'sel'}" data-farm="${id}"><div class="row-ico">${ico}</div><div class="row-main"><b>Fundar finca de ${g.name.toLowerCase()}${sim.mbFreed(id) ? '' : ` en ${c.name}`}</b><small>Cuesta ${c.farm[1].toLocaleString('es')} pesos · renta ≈ ${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto al empezar (bohío de jornaleros y 2 lotes sembrados; siembra y construye allí para ganar más), también con el juego cerrado (hasta 8 h).${why ? `<span class="mb-why">${why}</span>` : ''}</small></div><button class="btn ${why ? 'poor' : 'primary'}" data-act="mbfarm" data-id="${id}" ${why ? 'disabled' : ''}>Fundar finca${ICON.coin}${k1(c.farm[1])}</button></div>`;
     }
-    const r = sim.mbFarmRate(id), up = sim.mbUpgradePrice(id), why = sim.mbCanUpgrade(id);
-    const btn = up ? `<button class="btn ${why ? 'poor' : ''}" data-act="mbup" data-id="${id}" ${why ? 'disabled' : ''}>Mejorar a nivel ${f.lvl + 1} (×${FARM_LEVELS[f.lvl + 1].mult})${ICON.coin}${k1(up)}</button>` : '<button class="btn" disabled>Nivel máximo</button>';
-    return `<div class="row" data-farm="${id}"><div class="row-ico">${ico}</div><div class="row-main"><b>Finca de ${g.name.toLowerCase()} en ${c.name} · nivel ${f.lvl}/3</b><small>${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto.${up && why ? `<span class="mb-why">${why}</span>` : ''}</small></div>${btn}</div>`;
+    const r = sim.mbFarmRate(id), occ = sim.rgBlock(id) === 'occ', up = sim.mbUpgradePrice(id), why = sim.mbCanUpgrade(id);
+    const state = occ ? '<span class="mb-why">Ocupada por el Régimen: no produce hasta que recuperes la ciudad.</span>' : sim.rgHas(id, 'casa') ? '' : '<span class="mb-why">Sin bohío de jornaleros: solo produce lo que cosechas tú.</span>';
+    return `<div class="row ${occ ? 'dim' : ''}" data-farm="${id}"><div class="row-ico">${ico}</div><div class="row-main"><b>Finca de ${g.name.toLowerCase()} en ${c.name} · tierra ${f.lvl}/3</b><small>${sim.rgPlots(id)} lotes sembrados · ${sim.rgBuilt(id)} construcciones · ${k1(r.pesos)} pesos y ${r.viveres} víveres por minuto.${state}${up && why && !occ ? `<span class="mb-why">${why}</span>` : ''}</small></div><button class="btn primary" data-act="mbvisit" data-id="${id}">${ICON.home}Visitar finca</button>${up ? `<button class="btn ${why || occ ? 'poor' : ''}" data-act="mbup" data-id="${id}" ${why || occ ? 'disabled' : ''}>Más tierra ${f.lvl + 1}/3${ICON.coin}${k1(up)}</button>` : '<button class="btn" disabled>Tierra completa</button>'}</div>`;
   }
   // Lista de todas las fincas regionales: las libres sin finca primero, luego las fundadas y las que faltan por liberar.
   openFarms() {
@@ -317,11 +318,13 @@ export class MambiUI {
       if (!M.freed.length) out += `<p class="note">Todavía no hay ciudades libres. Libera ${sim.mbNext()?.name} desde el mapa y aquí podrás fundar su finca.</p>`;
       if (sinFinca.length) { out += '<h3>Libres sin finca</h3>'; for (const id of sinFinca) out += this.farmRow(id); }
       const con = M.freed.filter((id) => M.farms[id]);
+      const occ = Object.keys(M.farms).filter((id) => !M.freed.includes(id));
       if (con.length) {
         out += '<h3>Fincas fundadas</h3>';
         for (const id of con) out += this.farmRow(id);
         out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Pendiente: ${k1(sim.mbPending().pesos)} pesos</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
       }
+      if (occ.length) { out += '<h3>Ocupadas por el Régimen</h3>'; for (const id of occ) out += this.farmRow(id); }
       const falta = CITIES.filter((c) => !sim.mbFreed(c.id));
       if (falta.length) out += `<h3>Por liberar</h3><p class="note">${falta.map((c) => `${c.name} (${GOODS[c.farm[0]].name.toLowerCase()})`).join(' · ')}</p>`;
       return out + this.cheats();
@@ -375,3 +378,4 @@ export class MambiUI {
   }
 }
 void fmtTime;
+void FARM_LEVELS;
