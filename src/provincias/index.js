@@ -258,11 +258,8 @@ MP.farmRow = function (id) {
 
 // ---------------------------------------------------------------- juego: cambiar de finca, HUD, colores y paisaje
 const STYLE = `
-#pv-switch{position:absolute;left:calc(8px + var(--sal,0px));top:calc(56px + var(--sat,0px));z-index:3;display:flex;align-items:center;gap:5px;min-height:34px;padding:3px 11px 3px 7px;border-radius:17px;border:2px solid #5a4636;background:rgba(246,234,208,.95);color:#3a2a1e;font:800 12px/1.1 inherit;box-shadow:0 2px 0 rgba(60,40,20,.3);cursor:pointer;max-width:58vw}
-#pv-switch .ico{width:18px;height:18px;flex:none}
-#pv-switch span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#pv-switch.prov{background:rgba(255,240,196,.97);border-color:#8a5a14}
-#pv-switch.hidden{display:none}
+#pv-switch.prov{background:#fff0c4;border-color:#8a5a14}
+#pv-switch span{max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pv-raid{position:absolute;left:50%;transform:translateX(-50%);top:calc(96px + var(--sat,0px));z-index:3;background:rgba(92,96,100,.92);color:#fff;border-radius:12px;padding:5px 12px;font:700 12px/1.25 inherit;text-align:center;max-width:calc(100% - 24px)}
 #pv-raid.hidden{display:none}
 #pv-travel{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;background:rgba(42,31,21,.86);color:#fff7e0;font:800 20px/1.3 inherit;text-align:center;padding:20px}
@@ -278,13 +275,13 @@ registerGameModule({
     game.farmCity = A?.city || null;
     game.farmProfile = A?.prof || null;
     if (!document.getElementById('pv-style')) { const st = document.createElement('style'); st.id = 'pv-style'; st.textContent = STYLE; document.head.appendChild(st); }
-    // botón de fincas (arriba a la izquierda, debajo del nivel)
+    // botón «Fincas» en la columna de la izquierda (junto a Manigua, Batey y Campaña); en una provincia dice su ciudad
     const root = document.getElementById('ui');
     const btn = document.createElement('button');
-    btn.id = 'pv-switch'; btn.dataset.act = 'pvfarms'; btn.className = `hidden ${A ? 'prov' : ''}`;
-    btn.setAttribute('aria-label', 'Cambiar de finca');
-    btn.innerHTML = `${A ? ICON[A.prof.crops[0]] || ICON.home : ICON.home}<span>${esc(A ? `${CITY_BY_ID[A.city].name} · ${A.prof.short}` : 'Finca principal')}</span>`;
-    root.appendChild(btn);
+    btn.id = 'pv-switch'; btn.dataset.act = 'pvfarms'; btn.className = `round cam hidden ${A ? 'prov' : ''}`;
+    btn.setAttribute('aria-label', A ? `Finca de ${CITY_BY_ID[A.city].name}: cambiar de finca` : 'Cambiar de finca');
+    btn.innerHTML = `${A ? ICON[A.prof.crops[0]] || ICON.home : ICON.home}<span>${esc(A ? CITY_BY_ID[A.city].name.replace('Santiago de Cuba', 'Santiago').replace('Sancti Spíritus', 'S. Spíritus').replace('Pinar del Río', 'Pinar') : 'Fincas')}</span>`;
+    (document.getElementById('explore') || root).appendChild(btn);
     const raid = document.createElement('div'); raid.id = 'pv-raid'; raid.className = 'hidden'; root.appendChild(raid);
     game.pvEls = { btn, raid };
     game.switchFarm = (city) => switchFarm(game, city);
@@ -377,3 +374,5 @@ function decorate(game, A) {
 // entrar sin la pantalla de título después de cambiar de finca
 export function autoEnter() { try { if (sessionStorage.getItem(AUTO_KEY)) { sessionStorage.removeItem(AUTO_KEY); return true; } } catch { /* nada */ } return false; }
 void typeOf;
+// ganchos para pruebas automatizadas
+try { window.__pvRecipes = () => RECIPES; window.__pvActive = () => ACTIVE && { city: ACTIVE.city, pid: ACTIVE.pid }; } catch { /* sin window */ }
