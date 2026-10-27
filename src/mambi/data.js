@@ -56,8 +56,8 @@ export const GOODS = {
 // Ciudades en orden de campaña (de oriente a occidente). guards = fuerza de los guardias del Régimen.
 // farm: [producto, precio de la finca, unidades por minuto en el nivel 1]
 export const CITIES = [
-  { id: 'manzanillo', name: 'Manzanillo', lon: -77.12, lat: 20.34, guards: 20, terrain: 'costa', farm: ['arroz', 3000, 6] },
-  { id: 'bayamo', name: 'Bayamo', lon: -76.64, lat: 20.38, guards: 32, terrain: 'llano', farm: ['ganado', 4500, 4] },
+  { id: 'manzanillo', name: 'Manzanillo', lon: -77.12, lat: 20.34, guards: 20, terrain: 'costa', farm: ['arroz', 1500, 6] },
+  { id: 'bayamo', name: 'Bayamo', lon: -76.64, lat: 20.38, guards: 32, terrain: 'llano', farm: ['ganado', 3500, 4] },
   { id: 'baracoa', name: 'Baracoa', lon: -74.5, lat: 20.35, guards: 40, terrain: 'monte', farm: ['cacao', 6000, 4] },
   { id: 'santiago', name: 'Santiago de Cuba', lon: -75.82, lat: 20.03, guards: 60, terrain: 'monte', farm: ['cafe', 8000, 4] },
   { id: 'holguin', name: 'Holguín', lon: -76.26, lat: 20.89, guards: 75, terrain: 'llano', farm: ['maiz', 9500, 8] },
@@ -94,7 +94,7 @@ export const TACTIC_ORDER = ['carga', 'emboscada', 'asedio'];
 // Fincas regionales: multiplicador de renta por nivel y precio de mejora (× precio de la finca)
 export const FARM_LEVELS = [null, { mult: 1, up: 0 }, { mult: 2, up: 1.2 }, { mult: 3.5, up: 2.5 }];
 export const FARM_OFFLINE_CAP = 8 * 3600; // s
-export const LOOT_PER_GUARD = 50;
+export const LOOT_PER_GUARD = 75; // balance oct 2026: liberar Manzanillo (20 guardias) paga 1500 = su primera finca
 
 // Víveres que da cada cosa de la canasta
 export const FOOD = ['egg', 'tomato', 'leche', 'queso', 'carne', 'ketchup', 'guarapo', 'melao', 'mango', 'guayaba', 'coco', 'jutia', 'jibaro'];

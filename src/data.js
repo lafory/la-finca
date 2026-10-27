@@ -10,19 +10,36 @@ export const WOOD_CAP = 500; // tope de madera (recurso 'madera')
 export const SAVE_KEY = 'lafinca-v2';
 
 // Niveles: XP acumulada necesaria para llegar a cada nivel (índice = nivel).
-export const LEVEL_XP = [0, 0, 20, 55, 110, 190, 300, 450, 650, 900, 1200];
+// Balance oct 2026 (docs/BALANCE.md): curva más empinada desde el 6; del 11 en adelante 4800 + 600k + 220k² + 15k³ (k = nivel − 10).
+export const LEVEL_XP = [0, 0, 20, 55, 110, 190, 440, 950, 1800, 3000, 4800];
 export const MAX_LEVEL = 40;
+export const XP_CURVE = 2; // versión de la curva guardada en la partida (s.xpCurve)
 export function xpForLevel(l) {
   if (l < LEVEL_XP.length) return LEVEL_XP[l];
   const k = l - LEVEL_XP.length + 1; // 1 = nivel 11
-  return LEVEL_XP[LEVEL_XP.length - 1] + k * 300 + k * k * 45;
+  return Math.round(4800 + 600 * k + 220 * k * k + 15 * k * k * k);
+}
+// Curva vieja (hasta oct 2026), solo para pasar las partidas guardadas a la nueva
+const LEVEL_XP_V1 = [0, 0, 20, 55, 110, 190, 300, 450, 650, 900, 1200];
+export function xpForLevelV1(l) {
+  if (l < LEVEL_XP_V1.length) return LEVEL_XP_V1[l];
+  const k = l - LEVEL_XP_V1.length + 1;
+  return 1200 + k * 300 + k * k * 45;
+}
+// Partida vieja → misma nivel y mismo % de avance hacia el siguiente, en la curva nueva. Nunca baja de nivel ni da XP negativa.
+export function migrateXp(level, xp) {
+  const L = Math.max(1, Math.min(MAX_LEVEL, Math.floor(+level || 1)));
+  const a = xpForLevelV1(L), b = xpForLevelV1(L + 1);
+  const frac = Math.max(0, Math.min(0.99, ((+xp || 0) - a) / Math.max(1, b - a)));
+  const na = xpForLevel(L), nb = xpForLevel(L + 1);
+  return Math.max(na, Math.floor(na + frac * (nb - na)));
 }
 
 export const ITEMS = {
   egg: { name: 'Huevo', plural: 'Huevos', sell: 5, xp: 1 },
   tomato: { name: 'Tomate', plural: 'Tomates', sell: 12, xp: 3 },
   cane: { name: 'Caña', plural: 'Cañas', sell: 32, xp: 6 },
-  tobacco: { name: 'Tabaco', plural: 'Hojas de tabaco', sell: 70, xp: 10 },
+  tobacco: { name: 'Tabaco', plural: 'Hojas de tabaco', sell: 70, xp: 6 }, // balance: 10 → 6
   ketchup: { name: 'Kétchup', plural: 'Pomos de kétchup', sell: 48, xp: 6 },
   guarapo: { name: 'Guarapo', plural: 'Jarras de guarapo', sell: 85, xp: 8 },
   leche: { name: 'Leche', plural: 'Cantinas de leche', sell: 30, xp: 3 },
@@ -43,7 +60,7 @@ export const SELLABLE = ['egg', 'tomato', 'cane', 'tobacco', 'ketchup', 'guarapo
 export const CROPS = {
   tomato: { name: 'Tomate', seedName: 'Semilla de tomate', seed: 5, grow: 60, level: 1, item: 'tomato', xpPlant: 1 },
   cane: { name: 'Caña de azúcar', seedName: 'Esqueje de caña', seed: 10, grow: 180, level: 3, item: 'cane', xpPlant: 1 },
-  tobacco: { name: 'Tabaco', seedName: 'Semilla de tabaco', seed: 20, grow: 300, level: 4, item: 'tobacco', xpPlant: 2 },
+  tobacco: { name: 'Tabaco', seedName: 'Semilla de tabaco', seed: 20, grow: 420, level: 4, item: 'tobacco', xpPlant: 2 },
 };
 export const CROP_ORDER = ['tomato', 'cane', 'tobacco'];
 
@@ -168,6 +185,13 @@ Object.assign(STRUCTURES, {
   escuela: { name: 'La escuelita', detail: 'Los niños del batey aprenden y tú también: +10 % de XP.', price: 900, madera: 30, level: 12, kind: 'civic', zone: 'batey', x: 24, z: 48, w: 4, h: 3, effect: { xp: 0.1 } },
   iglesia: { name: 'La iglesita', detail: 'Campanas los domingos: +5 % en los pedidos de los camiones.', price: 1200, madera: 40, level: 14, kind: 'civic', zone: 'batey', x: 1, z: 53, w: 4, h: 4, effect: { pay: 0.05 } },
 });
+// Balance: desde el nivel 12 las obras (y sus mejoras) cuestan el doble: sumideros de pesos para el tramo medio.
+export const LATE_LEVEL = 12;
+export const LATE_MUL = 2;
+for (const st of Object.values(STRUCTURES)) {
+  if (st.level >= LATE_LEVEL) st.price *= LATE_MUL;
+  if (st.upgrade && st.upgrade.level >= LATE_LEVEL) st.upgrade.price *= LATE_MUL;
+}
 export const STRUCTURE_ORDER = ['anden', 'vacas', 'chivos', 'pozo', 'cerdos', 'trapiche', 'gallinero2', 'fogon2', 'casaTabaco'];
 export const BATEY_ORDER = ['casa1', 'casa2', 'casa3', 'bodega', 'casa4', 'casa5', 'casa6', 'escuela', 'casa7', 'iglesia', 'casa8'];
 export const OBSTACLES = {
@@ -231,7 +255,7 @@ const NEW_PARCELS = [
   { id: 'ojodeagua', name: 'El ojo de agua', blurb: 'Manantial y monte cerrado.', price: 4200, level: 21, rect: { x0: 28, z0: 26, x1: 35, z1: 39 }, plots: 20, obstacles: ['marabu', 'rock'], covered: 0.4 },
   { id: 'lavuelta', name: 'La vuelta de abajo', blurb: 'La última esquina: ¡la finca completa!', price: 5000, level: 22, rect: { x0: 36, z0: 26, x1: 45, z1: 39 }, plots: 26 },
 ];
-export const PARCELS = [...BASE_PARCELS.map((p) => ({ ...p, obstacles: [], site: null })), ...NEW_PARCELS.map((d, i) => genParcel(d, 1000 + i * 37))];
+export const PARCELS = [...BASE_PARCELS.map((p) => ({ ...p, obstacles: [], site: null })), ...NEW_PARCELS.map((d, i) => genParcel({ ...d, price: d.level >= LATE_LEVEL ? d.price * LATE_MUL : d.price }, 1000 + i * 37))];
 export const OBSTACLE_LIST = PARCELS.flatMap((p) => p.obstacles.map((o) => ({ ...o, parcel: p.id })));
 
 export function rectTiles(x0, z0, x1, z1) {
@@ -277,6 +301,6 @@ export function workerLook(role, n = 0) {
   const k = n * 3 + role.length;
   return { ...base, shirt: SHIRTS[k % SHIRTS.length], skin: SKINS[(k * 5) % SKINS.length], hat: base.hat == null ? null : HATS[k % HATS.length] };
 }
-// cada uno más del mismo oficio cuesta más
-export const workerHirePrice = (role, have = 0) => Math.round((WORKERS[role].price * (1 + 0.75 * have)) / 5) * 5;
-export const WORKER_LEVEL_CAP = 4; // +1 al tope cada 4 niveles
+// cada uno más del mismo oficio cuesta más (balance: precio × (1 + n)², antes × (1 + 0,75·n))
+export const workerHirePrice = (role, have = 0) => Math.round((WORKERS[role].price * (1 + have) ** 2) / 5) * 5;
+export const WORKER_LEVEL_CAP = 5; // +1 al tope cada 5 niveles (antes 4)

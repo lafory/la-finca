@@ -163,7 +163,7 @@ export function installCentral(Sim) {
     if (!st || c.building) return false;
     if (s.level < st.level) { this.h.toast(`${st.name}: nivel ${st.level}.`); this.h.sfx('error'); return false; }
     if (!this.hasRes('madera', st.wood)) { this.h.toast(`Hace falta ${st.wood} de madera (tienes ${s.res.madera || 0}). Búscala en la manigua o cómprala en el aserrío.`); this.h.sfx('error'); return false; }
-    if (!this.pay({ pesos: st.price, madera: st.wood })) return false;
+    if (!this.pay({ pesos: st.price, madera: st.wood, items: st.items })) return false;
     c.building = { stage: c.stage, at: now(), dur: st.dur };
     this.h.sfx('buy');
     this.h.toast(`¡Empezó la obra: ${st.name.toLowerCase()}!`);
@@ -326,7 +326,7 @@ export function installCentral(Sim) {
     if (k === 'l32') toLevel(CENTRAL_LEVEL);
     if (k === 'l35') toLevel(35);
     if (k === 'l40') toLevel(40);
-    if (k === 'rich') { this.addMoney(250000); s.res.madera = Math.max(s.res.madera || 0, RESOURCES.madera?.cap ?? 500); this.h.changed('res'); }
+    if (k === 'rich') { this.addMoney(250000); s.res.madera = Math.max(s.res.madera || 0, RESOURCES.madera?.cap ?? 500); for (const it of ['cane', 'azucar']) s.inv[it] = Math.max(s.inv[it] || 0, 60); this.h.changed('res'); this.h.changed('inv'); }
     if (k === 'fields') for (const f of FIELDS) if (s.level >= f.level && !c.owned.includes(f.id)) { c.owned.push(f.id); c.fields[f.id] = { crop: null, at: 0, dur: 0, work: null }; }
     if (k === 'central') { toLevel(35); while (c.stage < STAGES.length) { c.building = null; this.stageDone(); } }
     if (k === 'ripe') for (const id of c.owned) { const st = c.fields[id]; if (st?.work) st.work.at -= st.work.dur; else if (st?.crop) st.at = now() - st.dur - 1; }
