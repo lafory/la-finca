@@ -100,12 +100,12 @@ quedar en negativo. El precio cuadrático al repetir oficio ya hace de freno. La
 | 20 | 8 700 | 47 800 | 21 min | 14 min | 3,5 h | **1,7 h** | 1,0 h |
 | 25 | 15 825 | 113 925 | 29 min | 20 min | 7,1 h | **3,7 h** | 2,3 h |
 | 32 | 29 580 | 284 200 | 44 min | 30 min | 13,6 h | **7,2 h** | 4,2 h |
-| 35 | 36 825 | 391 675 | 52 min | 35 min | 16,7 h | **8,8 h** | 5,1 h |
+| 35 | 36 825 | 391 675 | 51 min | 34 min | 16,7 h | **8,8 h** | 5,1 h |
 | 40 | 50 700 | 625 800 | **1,0 h** | 40 min | 21,9 h | **11,6 h** | 6,5 h |
 
 - Primera hora: los niveles 6–13 salen cada 3–10 min y nunca pasan más de ~5 min sin poder comprar algo (9 min con ⏩
   fuerte). Ningún muro ni tramo raro según la heurística del script.
-- La campaña mambí (nivel 35) llega a las ~9 h de juego típico en vez de ~45 min.
+- La campaña mambí (nivel 35) llega a las ~9 h de juego típico en vez de ~51 min.
 
 ### Partidas guardadas
 - `s.xpCurve` (nuevo, `XP_CURVE = 2`). Al abrir una partida sin él, `migrateXp` la pasa a la curva nueva con **el
