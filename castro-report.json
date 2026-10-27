@@ -1,0 +1,128 @@
+{
+  "phone": {
+    "errors": [],
+    "noAttackYet": true,
+    "citySection": true,
+    "attack": {
+      "city": "bayamo",
+      "power": 19,
+      "secs": 180
+    },
+    "sheetWarn": true,
+    "mapBanner": true,
+    "mapMarker": true,
+    "farmBanner": true,
+    "defendOpens": true,
+    "garrison": {
+      "inf": 20,
+      "cab": 4
+    },
+    "trinchera": 1,
+    "chance": 1,
+    "defenseAnim": true,
+    "defenseDone": true,
+    "heldModal": true,
+    "afterHold": {
+      "attack": null,
+      "held": 1,
+      "freed": [
+        "manzanillo",
+        "bayamo"
+      ]
+    },
+    "lostModal": true,
+    "lost": {
+      "freed": false,
+      "owner": "regimen",
+      "farmKept": true,
+      "rate": 0,
+      "next": "manzanillo",
+      "gray": true,
+      "occLabel": true
+    },
+    "occupiedNote": true,
+    "retaken": {
+      "freed": true,
+      "owner": "jugador",
+      "retaken": 1,
+      "rate": 112
+    },
+    "offline": {
+      "report": 4,
+      "attacks": 6,
+      "lost": 2,
+      "raids": 0,
+      "freed": 1,
+      "next": 355
+    },
+    "offlineModal": true,
+    "reportCleared": true,
+    "offlineCapOk": true,
+    "reloadSame": true,
+    "noReportAgain": true,
+    "ok": true
+  },
+  "ipad": {
+    "errors": [],
+    "noAttackYet": true,
+    "citySection": true,
+    "attack": {
+      "city": "bayamo",
+      "power": 19,
+      "secs": 180
+    },
+    "sheetWarn": true,
+    "mapBanner": true,
+    "mapMarker": true,
+    "farmBanner": true,
+    "defendOpens": true,
+    "garrison": {
+      "inf": 20,
+      "cab": 4
+    },
+    "trinchera": 1,
+    "chance": 1,
+    "defenseAnim": true,
+    "defenseDone": true,
+    "heldModal": true,
+    "afterHold": {
+      "attack": null,
+      "held": 1,
+      "freed": [
+        "manzanillo",
+        "bayamo"
+      ]
+    },
+    "lostModal": true,
+    "lost": {
+      "freed": false,
+      "owner": "regimen",
+      "farmKept": true,
+      "rate": 0,
+      "next": "manzanillo",
+      "gray": true,
+      "occLabel": true
+    },
+    "occupiedNote": true,
+    "retaken": {
+      "freed": true,
+      "owner": "jugador",
+      "retaken": 1,
+      "rate": 112
+    },
+    "offline": {
+      "report": 4,
+      "attacks": 6,
+      "lost": 2,
+      "raids": 0,
+      "freed": 1,
+      "next": 355
+    },
+    "offlineModal": true,
+    "reportCleared": true,
+    "offlineCapOk": true,
+    "reloadSame": true,
+    "noReportAgain": true,
+    "ok": true
+  }
+}

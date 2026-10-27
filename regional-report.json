@@ -1,0 +1,485 @@
+{
+  "phone": {
+    "errors": [],
+    "farms": {
+      "manzanillo": {
+        "tapBadge": {
+          "x": 16.471351623535156,
+          "y": 364.09375,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de arroz · ManzanilloTierra 2/3 · 8/20 lotes sembrados · 2/3 construccionesRenta ≈ 582 pesos/min",
+        "harvest": 208,
+        "lotSheet": "Lote libre · Manzanillo",
+        "tapPlant": {
+          "x": 302.1328125,
+          "y": 365.25,
+          "hits": true
+        },
+        "planted": 1,
+        "buildSheet": "Lote libre · Manzanillo",
+        "tapBuild": {
+          "x": 291.359375,
+          "y": 607.75,
+          "hits": true
+        },
+        "built": true,
+        "rent": 1734,
+        "perf": {
+          "fps": 30,
+          "calls": 22,
+          "tris": 77436
+        },
+        "disposed": true
+      },
+      "bayamo": {
+        "tapBadge": {
+          "x": 161.06509399414062,
+          "y": 346.5,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de ganado · BayamoTierra 1/3 · 4/12 lotes sembrados · 1/3 construccionesRenta ≈ 378 pesos/min",
+        "harvest": 540,
+        "lotSheet": "Lote libre · Bayamo",
+        "tapPlant": {
+          "x": 290.796875,
+          "y": 336.625,
+          "hits": true
+        },
+        "planted": 1,
+        "buildSheet": "Lote libre · Bayamo",
+        "tapBuild": {
+          "x": 291.359375,
+          "y": 531.25,
+          "hits": true
+        },
+        "built": true,
+        "landUp": 1,
+        "perf": {
+          "fps": 36,
+          "calls": 21,
+          "tris": 72472
+        },
+        "disposed": true
+      },
+      "baracoa": {
+        "tapBadge": {
+          "x": 156.52865600585938,
+          "y": 350.890625,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de cacao · BaracoaTierra 3/3 · 12/30 lotes sembrados · 3/3 construccionesRenta ≈ 2162 pesos/min",
+        "harvest": 858,
+        "lotSheet": "Lote libre · Baracoa",
+        "tapPlant": {
+          "x": 302.1328125,
+          "y": 365.75,
+          "hits": true
+        },
+        "planted": 1,
+        "perf": {
+          "fps": 28,
+          "calls": 22,
+          "tris": 128032
+        },
+        "disposed": true
+      }
+    },
+    "migrated": {
+      "manzanillo": {
+        "lvl": 2,
+        "plots": 8,
+        "built": 2,
+        "casa": true,
+        "rate": 582
+      },
+      "bayamo": {
+        "lvl": 1,
+        "plots": 4,
+        "built": 1,
+        "casa": true,
+        "rate": 378
+      },
+      "baracoa": {
+        "lvl": 3,
+        "plots": 12,
+        "built": 3,
+        "casa": true,
+        "rate": 2162
+      }
+    },
+    "migrationOk": true,
+    "openMap": {
+      "x": 36,
+      "y": 268,
+      "hits": true
+    },
+    "map": {
+      "badges": [
+        "baracoa",
+        "manzanillo",
+        "bayamo"
+      ],
+      "mesh": 2844
+    },
+    "mapOk": true,
+    "newFound": {
+      "x": 195,
+      "y": 431.28125,
+      "hits": true
+    },
+    "newVisitBtn": {
+      "x": 195,
+      "y": 440.28125,
+      "hits": true
+    },
+    "newOpen": true,
+    "newCasa": true,
+    "raid": {
+      "held": false,
+      "stolen": 777,
+      "crops": 9,
+      "bank": 0,
+      "ready": 0,
+      "block": "raid",
+      "plots": 9
+    },
+    "raidOk": true,
+    "occBadge": true,
+    "occListed": true,
+    "occPaused": true,
+    "occInfo": true,
+    "occPlantDenied": true,
+    "afterReload": {
+      "santiago": true,
+      "manzMolino": true,
+      "bayamoCorral": true
+    },
+    "ok": true
+  },
+  "ipad": {
+    "errors": [],
+    "farms": {
+      "manzanillo": {
+        "tapBadge": {
+          "x": 114.7421875,
+          "y": 582.296875,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de arroz · ManzanilloTierra 2/3 · 8/20 lotes sembrados · 2/3 construccionesRenta ≈ 582 pesos/min",
+        "harvest": 208,
+        "lotSheet": "Lote libre · Manzanillo",
+        "tapPlant": {
+          "x": 597.1328125,
+          "y": 797,
+          "hits": true
+        },
+        "planted": 1,
+        "buildSheet": "Lote libre · Manzanillo",
+        "tapBuild": {
+          "x": 586.359375,
+          "y": 1029,
+          "hits": true
+        },
+        "built": true,
+        "rent": 1734,
+        "perf": {
+          "fps": 18,
+          "calls": 22,
+          "tris": 77436
+        },
+        "disposed": true
+      },
+      "bayamo": {
+        "tapBadge": {
+          "x": 349.9453125,
+          "y": 553.59375,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de ganado · BayamoTierra 1/3 · 4/12 lotes sembrados · 1/3 construccionesRenta ≈ 378 pesos/min",
+        "harvest": 540,
+        "lotSheet": "Lote libre · Bayamo",
+        "tapPlant": {
+          "x": 585.796875,
+          "y": 791.75,
+          "hits": true
+        },
+        "planted": 1,
+        "buildSheet": "Lote libre · Bayamo",
+        "tapBuild": {
+          "x": 586.359375,
+          "y": 963,
+          "hits": true
+        },
+        "built": true,
+        "landUp": 1,
+        "perf": {
+          "fps": 21,
+          "calls": 21,
+          "tris": 72472
+        },
+        "disposed": true
+      },
+      "baracoa": {
+        "tapBadge": {
+          "x": 342.6953125,
+          "y": 560.796875,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de cacao · BaracoaTierra 3/3 · 12/30 lotes sembrados · 3/3 construccionesRenta ≈ 2162 pesos/min",
+        "harvest": 858,
+        "lotSheet": "Lote libre · Baracoa",
+        "tapPlant": {
+          "x": 597.1328125,
+          "y": 797,
+          "hits": true
+        },
+        "planted": 1,
+        "perf": {
+          "fps": 15,
+          "calls": 22,
+          "tris": 128032
+        },
+        "disposed": true
+      }
+    },
+    "migrated": {
+      "manzanillo": {
+        "lvl": 2,
+        "plots": 8,
+        "built": 2,
+        "casa": true,
+        "rate": 582
+      },
+      "bayamo": {
+        "lvl": 1,
+        "plots": 4,
+        "built": 1,
+        "casa": true,
+        "rate": 378
+      },
+      "baracoa": {
+        "lvl": 3,
+        "plots": 12,
+        "built": 3,
+        "casa": true,
+        "rate": 2162
+      }
+    },
+    "migrationOk": true,
+    "openMap": {
+      "x": 36,
+      "y": 268,
+      "hits": true
+    },
+    "map": {
+      "badges": [
+        "baracoa",
+        "manzanillo",
+        "bayamo"
+      ],
+      "mesh": 2844
+    },
+    "mapOk": true,
+    "newFound": {
+      "x": 576.1171875,
+      "y": 643.8125,
+      "hits": true
+    },
+    "newVisitBtn": {
+      "x": 407.625,
+      "y": 788.6875,
+      "hits": true
+    },
+    "newOpen": true,
+    "newCasa": true,
+    "raid": {
+      "held": false,
+      "stolen": 777,
+      "crops": 9,
+      "bank": 0,
+      "ready": 0,
+      "block": "raid",
+      "plots": 9
+    },
+    "raidOk": true,
+    "occBadge": true,
+    "occListed": true,
+    "occPaused": true,
+    "occInfo": true,
+    "occPlantDenied": true,
+    "afterReload": {
+      "santiago": true,
+      "manzMolino": true,
+      "bayamoCorral": true
+    },
+    "ok": true
+  },
+  "desktop": {
+    "errors": [],
+    "farms": {
+      "manzanillo": {
+        "tapBadge": {
+          "x": 425,
+          "y": 435.5,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de arroz · ManzanilloTierra 2/3 · 8/20 lotes sembrados · 2/3 construccionesRenta ≈ 582 pesos/min",
+        "harvest": 208,
+        "lotSheet": "Lote libre · Manzanillo",
+        "tapPlant": {
+          "x": 830.8203125,
+          "y": 517,
+          "hits": true
+        },
+        "planted": 1,
+        "buildSheet": "Lote libre · Manzanillo",
+        "tapBuild": {
+          "x": 819.3984375,
+          "y": 749,
+          "hits": true
+        },
+        "built": true,
+        "rent": 1734,
+        "perf": {
+          "fps": 5,
+          "calls": 22,
+          "tris": 77436
+        },
+        "disposed": true
+      },
+      "bayamo": {
+        "tapBadge": {
+          "x": 599.1875,
+          "y": 414.1875,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de ganado · BayamoTierra 1/3 · 4/12 lotes sembrados · 1/3 construccionesRenta ≈ 378 pesos/min",
+        "harvest": 540,
+        "lotSheet": "Lote libre · Bayamo",
+        "tapPlant": {
+          "x": 819.296875,
+          "y": 511.8145751953125,
+          "hits": true
+        },
+        "planted": 1,
+        "buildSheet": "Lote libre · Bayamo",
+        "tapBuild": {
+          "x": 819.3984375,
+          "y": 683,
+          "hits": true
+        },
+        "built": true,
+        "landUp": 1,
+        "perf": {
+          "fps": 7,
+          "calls": 21,
+          "tris": 72472
+        },
+        "disposed": true
+      },
+      "baracoa": {
+        "tapBadge": {
+          "x": 593.6875,
+          "y": 419.5,
+          "hits": true
+        },
+        "open": true,
+        "info": "Finca de cacao · BaracoaTierra 3/3 · 12/30 lotes sembrados · 3/3 construccionesRenta ≈ 2162 pesos/min",
+        "harvest": 858,
+        "lotSheet": "Lote libre · Baracoa",
+        "tapPlant": {
+          "x": 830.8203125,
+          "y": 517,
+          "hits": true
+        },
+        "planted": 1,
+        "perf": {
+          "fps": 5,
+          "calls": 22,
+          "tris": 128032
+        },
+        "disposed": true
+      }
+    },
+    "migrated": {
+      "manzanillo": {
+        "lvl": 2,
+        "plots": 8,
+        "built": 2,
+        "casa": true,
+        "rate": 582
+      },
+      "bayamo": {
+        "lvl": 1,
+        "plots": 4,
+        "built": 1,
+        "casa": true,
+        "rate": 378
+      },
+      "baracoa": {
+        "lvl": 3,
+        "plots": 12,
+        "built": 3,
+        "casa": true,
+        "rate": 2162
+      }
+    },
+    "migrationOk": true,
+    "openMap": {
+      "x": 36,
+      "y": 268,
+      "hits": true
+    },
+    "map": {
+      "badges": [
+        "baracoa",
+        "manzanillo",
+        "bayamo"
+      ],
+      "mesh": 2844
+    },
+    "mapOk": true,
+    "newFound": {
+      "x": 808.4921875,
+      "y": 379.8125,
+      "hits": true
+    },
+    "newVisitBtn": {
+      "x": 634.9453125,
+      "y": 516.6875,
+      "hits": true
+    },
+    "newOpen": true,
+    "newCasa": true,
+    "raid": {
+      "held": false,
+      "stolen": 777,
+      "crops": 9,
+      "bank": 0,
+      "ready": 0,
+      "block": "raid",
+      "plots": 9
+    },
+    "raidOk": true,
+    "occBadge": true,
+    "occListed": true,
+    "occPaused": true,
+    "occInfo": true,
+    "occPlantDenied": true,
+    "afterReload": {
+      "santiago": true,
+      "manzMolino": true,
+      "bayamoCorral": true
+    },
+    "ok": true
+  }
+}

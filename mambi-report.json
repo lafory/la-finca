@@ -49,7 +49,7 @@
       "sheetBay": "Bayamo · Oriente",
       "fundar2": {
         "x": 808.4921875,
-        "y": 331.671875,
+        "y": 331.689208984375,
         "inView": true,
         "hitsIt": true,
         "disabled": false
@@ -89,7 +89,7 @@
       "maxShown": true
     },
     "farm": true,
-    "rent": 0,
+    "rent": 6496,
     "farmsAfter": {
       "manzanillo": 3,
       "bayamo": 1,
@@ -101,7 +101,7 @@
       "baracoa"
     ],
     "perf": {
-      "fps": 25,
+      "fps": 15,
       "calls": 34,
       "tris": 18166
     },
@@ -111,9 +111,9 @@
       "freed": 3,
       "farms": 3,
       "army": 38,
-      "viveres": 1815
+      "viveres": 2163
     },
-    "ok": false
+    "ok": true
   },
   "ipad": {
     "errors": [],
@@ -165,7 +165,7 @@
       "sheetBay": "Bayamo · Oriente",
       "fundar2": {
         "x": 578.4921875,
-        "y": 695.671875,
+        "y": 707.0111083984375,
         "inView": true,
         "hitsIt": true,
         "disabled": false
@@ -205,7 +205,7 @@
       "maxShown": true
     },
     "farm": true,
-    "rent": 0,
+    "rent": 6496,
     "farmsAfter": {
       "manzanillo": 3,
       "bayamo": 1,
@@ -227,9 +227,9 @@
       "freed": 3,
       "farms": 3,
       "army": 38,
-      "viveres": 1815
+      "viveres": 2163
     },
-    "ok": false
+    "ok": true
   },
   "phone": {
     "errors": [],
@@ -321,7 +321,7 @@
       "maxShown": true
     },
     "farm": true,
-    "rent": 0,
+    "rent": 6496,
     "farmsAfter": {
       "manzanillo": 3,
       "bayamo": 1,
@@ -333,7 +333,7 @@
       "baracoa"
     ],
     "perf": {
-      "fps": 47,
+      "fps": 26,
       "calls": 32,
       "tris": 17950
     },
@@ -343,9 +343,9 @@
       "freed": 3,
       "farms": 3,
       "army": 38,
-      "viveres": 1815
+      "viveres": 2163
     },
-    "ok": false
+    "ok": true
   },
   "phone-land": {
     "errors": [],
@@ -437,7 +437,7 @@
       "maxShown": true
     },
     "farm": true,
-    "rent": 0,
+    "rent": 6496,
     "farmsAfter": {
       "manzanillo": 3,
       "bayamo": 1,
@@ -449,7 +449,7 @@
       "baracoa"
     ],
     "perf": {
-      "fps": 50,
+      "fps": 31,
       "calls": 34,
       "tris": 18166
     },
@@ -459,9 +459,9 @@
       "freed": 3,
       "farms": 3,
       "army": 38,
-      "viveres": 1815
+      "viveres": 2163
     },
-    "ok": false
+    "ok": true
   },
   "iphone-webkit": {
     "errors": [],
@@ -553,7 +553,7 @@
       "maxShown": true
     },
     "farm": true,
-    "rent": 0,
+    "rent": 6496,
     "farmsAfter": {
       "manzanillo": 3,
       "bayamo": 1,
@@ -565,7 +565,7 @@
       "baracoa"
     ],
     "perf": {
-      "fps": 33,
+      "fps": 32,
       "calls": 34,
       "tris": 18166
     },
@@ -575,9 +575,9 @@
       "freed": 3,
       "farms": 3,
       "army": 38,
-      "viveres": 1815
+      "viveres": 2163
     },
-    "ok": false
+    "ok": true
   },
   "ipad-webkit": {
     "errors": [],
@@ -669,7 +669,7 @@
       "maxShown": true
     },
     "farm": true,
-    "rent": 0,
+    "rent": 6496,
     "farmsAfter": {
       "manzanillo": 3,
       "bayamo": 1,
@@ -681,7 +681,7 @@
       "baracoa"
     ],
     "perf": {
-      "fps": 26,
+      "fps": 16,
       "calls": 34,
       "tris": 18166
     },
@@ -691,8 +691,8 @@
       "freed": 3,
       "farms": 3,
       "army": 38,
-      "viveres": 1815
+      "viveres": 2163
     },
-    "ok": false
+    "ok": true
   }
 }
