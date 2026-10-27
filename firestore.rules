@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function n(k, max) {
+      return request.resource.data[k] is int
+        && request.resource.data[k] >= 0
+        && request.resource.data[k] <= max;
+    }
+
+    match /fincas/{uid} {
+      allow read: if signedIn();
+      allow create, update: if own(uid)
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() > 0
+        && request.resource.data.nombre.size() <= 24
+        && n('inf', 800) && n('cab', 400) && n('cart', 5)
+        && n('garInf', 800) && n('garCab', 400)
+        && n('freed', 13)
+        && request.resource.data.updated is timestamp
+        && request.resource.data.keys().hasOnly(['nombre', 'inf', 'cab', 'cart', 'garInf', 'garCab', 'freed', 'updated']);
+      allow delete: if false;
+    }
+
+    match /invasiones/{id} {
+      allow read: if signedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to is string
+        && request.resource.data.to != request.auth.uid
+        && request.resource.data.estado == 'resuelta'
+        && request.resource.data.win is bool
+        && request.resource.data.fromName is string
+        && request.resource.data.fromName.size() > 0
+        && request.resource.data.fromName.size() <= 24
+        && n('defInf', 40) && n('defCab', 20) && n('defGarInf', 80) && n('defGarCab', 40)
+        && request.resource.data.at is timestamp
+        && request.resource.data.keys().hasOnly(['from', 'to', 'fromName', 'estado', 'win', 'defInf', 'defCab', 'defGarInf', 'defGarCab', 'at']);
+      allow update, delete: if false;
+    }
+  }
+}

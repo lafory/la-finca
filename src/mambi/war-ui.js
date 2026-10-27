@@ -5,10 +5,12 @@ import { registerAct, registerGameModule } from '../registry.js';
 import { MambiUI } from './ui.js';
 import { CITY_BY_ID } from './data.js';
 import { RIVAL_BY, RIVALS, friendPower, rt, suggestDetachment } from './war.js';
+import { attachLive, liveFinca, liveNombre, livePower, liveState, pushFinca, reportLive, signInGoogle, signOutGoogle } from './live.js';
 
 const k1 = (n) => (n >= 10000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : `${Math.floor(n)}`);
 const mmss = (s) => { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const hm = (s) => { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h ? `${h} h ${m} min` : `${m} min`; };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&', '<': '<', '>': '>', '"': '"', "'": '&#39;' }[c]));
 const moodWord = (m) => (m < 0.7 ? 'debilitada' : m < 0.9 ? 'tocada' : m > 1.08 ? 'crecida' : 'en forma');
 
 const STYLE = `
@@ -66,6 +68,7 @@ export class WarUI {
         bar.appendChild(b);
       }
     }
+    try { attachLive(game); } catch (e) { console.warn('[vivo]', e); }
   }
 
   get sim() { return this.g.sim; }
@@ -103,6 +106,7 @@ export class WarUI {
     }
     const badge = document.getElementById('war-badge');
     if (badge) badge.classList.toggle('hidden', !A);
+    try { pushFinca(this.sim); } catch { /* sin cuenta */ }
     this.drain();
     this.showReport();
   }
@@ -127,8 +131,11 @@ export class WarUI {
     if (!r || r.cancelled) return;
     this.g.sound?.play(r.win ? 'level' : 'error');
     try { save(this.sim.s); } catch { /* sin guardar */ }
+    if (r.live) reportLive(this.sim, r.live, r);
+    else pushFinca(this.sim, true);
     const field = r.field ? ' La jugaste en el campo.' : '';
-    this.ui.modal(`<h2>${r.win ? ICON.flagcu : ICON.machete} ${r.title}</h2><p>${r.line}${field}</p><button class="btn primary" data-act="modal-close">Volver</button>`);
+    const reach = r.live ? ' Le llega a su teléfono. Sus ciudades siguen libres.' : '';
+    this.ui.modal(`<h2>${r.win ? ICON.flagcu : ICON.machete} ${r.title}</h2><p>${r.line}${field}${reach}</p><button class="btn primary" data-act="modal-close">Volver</button>`);
   }
 
   stepRow(k, label, step) {
@@ -157,7 +164,8 @@ export class WarUI {
     let W = null;
     try { W = sim.war(); } catch { return '<p class="note">La guerra de las fincas todavía no está lista.</p>'; }
     const code = sim.warCode();
-    let out = `<p class="note">El mismo ejército sirve para tres cosas: liberar ciudades y aguantar al Régimen (eso no cambia), rechazar a quien invada tus ciudades, e invadir otras fincas. Estas fincas no son personas en vivo.</p>`;
+    let out = `<p class="note">El mismo ejército libera ciudades, aguanta al Régimen, rechaza invasores e invade. Cachita, Pancho, Nené y Tato son para jugar solo. Con Google, la invasión le llega a la otra persona.</p>`;
+    out += this.liveHtml();
     out += `<h3>Tu código</h3><p class="note">Pásaselo a un amigo para que pelee contra tu tropa de ahora. El resultado se queda en su teléfono.</p>`;
     out += `<div class="war-code" id="war-code">${code}</div>`;
     out += `<div class="row"><div class="row-main"><b>Apodo en el código</b><small>Letras, sin espacios. Ahora: ${W.nick}.</small></div></div>`;
@@ -171,7 +179,7 @@ export class WarUI {
       const p = friendPower(f);
       out += `<div class="row sel"><div class="row-main"><b>Finca de ${f.name}</b><small>${f.inf} infantes · ${f.cab} jinetes · ${f.cart} carretas · guarnición ${f.garInf}+${f.garCab} · fuerza ${p}. Código, no una persona en vivo.</small></div><button class="btn primary" data-act="warinvade" data-id="friend">Invadir</button></div>`;
     }
-    out += `<h3>Otras fincas</h3>`;
+    out += `<h3>Otras fincas</h3><p class="note">Para jugar solo, sin que nadie se entere.</p>`;
     const inn = W.inbound;
     for (const r of RIVALS) {
       const mood = W.rivals[r.id]?.mood || 1;
@@ -191,6 +199,38 @@ export class WarUI {
     return out;
   }
 
+  liveHtml() {
+    if (!liveState.user) {
+      let out = `<h3>Cuenta de Google</h3><p class="note">Entras para que otra persona vea tu tropa y te pueda invadir. La finca —pesos, gallinas, central— no se sube. Cachita, Pancho, Nené y Tato siguen siendo para jugar solo.</p>`;
+      out += `<button class="btn primary" data-act="wargoogle">Entrar con Google</button>`;
+      if (liveState.error) out += `<p class="note">${esc(liveState.error)}</p>`;
+      return out;
+    }
+    const nombre = liveNombre() || liveState.user.email || 'tu cuenta';
+    let out = `<h3>En vivo</h3><p class="note">Entraste como <b>${esc(nombre)}</b>. Lo que se publica es el ejército de ahora. Si entras en dos teléfonos con la misma cuenta, queda el último que publicó.</p>`;
+    out += `<button class="btn" data-act="warout">Salir de Google</button>`;
+    if (liveState.error) out += `<p class="note">${esc(liveState.error)}</p>`;
+    out += `<h3>Fincas en vivo</h3>`;
+    if (!liveState.fincas.length) {
+      out += `<p class="note">Todavía no hay otra finca. La otra persona también tiene que tocar Entrar con Google en este juego.</p>`;
+    } else {
+      for (const f of liveState.fincas) {
+        const uid = String(f.uid || '');
+        if (!/^[A-Za-z0-9_-]{6,128}$/.test(uid)) continue;
+        const p = livePower(f);
+        out += `<div class="row"><div class="row-main"><b>${esc(f.nombre || 'Finca')}</b><small>${f.inf | 0} infantes · ${f.cab | 0} jinetes · ${f.cart | 0} carretas · guarnición ${f.garInf | 0}+${f.garCab | 0} · fuerza ${p}</small></div><button class="btn primary" data-act="warinvade" data-id="g:${uid}">Invadir</button></div>`;
+      }
+    }
+    return out;
+  }
+
+  onLive() {
+    if (this.sheet !== 'home' || this.ui.sheet?.title !== 'Invasiones') return;
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
+    this.ui.refreshSheet();
+  }
+
   openInvade(id) {
     const sim = this.sim;
     const W = sim.war();
@@ -198,13 +238,20 @@ export class WarUI {
       if (!W.friend) { this.ui.toast('Primero pega el código de una finca.'); return; }
       this.which = 'friend';
       this.det = suggestDetachment(sim.mb().army, friendPower(W.friend));
+    } else if (String(id || '').startsWith('g:')) {
+      const f = liveFinca(id.slice(2));
+      if (!f) { this.ui.toast('Esa finca ya no está en la lista.'); return; }
+      this.which = `g:${f.uid}`;
+      this.det = suggestDetachment(sim.mb().army, livePower(f));
     } else if (!RIVAL_BY[id]) return;
     else {
       this.which = id;
       this.det = suggestDetachment(sim.mb().army, sim.warPower(id));
     }
     this.sheet = 'invade';
-    const title = id === 'friend' ? `Invadir la finca de ${W.friend.name}` : `Invadir ${RIVAL_BY[id].finca}`;
+    let title = `Invadir ${RIVAL_BY[id]?.finca || 'la finca'}`;
+    if (id === 'friend') title = `Invadir la finca de ${W.friend.name}`;
+    else if (String(id || '').startsWith('g:')) title = `Invadir la finca de ${liveFinca(id.slice(2))?.nombre || 'otro'}`;
     this.ui.openSheet(title, () => this.invadeHtml());
   }
 
@@ -213,14 +260,20 @@ export class WarUI {
     const sim = this.sim;
     const W = sim.war();
     const friend = id === 'friend';
-    const rival = friend ? null : RIVAL_BY[id];
-    if (!friend && !rival) return '<p class="note">Esa finca ya no está.</p>';
+    const live = !friend && String(id || '').startsWith('g:') ? liveFinca(id.slice(2)) : null;
+    const rival = friend || live ? null : RIVAL_BY[id];
     if (friend && !W.friend) return '<p class="note">No hay código cargado.</p>';
-    const foe = friend ? W.friend.name : rival.name;
-    const place = friend ? `la finca de ${foe}` : rival.finca;
-    const power = friend ? friendPower(W.friend) : sim.warPower(id);
+    if (!friend && !live && !rival) return '<p class="note">Esa finca ya no está.</p>';
+    const foe = friend ? W.friend.name : live ? (live.nombre || 'Otra finca') : rival.name;
+    const place = friend || live ? `la finca de ${foe}` : rival.finca;
+    const power = friend ? friendPower(W.friend) : live ? livePower(live) : sim.warPower(id);
     const why = sim.warCanSend(this.det);
-    let out = `<p class="note">Mandas un destacamento del campamento contra ${place} (${foe}, fuerza ${power}). Quien pierde se dispersa y vuelve a su casa. ${friend ? 'Es el código de otra finca: el resultado no le llega.' : 'No es una persona en vivo, y no es una ciudad de la campaña.'}</p>`;
+    const extra = live
+      ? 'Es una persona con Google: el resultado le llega a su teléfono. Sus ciudades de la campaña siguen libres.'
+      : friend
+        ? 'Es el código de otra finca: el resultado no le llega.'
+        : 'No es una persona en vivo, y no es una ciudad de la campaña.';
+    let out = `<p class="note">Mandas un destacamento del campamento contra ${esc(place)} (${esc(foe)}, fuerza ${power}). Quien pierde se dispersa y vuelve a su casa. ${extra}</p>`;
     out += this.stepRow('inf', 'Infantes', 5);
     out += this.stepRow('cab', 'Jinetes', 1);
     out += this.stepRow('cart', 'Carretas', 1);
@@ -277,6 +330,20 @@ export class WarUI {
         enemy: friendPower(f), army: { ...det }, tactic: det.cart ? 'asedio' : det.cab > det.inf ? 'carga' : 'emboscada',
       };
     }
+    if (String(id || '').startsWith('g:')) {
+      const f = liveFinca(id.slice(2));
+      if (!f) return null;
+      const terrains = ['llano', 'monte', 'costa'];
+      return {
+        war: 'invade', rivalId: 'live', foe: 'amigo', foeName: String(f.nombre || 'Otra finca').replace(/[<>]/g, '').slice(0, 24),
+        cityId: 'vivo', city: `Finca de ${f.nombre || 'otro'}`, terrain: terrains[(f.freed | 0) % 3] || 'llano',
+        enemy: livePower(f), army: { ...det }, tactic: det.cart ? 'asedio' : det.cab > det.inf ? 'carga' : 'emboscada',
+        live: {
+          uid: f.uid, nombre: f.nombre || 'Finca',
+          inf: f.inf | 0, cab: f.cab | 0, cart: f.cart | 0, garInf: f.garInf | 0, garCab: f.garCab | 0,
+        },
+      };
+    }
     const r = RIVAL_BY[id];
     return {
       war: 'invade', rivalId: id, foe: r.foe, foeName: r.name,
@@ -323,15 +390,19 @@ export class WarUI {
     }
     if (kind === 'quick') {
       const spec = this.invadeSpec(det);
+      if (!spec) { this.ui.toast('Esa finca ya no está en la lista.'); return; }
       const r = this.sim.warQuick({
         war: 'invade', rivalId: spec.rivalId, cityId: spec.cityId, foeName: spec.foeName,
         friend: spec.friend, enemyPower: spec.enemy, tactic: spec.tactic, sent: det,
       });
       this.ui.closeSheet();
+      if (r && spec.live) r.live = spec.live;
       if (r && !r.cancelled) this.resultModal(r);
       return;
     }
-    this.g.field?.openWar(this.invadeSpec(det));
+    const spec = this.invadeSpec(det);
+    if (!spec) { this.ui.toast('Esa finca ya no está en la lista.'); return; }
+    this.g.field?.openWar(spec);
   }
 
   act(a, d) {
@@ -358,6 +429,14 @@ export class WarUI {
       return;
     }
     if (a === 'wargo') return this.go(d.id === 'quick' ? 'quick' : 'field');
+    if (a === 'wargoogle') {
+      signInGoogle().catch(() => {});
+      return;
+    }
+    if (a === 'warout') {
+      signOutGoogle().catch(() => this.ui.toast('No se pudo salir de Google.'));
+      return;
+    }
     if (a === 'warcopy') return this.copy();
     if (a === 'warnick') {
       const nick = document.getElementById('war-nick')?.value || '';
@@ -409,6 +488,6 @@ registerGameModule({
   frame(game) { try { game.war?.tick(); } catch { /* el mapa ya avisa */ } },
 });
 
-for (const a of ['waropen', 'warfield', 'warinvade', 'wardet', 'wargo', 'warcopy', 'warnick', 'waruse', 'warok', 'warcheat']) {
+for (const a of ['waropen', 'warfield', 'warinvade', 'wardet', 'wargo', 'wargoogle', 'warout', 'warcopy', 'warnick', 'waruse', 'warok', 'warcheat']) {
   registerAct(a, (ui, d) => ui.g.war?.act(a, d));
 }

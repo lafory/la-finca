@@ -310,6 +310,7 @@ export class FieldUI {
     this.ui.closeSheet();
     const mode = spec.war === 'invade' ? 'attack' : 'defense';
     this.battle = createBattle({ ...spec, mode });
+    if (spec.live) this.battle.live = spec.live;
     this.hold = false;
     this.begin();
   }
@@ -636,6 +637,7 @@ export class FieldUI {
     const win = result === 'win';
     const lost = casualties(b);
     if (b.war) {
+      const live = b.live || null;
       const sent = b.war === 'invade'
         ? { inf: b.stock.inf, cab: b.stock.cab, cart: b.stock.cart }
         : { inf: b.stock.campInf || 0, cab: b.stock.campCab || 0, cart: b.stock.campCart || 0 };
@@ -645,6 +647,7 @@ export class FieldUI {
       };
       this.close();
       const r = this.sim.warApply(spec);
+      if (r && live) r.live = live;
       if (r && !r.cancelled) this.g.war?.resultModal(r);
       return;
     }
@@ -669,6 +672,7 @@ export class FieldUI {
     const b = this.battle;
     if (!b || this.busy) return;
     if (b.war) {
+      const live = b.live || null;
       if (b.phase === 'deploy') {
         const sent = b.war === 'invade'
           ? { inf: b.stock.inf, cab: b.stock.cab, cart: b.stock.cart }
@@ -679,6 +683,7 @@ export class FieldUI {
         };
         this.cancel();
         const r = this.sim.warQuick(spec);
+        if (r && live) r.live = live;
         if (r && !r.cancelled) this.g.war?.resultModal(r);
         return;
       }
