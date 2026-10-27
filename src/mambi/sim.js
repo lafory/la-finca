@@ -24,6 +24,8 @@ export function ensureMambi(s) {
     // Por ciudad (reservado para contraataques del Régimen): dueño y guarnición mambisa que la defiende.
     garrison: Object.fromEntries(Object.entries(obj(d.garrison)).filter(([id]) => CITY_BY_ID[id]).map(([id, g]) => [id, { owner: obj(g).owner === 'regimen' ? 'regimen' : 'mambi', troops: int(obj(g).troops) }])),
     castro: d.castro, // contraataques del Régimen (src/mambi/castro.js)
+    cur: d.cur && CITY_BY_ID[d.cur] ? d.cur : undefined, // finca de provincia donde está el guajiro (src/provincias)
+    pvNote: d.pvNote, // aviso pendiente de la conversión de fincas viejas
   };
   if (!s.res) s.res = {};
   s.res.viveres = int(s.res.viveres);

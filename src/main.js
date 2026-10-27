@@ -4,6 +4,8 @@ import { viewSize, watchViewport, CAN_FULLSCREEN, NEEDS_A2HS_HINT } from './view
 import * as THREE from 'three';
 import { newGame, load, save, resetSave, now, isOwned, parcelAt, invCount, CLOCK, structOpen } from './state.js';
 import { TAP_HANDLERS, GAME_MODULES } from './registry.js';
+import { bootFarm, autoEnter } from './provincias/index.js';
+import { ZONE_FILTER } from './zones.js';
 import { ZONES, zoneOpen, zoneAt, isAnyRoad, PLANT_BY_ID, inFarm } from './zones.js';
 import { Sim } from './sim.js';
 import { World } from './world.js';
@@ -19,7 +21,10 @@ class Game {
     this.canvas = document.getElementById('game');
     const saved = load();
     this.hadSave = !!saved;
-    const state = saved || newGame();
+    // finca de provincia (src/provincias): si el guajiro estaba en una, se abre esa (misma partida, otra finca)
+    const boot = bootFarm(saved || newGame());
+    const state = boot.state;
+    this.farmCity = boot.city || null;
     this.sound = new Sound();
     this.started = false;
     this.ffSpeed = 1;
@@ -130,6 +135,8 @@ class Game {
       safe(() => { if (sessionStorage.getItem('lafinca-rescued')) { sessionStorage.removeItem('lafinca-rescued'); this.ui.toast('Finca nueva. Tu partida anterior quedó guardada: Ajustes → Guardar partida → Restaurar.'); } });
       setTimeout(() => safe(() => this.resize()), 300);
     });
+    // al cambiar de finca la página se recarga: se entra directo, sin la pantalla de título
+    if (autoEnter()) setTimeout(() => btn.click(), 0);
   }
 
   project(x, y, z) {
@@ -319,7 +326,7 @@ class Game {
       }
       if (pl) return this.tapPlant(pl.id);
       const zid = zoneAt(tx, tz);
-      if (zid && !isAnyRoad(tx, tz) && !zoneOpen(s, zid)) return this.ui.toast(`${ZONES[zid].name}: ${ZONES[zid].soon ? 'muy pronto' : `se abre en el nivel ${ZONES[zid].level}`}.`);
+      if (zid && !isAnyRoad(tx, tz) && !zoneOpen(s, zid)) return this.ui.toast(`${ZONES[zid].name}: ${ZONE_FILTER.fn && !ZONE_FILTER.fn(zid) ? 'eso está en tu finca principal' : ZONES[zid].soon ? 'muy pronto' : `se abre en el nivel ${ZONES[zid].level}`}.`);
       return go({ kind: 'ground', x: tx, z: tz }, tx + 0.5, tz + 0.5);
     }
     // obstáculos: tolera tocar la parte alta (cae una casilla detrás)

@@ -16,7 +16,9 @@ export function zoneAt(x, z) {
   for (const id of ZONE_ORDER) if (inRect(ZONES[id].rect, x, z)) return id;
   return null;
 }
-export function zoneOpen(s, id) { const zn = ZONES[id]; return !!zn && !zn.soon && s.level >= zn.level; }
+// Fincas de provincia (src/provincias): solo algunas zonas existen allí (sin campos grandes ni central).
+export const ZONE_FILTER = { fn: null };
+export function zoneOpen(s, id) { const zn = ZONES[id]; return !!zn && !zn.soon && s.level >= zn.level && (!ZONE_FILTER.fn || ZONE_FILTER.fn(id)); }
 // el camino real (x15–16) sigue hasta el fondo del mapa y el camino del sur cruza de este a oeste
 export const isAnyRoad = (x, z) => (x === 15 || x === 16) || (z === 40 || z === 41);
 

@@ -166,11 +166,13 @@ export function walkable(s, grid, x, z) {
 }
 
 // ---- Guardado ------------------------------------------------------------
+// Finca de provincia activa: SAVE_HOOK.fn(s) devuelve la partida raíz (finca principal) con la provincia dentro.
+export const SAVE_HOOK = { fn: null };
 export function save(s) {
   try {
     s.savedAt = now();
     s.clockOffset = CLOCK.offset;
-    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+    localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE_HOOK.fn ? SAVE_HOOK.fn(s) : s));
     return true;
   } catch {
     return false;
@@ -196,7 +198,17 @@ export function load() {
     const d = JSON.parse(raw);
     if (!d || typeof d !== 'object' || d.v !== 2) { keepRescue(raw); return null; }
     CLOCK.offset = +d.clockOffset || 0;
-    const base = newGame();
+    return normalizeState(d);
+  } catch (e) {
+    console.warn('[partida] no se pudo leer', e);
+    keepRescue(raw);
+    return null;
+  }
+}
+
+// Partida guardada (objeto plano) → estado válido, con valores por defecto y migraciones. base = estado nuevo de referencia.
+export function normalizeState(d, base = newGame()) {
+  {
     // Fusiona con valores por defecto para tolerar saves viejos.
     const s = { ...base, ...d };
     s.inv = { ...base.inv, ...d.inv };
@@ -240,10 +252,6 @@ export function load() {
     // v4: cada trabajador con id propio (los viejos son el original de su oficio)
     for (const w of s.workers) { if (!w.id) w.id = w.role; if (w.n == null) w.n = 0; }
     return s;
-  } catch (e) {
-    console.warn('[partida] no se pudo leer', e);
-    keepRescue(raw);
-    return null;
   }
 }
 

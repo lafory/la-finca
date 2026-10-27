@@ -19,7 +19,7 @@ registerZone('central', { name: 'El central', blurb: 'El central azucarero, su c
 // ---- lógica y guardado (estado en s.ext.central)
 installCentral(Sim); // métodos de campos/central/tren en Sim.prototype + bloqueo de la cuadrícula por los edificios
 registerMigration((s) => { ensureCen(s); });
-registerSimModule({ id: 'central', init: (sim) => sim.cenInit(), update: (sim, dt) => sim.updateCentral(dt) });
+registerSimModule({ id: 'central', mainOnly: true, init: (sim) => sim.cenInit(), update: (sim, dt) => sim.updateCentral(dt) });
 
 // ---- avisos de subir de nivel
 for (let l = 2; l <= 40; l++) for (const t of centralUnlocks(l)) registerUnlock(l, t);
@@ -27,6 +27,7 @@ for (let l = 2; l <= 40; l++) for (const t of centralUnlocks(l)) registerUnlock(
 // ---- vista, UI y cámara (necesitan el Game)
 let GAME = null;
 registerGameModule({
+  id: 'central', mainOnly: true, // solo en la finca principal (no en las de provincia)
   attach(game) {
     GAME = game;
     game.central = new CentralView(game);

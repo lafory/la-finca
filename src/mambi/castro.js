@@ -207,7 +207,7 @@ export function installCastro(SimC) {
       res.stolen = Math.floor(f.bank || 0); f.bank = 0; f.vbank = 0; res.crops = this.rgLoot?.(A.city) || 0;
       c.raidUntil = rt() + CS.RAID_BLOCK;
       C.stats.raids++;
-      this.csLog(`Saquearon la finca de ${city.name}: se llevaron ${res.stolen} pesos de renta${res.crops ? ` y la cosecha de ${res.crops} lotes` : ''}.`);
+      this.csLog(`Saquearon la finca de ${city.name}: se llevaron ${res.stolen} pesos de renta${res.crops ? ` y ${res.crops} cosas del almacén` : ''}.`);
     } else {
       // la ciudad cae: vuelve a gris, la finca se queda pero ocupada, la guarnición vuelve al campamento
       C.stats.lost++;
@@ -246,7 +246,7 @@ export function installCastro(SimC) {
       if (r.spared) lines.push(`${nm}: una columna se acercó y se retiró sin atacar.`);
       else if (r.held) lines.push(`${nm} resistió a ${r.attack} soldados del Régimen.${r.lost.inf + r.lost.cab ? ` ${r.lost.inf + r.lost.cab} de la guarnición se dispersaron y volvieron a sus casas.` : ''}`);
       else if (r.occupied) { losses++; lines.push(`${nm} cayó en manos del Régimen.${this.mb().farms[r.city] ? ' Su finca regional está ocupada y no paga renta.' : ''} Recupérala con una batalla.`); }
-      else { losses++; lines.push(`Saquearon la finca de ${nm}: se llevaron ${r.stolen} pesos de renta${r.crops ? ` y la cosecha de ${r.crops} lotes` : ''}.`); }
+      else { losses++; lines.push(`Saquearon la finca de ${nm}: se llevaron ${r.stolen} pesos de renta${r.crops ? ` y ${r.crops} cosas del almacén` : ''}.`); }
     }
     // si siguen atrasados (ausencia muy larga), el próximo llega después de volver
     if (!C.attack && C.next && C.next < t) C.next = t + CS.FIRST / 2;

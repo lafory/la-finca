@@ -13,6 +13,8 @@ export function normFarm(id, f) {
   const T = TYPES[CITY_BY_ID[id].farm[0]], t = now();
   const lvl = Math.min(3, Math.max(1, int(f.lvl) || 1));
   const out = { v: 2, lvl, at: +f.at || t, bank: Math.max(0, +f.bank || 0), vbank: Math.max(0, +f.vbank || 0), cells: {} };
+  // finca grande de provincia (src/provincias): se conserva tal cual
+  if (f.conv) { out.conv = f.conv; out.full = f.full && typeof f.full === 'object' ? f.full : null; out.sum = f.sum && typeof f.sum === 'object' ? f.sum : null; return out; }
   const builtIds = new Set();
   if (f.cells && typeof f.cells === 'object') {
     for (const [k, c] of Object.entries(f.cells)) {

@@ -25,7 +25,8 @@ export function readBackup() {
 }
 
 // Partida actual (recién guardada) como objeto plano.
-function current(g) { save(g.sim.s); return JSON.parse(JSON.stringify(g.sim.s)); }
+// En una finca de provincia, lo guardado es la partida entera (finca principal con las provincias dentro).
+function current(g) { save(g.sim.s); try { const raw = localStorage.getItem(SAVE_KEY); if (raw) return JSON.parse(raw); } catch { /* sin almacenamiento */ } return JSON.parse(JSON.stringify(g.sim.s)); }
 
 function copyFallback(text) {
   const ta = document.createElement('textarea');

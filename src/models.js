@@ -599,7 +599,10 @@ export function plotGeo() {
   return b.build();
 }
 
+// Cultivos extra (fincas de provincia): type → (stage 1|2) => geometría
+export const CROP_GEOS = {};
 export function cropGeo(type, stage) {
+  if (stage > 0 && CROP_GEOS[type]) return CROP_GEOS[type](stage);
   const r = rng(type.length * 10 + stage);
   const b = new Builder();
   const spots = [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]]; // encima de los dos lomos del surco

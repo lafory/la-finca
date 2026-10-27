@@ -140,7 +140,7 @@ export class Sim {
       if (s.seeds[crop] > 0) w += 1;
       weights[item] = w;
     };
-    crop('tomato', 'tomato', 1); crop('cane', 'cane', 3); crop('tobacco', 'tobacco', 4);
+    for (const c of CROP_ORDER) crop(CROPS[c].item, c, CROPS[c].level); // finca principal: tomate, caña, tabaco
     const prod = (item, recipe) => {
       const r = RECIPES[recipe];
       if (s.level < r.level) return;
@@ -151,15 +151,17 @@ export class Sim {
       if (s.inv[ing] >= q) w += 2;
       weights[item] = w;
     };
-    prod('ketchup', 'ketchup'); prod('guarapo', 'guarapo');
+    for (const [rid, r] of Object.entries(RECIPES)) if (r.where.includes('kitchen')) prod(r.out, rid); // kétchup y guarapo en la principal
     // productos de las estructuras nuevas (solo si están construidas)
     for (const [id, st] of Object.entries(STRUCTURES)) {
       if (!s.built[id]) continue;
       if (st.kind === 'animal' && st.produce.item !== 'egg') weights[st.produce.item] = 2 + (s.inv[st.produce.item] > 0 ? 4 : 0);
-      if (st.kind === 'proc') for (const [rid, r] of Object.entries(RECIPES)) if (r.where.includes(id) && rid !== 'ketchup' && rid !== 'guarapo' && s.level >= r.level) weights[r.out] = 1.5 + (s.inv[r.out] > 0 ? 4 : 0) + (this.proc(id)?.recipe === rid ? 2 : 0);
+      if (st.kind === 'proc') for (const [rid, r] of Object.entries(RECIPES)) if (r.where.includes(id) && !r.where.includes('kitchen') && s.level >= r.level) weights[r.out] = 1.5 + (s.inv[r.out] > 0 ? 4 : 0) + (this.proc(id)?.recipe === rid ? 2 : 0);
     }
     // lo de la manigua, si tienes
     for (const k of ['mango', 'guayaba', 'coco', 'jutia', 'jibaro']) if (s.inv[k] > 0) weights[k] = 3;
+    // fincas de provincia: lo típico de la región se pide más (FARM_HOOKS.demand)
+    if (FARM_HOOKS.demand) FARM_HOOKS.demand(s, weights);
     // un poco de variedad: baja el peso de lo que ya piden los demás camiones
     for (const k of pending) if (weights[k]) weights[k] *= 0.6;
     const pick = (exclude) => {

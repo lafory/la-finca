@@ -293,7 +293,7 @@ export class MambiUI {
       }
       out += `<p class="note">${ICON.flagcu} ¡${c.name} es libre! El pueblo celebra en la plaza.</p>`;
       out += this.farmRow(id);
-      if (M.farms[id]) out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Se junta sola, también con el juego cerrado (hasta 8 h).</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
+      if (M.farms[id] && !M.farms[id].conv) out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Se junta sola, también con el juego cerrado (hasta 8 h).</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
       const otras = sim.mbFarmless().filter((x) => x !== id);
       if (otras.length) out += `<p class="note">Otras ciudades libres sin finca: ${otras.map((x) => `<b>${CITY_BY_ID[x].name}</b>`).join(', ')}. Toca «Fincas» abajo para verlas todas.</p>`;
       return out + this.cheats();
@@ -322,7 +322,7 @@ export class MambiUI {
       if (con.length) {
         out += '<h3>Fincas fundadas</h3>';
         for (const id of con) out += this.farmRow(id);
-        out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Pendiente: ${k1(sim.mbPending().pesos)} pesos</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
+        if (con.some((id) => !M.farms[id].conv)) out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Renta de todas las fincas</b><small>Pendiente: ${k1(sim.mbPending().pesos)} pesos</small></div><button class="btn primary" data-act="mbrent">Cobrar</button></div>`;
       }
       if (occ.length) { out += '<h3>Ocupadas por el Régimen</h3>'; for (const id of occ) out += this.farmRow(id); }
       const falta = CITIES.filter((c) => !sim.mbFreed(c.id));

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { viewSize } from './viewport.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import {
-  W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, WORKERS, WORKER_ORDER,
+  W, H, PARCELS, BUILDINGS, PEN, START_PLOTS, START_PALMS, FLAGPOLE, TRUCK_SPOT, CROPS, CROP_ORDER, WORKERS, WORKER_ORDER,
   STRUCTURES, OBSTACLE_LIST, TRUCK_SLOTS, GW, GH, workerLook,
 } from './data.js';
 import { isOwned, isRoad, parcelAt, now, parcelReachable, structOpen } from './state.js';
@@ -16,7 +16,10 @@ import * as M from './models.js';
 import { patchMaterial, TIME } from './shaders.js';
 import { groundTexture, grassTileTexture, blobTexture, skyTexture } from './textures.js';
 
-const CROP_KEYS = ['tomato', 'cane', 'tobacco'];
+// Cultivos con malla propia: los de la finca activa (principal: tomate, caña, tabaco; provincias: los suyos)
+let CROP_KEYS = ['tomato', 'cane', 'tobacco'];
+// Animales extra (provincias): kind → (variante) => geometría; 'none' = obra sin animales sueltos (muelle)
+export const ANIMAL_GEOS = {};
 const tmpM = new THREE.Matrix4(), tmpQ = new THREE.Quaternion(), tmpV = new THREE.Vector3(), tmpS = new THREE.Vector3(), tmpE = new THREE.Euler();
 const setMat = (mesh, i, x, y, z, ry = 0, s = 1, sy = s, sz = s) => {
   tmpQ.setFromEuler(tmpE.set(0, ry, 0));
@@ -429,11 +432,12 @@ export class World {
     const have = new Set(this.animals.map((a) => a.id));
     for (const [id, st] of Object.entries(STRUCTURES)) {
       if (st.kind !== 'animal' || !s.built[id] || have.has(id)) continue;
-      const geos = [0, 1, 2].map((v) => (st.animal === 'cow' ? M.cowGeo(v) : st.animal === 'goat' ? M.goatGeo(v) : st.animal === 'pig' ? M.pigGeo(v) : M.chickenGeo(v)));
+      if (st.animal === 'none') continue;
+      const geos = [0, 1, 2].map((v) => (ANIMAL_GEOS[st.animal] ? ANIMAL_GEOS[st.animal](v) : st.animal === 'cow' ? M.cowGeo(v) : st.animal === 'goat' ? M.goatGeo(v) : st.animal === 'pig' ? M.pigGeo(v) : M.chickenGeo(v)));
       for (let i = 0; i < st.n; i++) {
         const m = new THREE.Mesh(geos[i % 3], this.mat);
         m.castShadow = true;
-        const a = { id, st, m, x: st.x + 0.8 + Math.random() * (st.w - 1.6), z: st.z + 1.2 + Math.random() * (st.h - 1.8), tx: 0, tz: 0, wait: Math.random() * 3, face: Math.random() * 6, speed: st.animal === 'cow' ? 0.35 : st.animal === 'hen' ? 0.8 : 0.5 };
+        const a = { id, st, m, x: st.x + 0.8 + Math.random() * (st.w - 1.6), z: st.z + 1.2 + Math.random() * (st.h - 1.8), tx: 0, tz: 0, wait: Math.random() * 3, face: Math.random() * 6, speed: st.animal === 'cow' || st.animal === 'ox' ? 0.35 : st.animal === 'hen' ? 0.8 : 0.5 };
         a.tx = a.x; a.tz = a.z;
         this.scene.add(m);
         this.animals.push(a);
@@ -505,6 +509,7 @@ export class World {
       this.plotMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3).fill(1), 3);
       this.scene.add(this.plotMesh);
       this.cropMeshes = {};
+      CROP_KEYS = [...new Set([...CROP_ORDER, ...this.s.plots.map((p) => p.crop).filter((c) => c && CROPS[c])])];
       for (const c of CROP_KEYS) {
         this.cropMeshes[c] = [0, 1, 2].map((st) => {
           const m = new THREE.InstancedMesh(st === 0 ? (this.sproutGeo ||= M.cropGeo('tomato', 0)) : M.cropGeo(c, st), this.matCrop, n);
@@ -531,7 +536,7 @@ export class World {
     s.plots.forEach((p, i) => {
       if (this.plotsDirty) setMat(this.plotMesh, i, p.x + 0.5, 0, p.z + 0.5);
       this.plotMesh.setColorAt(i, p.crop && p.watered ? wet : dry);
-      if (!p.crop) return;
+      if (!p.crop || !this.cropMeshes[p.crop]) return;
       const prog = this.sim.plotProgress(p, t);
       const st = prog >= 1 ? 2 : prog < 0.33 ? 0 : 1;
       const mesh = this.cropMeshes[p.crop][st];
