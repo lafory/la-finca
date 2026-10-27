@@ -143,8 +143,9 @@ async function run(name, { webkit: useWk, ...opts }) {
   await click('[data-act="mbclose"]'); await sleep(1500);
   res.backToFarm = await ev(() => document.getElementById('mambi').classList.contains('hidden') && !document.getElementById('ui').classList.contains('mambi-on'));
   const c0 = await ev(() => window.__finca.fps.frames + window.__finca.fps.t);
-  await sleep(1200);
-  res.farmLoopRunning = (await ev(() => window.__finca.fps.frames + window.__finca.fps.t)) !== c0;
+  // en WebKit por software el primer cuadro de la finca tras el mapa puede tardar >1 s: esperar hasta 6 s
+  res.farmLoopRunning = false;
+  for (let i = 0; i < 20 && !res.farmLoopRunning; i++) { await sleep(300); res.farmLoopRunning = (await ev(() => window.__finca.fps.frames + window.__finca.fps.t)) !== c0; }
   await shot('7-finca');
   // guardado
   await page.evaluate(() => { const g = window.__finca; localStorage.setItem('lafinca-v2', JSON.stringify({ ...g.sim.s, savedAt: Date.now() / 1000 })); });
