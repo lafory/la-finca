@@ -1,3 +1,7 @@
+// RETIRADA (provincias): las fincas regionales ya no son finquitas con escena de visita; ahora son fincas grandes
+// con el mismo motor que la principal. La prueba que la reemplaza es tests/provincias.mjs. Se deja por historia;
+// para correrla igual (contra una versión vieja): FORCE=1.
+if (!process.env.FORCE) { console.log('tests/regional.mjs retirada: usa tests/provincias.mjs'); process.exit(0); }
 // Fincas regionales jugables: partida VIEJA (nivel 1–3 sin lotes) → se conserva y se convierte; finquitas 3D y
 // marcadores en el mapa; visitar 3 tipos con toques reales (cosechar, sembrar, construir, comprar tierra, cobrar);
 // fundar una nueva y jugarla; ciudad ocupada (todo parado, en gris); escena liberada al volver; 0 errores.
