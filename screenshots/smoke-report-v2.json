@@ -26,14 +26,14 @@
       "after": 9.8,
       "ok": true
     },
-    "eggs": 5,
+    "eggs": 3,
     "load": {
       "order": {
         "egg": 3
       },
       "money": 35,
       "sold": 1,
-      "tut": 2,
+      "tut": 1,
       "queueLen": 2
     },
     "skip": {
@@ -41,16 +41,16 @@
       "before": [
         8,
         9,
-        15
+        17
       ],
       "afterSkip": [
         9,
-        15
+        17
       ],
       "after": [
         9,
-        15,
-        17
+        17,
+        20
       ],
       "frontChanged": true,
       "refilled": true,
@@ -72,10 +72,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 11.6,
+      "fps": 60,
       "quality": "alta",
       "calls": 59,
-      "tris": 184594
+      "tris": 186062
     }
   },
   "phone": {
@@ -105,7 +105,7 @@
       "after": 14.4,
       "ok": true
     },
-    "eggs": 6,
+    "eggs": 5,
     "load": {
       "order": {
         "egg": 3
@@ -122,11 +122,12 @@
         9
       ],
       "afterSkip": [
-        9
+        9,
+        16
       ],
       "after": [
         9,
-        15,
+        16,
         17
       ],
       "frontChanged": true,
@@ -149,10 +150,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 12.5,
+      "fps": 60,
       "quality": "media",
       "calls": 87,
-      "tris": 185999
+      "tris": 187207
     }
   },
   "ipad": {
@@ -189,23 +190,24 @@
       },
       "money": 35,
       "sold": 1,
-      "tut": 2,
+      "tut": 1,
       "queueLen": 2
     },
     "skip": {
       "parkedBefore": true,
       "before": [
         8,
-        9
+        9,
+        22
       ],
       "afterSkip": [
         9,
-        19
+        22
       ],
       "after": [
         9,
-        19,
-        20
+        22,
+        25
       ],
       "frontChanged": true,
       "refilled": true,
@@ -229,8 +231,8 @@
     "perf": {
       "fps": 60,
       "quality": "media",
-      "calls": 76,
-      "tris": 184996
+      "calls": 81,
+      "tris": 185436
     }
   },
   "phone-landscape": {
@@ -267,22 +269,24 @@
       },
       "money": 35,
       "sold": 1,
-      "tut": 2,
+      "tut": 1,
       "queueLen": 2
     },
     "skip": {
       "parkedBefore": true,
       "before": [
         8,
-        9
+        9,
+        17
       ],
       "afterSkip": [
-        9
+        9,
+        17
       ],
       "after": [
         9,
-        15,
-        16
+        17,
+        18
       ],
       "frontChanged": true,
       "refilled": true,
@@ -304,10 +308,10 @@
       "trucks": 3
     },
     "perf": {
-      "fps": 12.6,
+      "fps": 60,
       "quality": "media",
       "calls": 59,
-      "tris": 170869
+      "tris": 173165
     }
   }
 }

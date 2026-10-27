@@ -20,26 +20,100 @@
     "freed": [
       "manzanillo"
     ],
+    "taps": {
+      "badge1": "1",
+      "labelManz": {
+        "x": 640,
+        "y": 361.296875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetManz": "Manzanillo · Oriente",
+      "poorWhy": "Te faltan 2900 pesos (cuesta 3000). Cobra la renta o vende en la finca.",
+      "poorDisabled": true,
+      "fundar1": {
+        "x": 808.4921875,
+        "y": 331.671875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "winBtn": {
+        "x": 730.515625,
+        "y": 515.15625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBay": "Bayamo · Oriente",
+      "fundar2": {
+        "x": 808.4921875,
+        "y": 331.671875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "title": {
+        "x": 640,
+        "y": 77,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar": "Baracoa · Oriente",
+      "badge3": "1",
+      "labelBar": {
+        "x": 640,
+        "y": 355.796875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar2": "Baracoa · Oriente",
+      "fundar3": {
+        "x": 808.4921875,
+        "y": 331.671875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsBtn": {
+        "x": 598.203125,
+        "y": 758,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsSheet": "Fincas regionales · Cuba libre",
+      "maxShown": true
+    },
     "farm": true,
-    "rent": 14403,
+    "rent": 0,
+    "farmsAfter": {
+      "manzanillo": 3,
+      "bayamo": 1,
+      "baracoa": 1
+    },
     "freed2": [
       "manzanillo",
-      "bayamo"
+      "bayamo",
+      "baracoa"
     ],
     "perf": {
-      "fps": 30,
-      "calls": 29,
-      "tris": 14582
+      "fps": 25,
+      "calls": 34,
+      "tris": 18166
     },
     "backToFarm": true,
     "farmLoopRunning": true,
     "afterReload": {
-      "freed": 2,
-      "farms": 1,
+      "freed": 3,
+      "farms": 3,
       "army": 38,
-      "viveres": 2573
+      "viveres": 1815
     },
-    "ok": true
+    "ok": false
   },
   "ipad": {
     "errors": [],
@@ -62,26 +136,100 @@
     "freed": [
       "manzanillo"
     ],
+    "taps": {
+      "badge1": "1",
+      "labelManz": {
+        "x": 410,
+        "y": 545.09375,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetManz": "Manzanillo · Oriente",
+      "poorWhy": "Te faltan 2900 pesos (cuesta 3000). Cobra la renta o vende en la finca.",
+      "poorDisabled": true,
+      "fundar1": {
+        "x": 578.4921875,
+        "y": 695.671875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "winBtn": {
+        "x": 500.515625,
+        "y": 705.15625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBay": "Bayamo · Oriente",
+      "fundar2": {
+        "x": 578.4921875,
+        "y": 695.671875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "title": {
+        "x": 410,
+        "y": 77,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar": "Baracoa · Oriente",
+      "badge3": "1",
+      "labelBar": {
+        "x": 410,
+        "y": 536.890625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar2": "Baracoa · Oriente",
+      "fundar3": {
+        "x": 578.4921875,
+        "y": 695.671875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsBtn": {
+        "x": 368.203125,
+        "y": 1138,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsSheet": "Fincas regionales · Cuba libre",
+      "maxShown": true
+    },
     "farm": true,
-    "rent": 14403,
+    "rent": 0,
+    "farmsAfter": {
+      "manzanillo": 3,
+      "bayamo": 1,
+      "baracoa": 1
+    },
     "freed2": [
       "manzanillo",
-      "bayamo"
+      "bayamo",
+      "baracoa"
     ],
     "perf": {
-      "fps": 34,
-      "calls": 24,
-      "tris": 14342
+      "fps": 26,
+      "calls": 34,
+      "tris": 18166
     },
     "backToFarm": true,
     "farmLoopRunning": true,
     "afterReload": {
-      "freed": 2,
-      "farms": 1,
+      "freed": 3,
+      "farms": 3,
       "army": 38,
-      "viveres": 2573
+      "viveres": 1815
     },
-    "ok": true
+    "ok": false
   },
   "phone": {
     "errors": [],
@@ -104,26 +252,100 @@
     "freed": [
       "manzanillo"
     ],
+    "taps": {
+      "badge1": "1",
+      "labelManz": {
+        "x": 195,
+        "y": 382.59375,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetManz": "Manzanillo · Oriente",
+      "poorWhy": "Te faltan 2900 pesos (cuesta 3000). Cobra la renta o vende en la finca.",
+      "poorDisabled": true,
+      "fundar1": {
+        "x": 195,
+        "y": 439.296875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "winBtn": {
+        "x": 270.8125,
+        "y": 548.359375,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBay": "Bayamo · Oriente",
+      "fundar2": {
+        "x": 195,
+        "y": 439.296875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "title": {
+        "x": 195,
+        "y": 121,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar": "Baracoa · Oriente",
+      "badge3": "1",
+      "labelBar": {
+        "x": 195,
+        "y": 376.6875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar2": "Baracoa · Oriente",
+      "fundar3": {
+        "x": 195,
+        "y": 439.296875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsBtn": {
+        "x": 158.6875,
+        "y": 802,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsSheet": "Fincas regionales · Cuba libre",
+      "maxShown": true
+    },
     "farm": true,
-    "rent": 14402,
+    "rent": 0,
+    "farmsAfter": {
+      "manzanillo": 3,
+      "bayamo": 1,
+      "baracoa": 1
+    },
     "freed2": [
       "manzanillo",
-      "bayamo"
+      "bayamo",
+      "baracoa"
     ],
     "perf": {
-      "fps": 61,
-      "calls": 17,
-      "tris": 13798
+      "fps": 47,
+      "calls": 32,
+      "tris": 17950
     },
     "backToFarm": true,
     "farmLoopRunning": true,
     "afterReload": {
-      "freed": 2,
-      "farms": 1,
+      "freed": 3,
+      "farms": 3,
       "army": 38,
-      "viveres": 2573
+      "viveres": 1815
     },
-    "ok": true
+    "ok": false
   },
   "phone-land": {
     "errors": [],
@@ -146,25 +368,331 @@
     "freed": [
       "manzanillo"
     ],
+    "taps": {
+      "badge1": "1",
+      "labelManz": {
+        "x": 422,
+        "y": 163.09375,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetManz": "Manzanillo · Oriente",
+      "poorWhy": "Te faltan 2900 pesos (cuesta 3000). Cobra la renta o vende en la finca.",
+      "poorDisabled": true,
+      "fundar1": {
+        "x": 620.4921875,
+        "y": 172.75,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "winBtn": {
+        "x": 512.515625,
+        "y": 310.15625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBay": "Bayamo · Oriente",
+      "fundar2": {
+        "x": 620.4921875,
+        "y": 172.75,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "title": {
+        "x": 422,
+        "y": 77,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar": "Baracoa · Oriente",
+      "badge3": "1",
+      "labelBar": {
+        "x": 422,
+        "y": 160.390625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar2": "Baracoa · Oriente",
+      "fundar3": {
+        "x": 620.4921875,
+        "y": 172.75,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsBtn": {
+        "x": 384.6875,
+        "y": 354,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsSheet": "Fincas regionales · Cuba libre",
+      "maxShown": true
+    },
     "farm": true,
-    "rent": 14402,
+    "rent": 0,
+    "farmsAfter": {
+      "manzanillo": 3,
+      "bayamo": 1,
+      "baracoa": 1
+    },
     "freed2": [
       "manzanillo",
-      "bayamo"
+      "bayamo",
+      "baracoa"
     ],
     "perf": {
-      "fps": 58,
-      "calls": 28,
-      "tris": 14526
+      "fps": 50,
+      "calls": 34,
+      "tris": 18166
     },
     "backToFarm": true,
     "farmLoopRunning": true,
     "afterReload": {
-      "freed": 2,
-      "farms": 1,
+      "freed": 3,
+      "farms": 3,
       "army": 38,
-      "viveres": 2573
+      "viveres": 1815
     },
-    "ok": true
+    "ok": false
+  },
+  "iphone-webkit": {
+    "errors": [],
+    "hiddenAtStart": true,
+    "lockedAtStart": true,
+    "unlocked": true,
+    "btnVisible": true,
+    "mapOpen": true,
+    "intro": true,
+    "army": {
+      "inf": 5,
+      "cab": 3,
+      "cart": 1
+    },
+    "viveresGain": 24,
+    "citySheet": "Manzanillo · Oriente",
+    "tactics": 3,
+    "inBattle": true,
+    "battleDone": true,
+    "freed": [
+      "manzanillo"
+    ],
+    "taps": {
+      "badge1": "1",
+      "labelManz": {
+        "x": 194.9765625,
+        "y": 295.59375,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetManz": "Manzanillo · Oriente",
+      "poorWhy": "Te faltan 2900 pesos (cuesta 3000). Cobra la renta o vende en la finca.",
+      "poorDisabled": true,
+      "fundar1": {
+        "x": 195,
+        "y": 364.78125,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "winBtn": {
+        "x": 268.1328125,
+        "y": 447.15625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBay": "Bayamo · Oriente",
+      "fundar2": {
+        "x": 195,
+        "y": 364.78125,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "title": {
+        "x": 194.9609375,
+        "y": 121,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar": "Baracoa · Oriente",
+      "badge3": "1",
+      "labelBar": {
+        "x": 194.95052337646484,
+        "y": 290.890625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar2": "Baracoa · Oriente",
+      "fundar3": {
+        "x": 195,
+        "y": 364.78125,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsBtn": {
+        "x": 159.1875,
+        "y": 622,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsSheet": "Fincas regionales · Cuba libre",
+      "maxShown": true
+    },
+    "farm": true,
+    "rent": 0,
+    "farmsAfter": {
+      "manzanillo": 3,
+      "bayamo": 1,
+      "baracoa": 1
+    },
+    "freed2": [
+      "manzanillo",
+      "bayamo",
+      "baracoa"
+    ],
+    "perf": {
+      "fps": 33,
+      "calls": 34,
+      "tris": 18166
+    },
+    "backToFarm": true,
+    "farmLoopRunning": true,
+    "afterReload": {
+      "freed": 3,
+      "farms": 3,
+      "army": 38,
+      "viveres": 1815
+    },
+    "ok": false
+  },
+  "ipad-webkit": {
+    "errors": [],
+    "hiddenAtStart": true,
+    "lockedAtStart": true,
+    "unlocked": true,
+    "btnVisible": true,
+    "mapOpen": true,
+    "intro": true,
+    "army": {
+      "inf": 5,
+      "cab": 3,
+      "cart": 1
+    },
+    "viveresGain": 24,
+    "citySheet": "Manzanillo · Oriente",
+    "tactics": 3,
+    "inBattle": true,
+    "battleDone": true,
+    "freed": [
+      "manzanillo"
+    ],
+    "taps": {
+      "badge1": "1",
+      "labelManz": {
+        "x": 404.9765625,
+        "y": 496.6875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetManz": "Manzanillo · Oriente",
+      "poorWhy": "Te faltan 2900 pesos (cuesta 3000). Cobra la renta o vende en la finca.",
+      "poorDisabled": true,
+      "fundar1": {
+        "x": 576.1171875,
+        "y": 595.3125,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "winBtn": {
+        "x": 501.3828125,
+        "y": 655.15625,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBay": "Bayamo · Oriente",
+      "fundar2": {
+        "x": 576.1171875,
+        "y": 595.3125,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "title": {
+        "x": 404.9609375,
+        "y": 77,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar": "Baracoa · Oriente",
+      "badge3": "1",
+      "labelBar": {
+        "x": 405.1171875,
+        "y": 489.1875,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "sheetBar2": "Baracoa · Oriente",
+      "fundar3": {
+        "x": 576.1171875,
+        "y": 595.3125,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsBtn": {
+        "x": 363.75,
+        "y": 1038,
+        "inView": true,
+        "hitsIt": true,
+        "disabled": false
+      },
+      "farmsSheet": "Fincas regionales · Cuba libre",
+      "maxShown": true
+    },
+    "farm": true,
+    "rent": 0,
+    "farmsAfter": {
+      "manzanillo": 3,
+      "bayamo": 1,
+      "baracoa": 1
+    },
+    "freed2": [
+      "manzanillo",
+      "bayamo",
+      "baracoa"
+    ],
+    "perf": {
+      "fps": 26,
+      "calls": 34,
+      "tris": 18166
+    },
+    "backToFarm": true,
+    "farmLoopRunning": true,
+    "afterReload": {
+      "freed": 3,
+      "farms": 3,
+      "army": 38,
+      "viveres": 1815
+    },
+    "ok": false
   }
 }

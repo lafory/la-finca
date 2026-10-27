@@ -25,7 +25,7 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 8
+    "eggsLeft": 12
   },
   "ipad": {
     "errors": [],
@@ -39,7 +39,7 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 12
+    "eggsLeft": 11
   },
   "phone-landscape": {
     "errors": [],
@@ -53,6 +53,6 @@
     "skipped": true,
     "keep": 5,
     "soldSurplus": true,
-    "eggsLeft": 12
+    "eggsLeft": 11
   }
 }

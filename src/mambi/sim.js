@@ -218,7 +218,7 @@ export function installMambi(Sim) {
     }
     if (k === 'army') { M.army.inf += 20; M.army.cab += 10; M.army.cart = Math.min(UNITS.cart.max, M.army.cart + 3); s.res.viveres = (s.res.viveres || 0) + 500; }
     if (k === 'free') { const c = this.mbNext(); if (c) M.freed.push(c.id); }
-    if (k === 'rent') for (const f of Object.values(M.farms)) f.at -= 3600;
+    if (k === 'rent') for (const f of Object.values(M.farms)) { f.at -= 3600; for (const c of Object.values(f.cells || {})) if (c.k === 'p') c.t0 -= 3600; }
     this.h.changed('res'); this.h.changed('money');
     this.mbChanged();
   };

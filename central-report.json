@@ -8,18 +8,18 @@
     "planted": true,
     "ripe": "ripe",
     "harvested": true,
-    "yard": 216,
+    "yard": 108,
     "building": true,
     "stage": 4,
     "trainMoved": true,
     "trainDelivered": true,
     "milled": true,
     "orderPaid": true,
-    "moneyGain": 7640,
+    "moneyGain": 12900,
     "perf": {
-      "fps": 3,
-      "calls": 192,
-      "tris": 273160
+      "fps": 2,
+      "calls": 188,
+      "tris": 271164
     },
     "afterReload": {
       "stage": 4,
@@ -36,18 +36,18 @@
     "planted": true,
     "ripe": "ripe",
     "harvested": true,
-    "yard": 108,
+    "yard": 216,
     "building": true,
     "stage": 4,
     "trainMoved": true,
     "trainDelivered": true,
     "milled": true,
     "orderPaid": true,
-    "moneyGain": 20180,
+    "moneyGain": 9700,
     "perf": {
-      "fps": 3,
-      "calls": 204,
-      "tris": 284731
+      "fps": 2,
+      "calls": 194,
+      "tris": 280055
     },
     "afterReload": {
       "stage": 4,
@@ -71,11 +71,11 @@
     "trainDelivered": true,
     "milled": true,
     "orderPaid": true,
-    "moneyGain": 11330,
+    "moneyGain": 19100,
     "perf": {
-      "fps": 5,
-      "calls": 209,
-      "tris": 283945
+      "fps": 3,
+      "calls": 203,
+      "tris": 280719
     },
     "afterReload": {
       "stage": 4,
@@ -99,11 +99,11 @@
     "trainDelivered": true,
     "milled": true,
     "orderPaid": true,
-    "moneyGain": 11540,
+    "moneyGain": 20780,
     "perf": {
-      "fps": 5,
-      "calls": 239,
-      "tris": 288835
+      "fps": 3,
+      "calls": 231,
+      "tris": 283727
     },
     "afterReload": {
       "stage": 4,
