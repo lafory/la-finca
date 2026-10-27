@@ -239,6 +239,14 @@ const MP = MambiUI.prototype;
 MP.openVisit = function (id) { this.g.switchFarm?.(id); };
 const oAct = MP.act;
 MP.act = function (a, d) { if (a === 'mbvisit') return this.g.switchFarm?.(d.id); return oAct.call(this, a, d); };
+// las fincas grandes no dan renta: el botón «Renta» del mapa solo se ve si queda algo viejo por cobrar
+const oRefresh = MP.refresh;
+MP.refresh = function (...a) {
+  const r = oRefresh.apply(this, a);
+  const b = this.el?.querySelector('.big[data-act="mbrent"]');
+  if (b) { const F = Object.values(this.sim.mb().farms); const show = !F.length || F.some((f) => !f.conv) || this.sim.mbPending().pesos >= 1; const d = show ? '' : 'none'; if (b.style.display !== d) b.style.display = d; }
+  return r;
+};
 const oRow = MP.farmRow;
 MP.farmRow = function (id) {
   const sim = this.sim, c = CITY_BY_ID[id], f = sim.mb().farms[id], prof = profileOf(id);

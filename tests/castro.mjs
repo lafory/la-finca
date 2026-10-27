@@ -96,7 +96,7 @@ async function run(name) {
     await click('[data-act="mbskip"]');
     await waitFor(() => !window.__finca.mambi.battle, 15000); await sleep(300);
     await closeModals(); await sleep(600);
-    R.retaken = await ev(() => { const s = window.__finca.sim; return { freed: s.mbFreed('manzanillo'), owner: s.cs().cities.manzanillo.owner, retaken: s.cs().stats.retaken, rate: s.mbFarmRate('manzanillo').pesos }; });
+    R.retaken = await ev(() => { const s = window.__finca.sim; return { freed: s.mbFreed('manzanillo'), owner: s.cs().cities.manzanillo.owner, retaken: s.cs().stats.retaken, rate: s.mbFarmRate('manzanillo').pesos, farm: !!s.mb().farms.manzanillo?.conv }; });
     // 5) ausencia: ataques resueltos al volver (con tope), resumen y guardado
     await ev(() => window.__finca.sim.csCheat('away', { h: 3 }));
     await page.reload(); await sleep(2000);
@@ -121,7 +121,7 @@ async function run(name) {
   R.ok = !R.ex && !errors.length && R.noAttackYet && R.citySection && R.attack?.city === 'bayamo' && R.sheetWarn && R.mapBanner && R.mapMarker && R.farmBanner && R.defendOpens
     && R.garrison?.inf === 20 && R.garrison?.cab === 4 && R.trinchera === 1 && R.chance >= 0.999 && R.defenseAnim && R.defenseDone && R.heldModal && !R.afterHold.attack && R.afterHold.held === 1 && R.afterHold.freed.includes('bayamo')
     && R.lostModal && R.lost.freed === false && R.lost.owner === 'regimen' && R.lost.farmKept && R.lost.rate === 0 && R.lost.next === 'manzanillo' && R.lost.gray && R.lost.occLabel
-    && R.occupiedNote && R.retaken.freed && R.retaken.owner === 'jugador' && R.retaken.retaken === 1 && R.retaken.rate > 0
+    && R.occupiedNote && R.retaken.freed && R.retaken.owner === 'jugador' && R.retaken.retaken === 1 && R.retaken.farm /* provincias: finca grande, sin renta; se puede volver a entrar */
     && R.offlineModal && R.offline.report >= 1 && R.reportCleared && R.offlineCapOk && R.reloadSame && R.noReportAgain;
   if (!R.ok) fail++;
   report[name] = R;

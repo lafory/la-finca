@@ -129,9 +129,10 @@ async function run(name, { webkit: useWk, ...opts }) {
   // lista de fincas y mejoras 1 → 2 → 3
   res.taps.farmsBtn = await tap('#mb-farms-btn');
   res.taps.farmsSheet = await sheetTitle();
-  await tap('#sheet-body [data-act="mbup"][data-id="manzanillo"]');
-  await tap('#sheet-body [data-act="mbup"][data-id="manzanillo"]');
-  res.taps.maxShown = await ev(() => /Tierra completa/.test(document.querySelector('#sheet-body [data-farm="manzanillo"]')?.textContent || ''));
+  // provincias: las fincas son grandes (sin «Más tierra» ni renta); cada una tiene «Ir a la finca»
+  res.taps.goBtns = await ev(() => ['manzanillo', 'bayamo', 'baracoa'].filter((id) => document.querySelector(`#sheet-body [data-act="mbvisit"][data-id="${id}"]`)).length);
+  res.taps.noUp = await ev(() => !document.querySelector('#sheet-body [data-act="mbup"]'));
+  res.conv = await ev(() => Object.values(window.__finca.sim.mb().farms).every((f) => f.conv === 2));
   await shot('5d-fincas');
   await tap('#sheet-wrap [data-act="close"]');
   res.farmsAfter = await farms();
@@ -151,11 +152,11 @@ async function run(name, { webkit: useWk, ...opts }) {
   await page.evaluate(() => { const g = window.__finca; localStorage.setItem('lafinca-v2', JSON.stringify({ ...g.sim.s, savedAt: Date.now() / 1000 })); });
   await page.reload(); await sleep(1500);
   res.afterReload = await ev(() => { const m = window.__finca.sim.s.ext.mambi; return { freed: m.freed.length, farms: Object.keys(m.farms).length, army: m.army.inf + m.army.cab, viveres: window.__finca.sim.s.res.viveres }; });
-  res.ok = !errors.length && res.unlocked && res.btnVisible && res.mapOpen && res.army.inf === 5 && res.army.cab === 3 && res.army.cart === 1 && res.viveresGain > 0 && res.inBattle && res.battleDone && res.freed.includes('manzanillo') && res.farm && res.rent > 0 && res.freed2.length === 3 && res.backToFarm && res.farmLoopRunning && res.afterReload.freed === 3 && res.afterReload.farms === 3
+  res.ok = !errors.length && res.unlocked && res.btnVisible && res.mapOpen && res.army.inf === 5 && res.army.cab === 3 && res.army.cart === 1 && res.viveresGain > 0 && res.inBattle && res.battleDone && res.freed.includes('manzanillo') && res.farm && res.conv && res.freed2.length === 3 && res.backToFarm && res.farmLoopRunning && res.afterReload.freed === 3 && res.afterReload.farms === 3
     && res.taps.sheetManz?.startsWith('Manzanillo') && /Te faltan/.test(res.taps.poorWhy || '') && res.taps.poorDisabled && res.taps.badge1 === '1'
     && res.taps.fundar1.hitsIt && res.taps.fundar2.hitsIt && res.taps.fundar3.hitsIt && res.taps.labelBar.hitsIt && res.taps.winBtn.hitsIt
     && res.taps.sheetBay?.startsWith('Bayamo') && res.taps.sheetBar?.startsWith('Baracoa') && res.taps.sheetBar2?.startsWith('Baracoa') && res.taps.badge3 === '1'
-    && res.farmsAfter.manzanillo === 3 && res.farmsAfter.bayamo === 1 && res.farmsAfter.baracoa === 1 && res.taps.maxShown && res.taps.farmsSheet?.startsWith('Fincas');
+    && res.farmsAfter.manzanillo === 1 && res.farmsAfter.bayamo === 1 && res.farmsAfter.baracoa === 1 && res.taps.goBtns === 3 && res.taps.noUp && /Fincas/.test(res.taps.farmsSheet || '');
   if (!res.ok) process.exitCode = 1;
   report[name] = res;
   console.log(name, JSON.stringify(res));
