@@ -75,7 +75,7 @@ export class CastroUI {
   bannerHtml(A) {
     const c = CITY_BY_ID[A.city];
     const what = A.kind === 'saqueo' ? `viene a saquear la finca de <b>${c.name}</b>` : `marcha sobre <b>${c.name}</b>`;
-    return `${ICON.alarm}<span class="cs-txt">Una columna del Régimen (${A.power}) ${what} · <span class="cs-cd" data-hit="${A.hit}">${mmss(A.hit - rt())}</span></span><button class="btn primary" data-act="csgo" data-id="${A.city}">Defender</button>`;
+    return `${ICON.alarm}<span class="cs-txt">Una columna del Régimen (${A.power}) ${what} · <span class="cs-cd" data-hit="${A.hit}">${mmss(A.hit - rt())}</span></span><button class="btn" data-act="csgo" data-id="${A.city}">Ver</button><button class="btn primary" data-act="csfield">Al campo</button>`;
   }
   updateBanner(el, A, show) {
     if (!el) return;
@@ -161,6 +161,7 @@ export class CastroUI {
     if (A?.city === id) {
       const ch = sim.csChance(id, A.power);
       out += `<div class="cs-warn">${ICON.alarm} ${KIND[A.kind]}: ${A.power} soldados del Régimen llegan en <span class="cs-cd" data-hit="${A.hit}">${mmss(A.hit - rt())}</span>. Tu defensa: ${Math.round(sim.csDefense(id))} · ${this.mambi.oddsTag(ch)}</div>`;
+      out += `<div class="row"><div class="row-ico">${ICON.machete}</div><div class="row-main"><b>Jugar la defensa en el campo</b><small>Coloca la guarnición, la milicia, trincheras y barricadas. El cañaveral y el muro cubren; el río los frena. Si no quieres jugarla, deja que el tiempo se acabe.</small></div><button class="btn primary" data-act="csfield">Al campo</button></div>`;
     } else if (A) out += `<p class="note">Ahora mismo el Régimen ataca ${CITY_BY_ID[A.city].name}.</p>`;
     if (g.raidUntil > rt()) out += `<p class="note">La finca fue saqueada: vuelve a dar renta en ${mmss(g.raidUntil - rt())}.</p>`;
     out += `<p class="note">Defensa ${Math.round(sim.csDefense(id))} = (pueblo ${sim.csMilitia(id)} + guarnición ${sim.csGarPower(id)}) × ${sim.csDefMult(id).toFixed(2).replace('.', ',')} por las obras. Si la ciudad cae, la guarnición vuelve al campamento.</p>`;
@@ -226,9 +227,10 @@ export class CastroUI {
     const c = CITY_BY_ID[r.city], farm = this.sim.mb().farms[r.city];
     const vs = `Defensa ${r.power} contra ${r.attack} soldados del Régimen`;
     let h;
-    if (r.held) h = `<h2>${ICON.flagcu} ¡${c.name} resistió!</h2><p>${vs}${r.def.trinchera || r.def.fortin ? ` (trinchera ${r.def.trinchera}, fortín ${r.def.fortin})` : ''}: la columna gris se retiró por donde vino.</p><p>${this.lostTxt(r)} +${r.xp || 0} XP.</p><button class="btn primary" data-act="modal-close">¡Viva Cuba libre!</button>`;
-    else if (!r.occupied) h = `<h2>Saquearon la finca de ${c.name}</h2><p>${vs}: no alcanzó. Se llevaron <b>${r.stolen} pesos</b> de renta${r.crops ? ` y ${r.crops} cosas del almacén` : ''} y la finca no produce (ni vienen camiones) durante ${Math.round(CS.RAID_BLOCK / 60)} minutos.</p><p>${this.lostTxt(r)} La ciudad sigue siendo libre.</p><button class="btn primary" data-act="modal-close">A reforzarla</button>`;
-    else h = `<h2>${c.name} cayó</h2><p>${vs}: esta vez no alcanzó. ${r.back.inf + r.back.cab ? `${r.back.inf + r.back.cab} soldados de la guarnición volvieron al campamento. ` : ''}${this.lostTxt(r)}</p><p>La bandera gris ondea en la plaza${farm ? ` y la finca de ${GOODS[c.farm[0]].name.toLowerCase()} está ocupada: no paga renta` : ''}. Recupérala con una batalla normal desde el mapa.</p><button class="btn primary" data-act="modal-close">Volver</button>`;
+    const played = r.field ? ' La jugaste en el campo.' : '';
+    if (r.held) h = `<h2>${ICON.flagcu} ¡${c.name} resistió!</h2><p>${vs}${r.def.trinchera || r.def.fortin ? ` (trinchera ${r.def.trinchera}, fortín ${r.def.fortin})` : ''}: la columna gris se retiró por donde vino.${played}</p><p>${this.lostTxt(r)} +${r.xp || 0} XP.</p><button class="btn primary" data-act="modal-close">¡Viva Cuba libre!</button>`;
+    else if (!r.occupied) h = `<h2>Saquearon la finca de ${c.name}</h2><p>${vs}: no alcanzó.${played} Se llevaron <b>${r.stolen} pesos</b> de renta${r.crops ? ` y ${r.crops} cosas del almacén` : ''} y la finca no produce (ni vienen camiones) durante ${Math.round(CS.RAID_BLOCK / 60)} minutos.</p><p>${this.lostTxt(r)} La ciudad sigue siendo libre.</p><button class="btn primary" data-act="modal-close">A reforzarla</button>`;
+    else h = `<h2>${c.name} cayó</h2><p>${vs}: esta vez no alcanzó.${played} ${r.back.inf + r.back.cab ? `${r.back.inf + r.back.cab} soldados de la guarnición volvieron al campamento. ` : ''}${this.lostTxt(r)}</p><p>La bandera gris ondea en la plaza${farm ? ` y la finca de ${GOODS[c.farm[0]].name.toLowerCase()} está ocupada: no paga renta` : ''}. Recupérala con una batalla normal desde el mapa.</p><button class="btn primary" data-act="modal-close">Volver</button>`;
     this.g.sound?.play(r.held ? 'level' : 'error');
     save(this.sim.s);
     this.ui.modal(h);

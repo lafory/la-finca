@@ -4,4 +4,5 @@ import './central/index.js'; // campos grandes, central azucarero y tren cañero
 import './granja/index.js'; // gallinero por niveles, surcos, potrero ampliable y batey más grande
 import './mambi/index.js'; // campaña mambisa (después del central)
 import './mambi/castro.js'; // contraataques del Régimen (después de la campaña)
+import './mambi/field-ui.js'; // campo de batalla táctico (atacar y defender)
 import './provincias/index.js'; // fincas de provincia grandes (copia de la principal con lo de cada región)

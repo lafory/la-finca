@@ -177,7 +177,7 @@ export function installCastro(SimC) {
 
   // ---- resolver el golpe
   // opts.lossOk = false → si la defensa perdiera, la columna se retira sin tomar nada (tope de pérdidas offline)
-  P.csResolve = function (roll = Math.random(), { lossOk = true, offline = false } = {}) {
+  P.csResolve = function (roll = Math.random(), { lossOk = true, offline = false, forced = null, lost: lostIn = null, field = false } = {}) {
     const C = this.cs(), A = C.attack;
     if (!A) return null;
     C.attack = null;
@@ -187,14 +187,16 @@ export function installCastro(SimC) {
     const c = this.csCity(A.city), before = { inf: c.gar.inf, cab: c.gar.cab };
     const mult = this.csDefMult(A.city), militia = this.csMilitia(A.city);
     const power = this.csDefense(A.city) * (0.85 + 0.3 * roll);
-    let held = power >= A.power;
+    let held = forced == null ? power >= A.power : !!forced;
     let spared = false;
     if (!held && !lossOk) { held = true; spared = true; }
     const frac = spared ? 0 : held ? Math.min(0.5, 0.18 * (A.power / Math.max(1, power)) * CS.DEF_LOSS) : Math.min(0.7, 0.4 * CS.DEF_LOSS);
-    const lost = { inf: Math.round(c.gar.inf * frac), cab: Math.round(c.gar.cab * frac) };
+    const lost = lostIn && !spared
+      ? { inf: Math.min(before.inf, Math.max(0, Math.round(+lostIn.inf || 0))), cab: Math.min(before.cab, Math.max(0, Math.round(+lostIn.cab || 0))) }
+      : { inf: Math.round(c.gar.inf * frac), cab: Math.round(c.gar.cab * frac) };
     c.gar.inf -= lost.inf; c.gar.cab -= lost.cab;
     const M = this.mb();
-    const res = { id: A.id, city: A.city, kind: A.kind, attack: A.power, power: Math.round(power), held, spared, lost, before, mult, militia, def: { ...c.def }, offline, stolen: 0, occupied: false, back: { inf: 0, cab: 0 } };
+    const res = { id: A.id, city: A.city, kind: A.kind, attack: A.power, power: Math.round(power), held, spared, lost, before, mult, militia, def: { ...c.def }, offline, stolen: 0, occupied: false, back: { inf: 0, cab: 0 }, field: !!field };
     this.mbAccrue?.();
     if (held) {
       C.stats.held++;
@@ -274,10 +276,10 @@ export function installCastro(SimC) {
 
   // ---- recuperar una ciudad con la batalla normal: el botín es la mitad
   const battle = P.mbBattle;
-  P.mbBattle = function (cityId, tactic, roll) {
+  P.mbBattle = function (cityId, tactic, roll, tactical) {
     let was = false;
     try { was = this.csOccupied(cityId); } catch { /* sin castro */ }
-    const r = battle.call(this, cityId, tactic, roll);
+    const r = battle.call(this, cityId, tactic, roll, tactical);
     try {
       if (r && r.win && was) {
         const cut = Math.floor(r.loot * CS.RETAKE_LOOT);

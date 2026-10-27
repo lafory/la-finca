@@ -97,9 +97,9 @@ export class MambiUI {
 
   setupDrag() {
     const el = this.el; const pts = new Map(); let last = null, pinch = 0, moved = 0;
-    el.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY]; moved = 0; el.setPointerCapture?.(e.pointerId); });
+    el.addEventListener('pointerdown', (e) => { if (this.fielding || e.target.closest('button, .fd-bar, .fd-top, .fd-zoom')) return; pts.set(e.pointerId, [e.clientX, e.clientY]); last = [e.clientX, e.clientY]; moved = 0; el.setPointerCapture?.(e.pointerId); });
     el.addEventListener('pointermove', (e) => {
-      if (!pts.has(e.pointerId) || this.battle) return;
+      if (!pts.has(e.pointerId) || this.battle || this.fielding) return;
       pts.set(e.pointerId, [e.clientX, e.clientY]);
       if (pts.size === 2) { const [a, b] = [...pts.values()]; const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch) this.scenes.zoom(pinch / d); pinch = d; return; }
       const k = this.scenes.view.dist / Math.max(300, el.clientHeight) * 1.3;
@@ -109,7 +109,7 @@ export class MambiUI {
     });
     const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = 0; if (pts.size === 1) last = [...pts.values()][0]; };
     el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    el.addEventListener('wheel', (e) => { e.preventDefault(); this.scenes.zoom(e.deltaY > 0 ? 1.12 : 0.89); }, { passive: false });
+    el.addEventListener('wheel', (e) => { if (this.fielding) return; e.preventDefault(); this.scenes.zoom(e.deltaY > 0 ? 1.12 : 0.89); }, { passive: false });
     void moved;
   }
 
@@ -334,10 +334,10 @@ export class MambiUI {
     const c = CITY_BY_ID[id];
     this.ui.openSheet(`Táctica · ${c.name}`, () => {
       const sim = this.sim;
-      let out = `<p class="note">Guardias: <b>${c.guards}</b>. La marcha gasta 1 víver por soldado. Quien pierde no sufre: se dispersa y vuelve a su casa.</p>` + this.armyLine();
+      let out = `<p class="note">Guardias: <b>${c.guards}</b>. Puedes jugarla en el campo —más grande que la finca— colocando la tropa y dando órdenes, o resolverla rápido. La marcha gasta 1 víver por soldado. Quien pierde no sufre: se dispersa y vuelve a su casa.</p>` + this.armyLine();
       for (const t of TACTIC_ORDER) {
         const T = TACTICS[t], why = sim.mbCanAttack(id, t), ch = sim.mbChance(t, id), p = Math.round(sim.mbPower(t, id));
-        out += `<div class="row ${why ? 'dim' : ''}"><div class="row-ico">${t === 'carga' ? ICON.machete : t === 'emboscada' ? ICON.tree : ICON.cart}</div><div class="row-main"><b>${T.name} · fuerza ${p} ${this.oddsTag(ch)}</b><small>${why || T.detail}</small></div><button class="btn ${why ? '' : 'primary'}" data-act="mbgo" data-id="${id}" data-tactic="${t}" ${why ? 'disabled' : ''}>¡Al ataque!</button></div>`;
+        out += `<div class="row fd-tact ${why ? 'dim' : ''}"><div class="row-ico">${t === 'carga' ? ICON.machete : t === 'emboscada' ? ICON.tree : ICON.cart}</div><div class="row-main"><b>${T.name} · fuerza ${p} ${this.oddsTag(ch)}</b><small>${why || T.detail}</small></div><div class="fd-tact-btns"><button class="btn ${why ? '' : 'primary'}" data-act="mbfield" data-id="${id}" data-tactic="${t}" ${why ? 'disabled' : ''}>Jugar en el campo</button><button class="btn" data-act="mbgo" data-id="${id}" data-tactic="${t}" ${why ? 'disabled' : ''}>Resolver rápido</button></div></div>`;
       }
       return out + this.cheats();
     });
@@ -357,19 +357,27 @@ export class MambiUI {
   }
   finishBattle() {
     const r = this.battle; r.shown = true;
-    const c = CITY_BY_ID[r.city];
     this.battle = null;
     for (const s of ['#mb-bottom', '#mb-cities', '.mb-zoom']) this.el.querySelector(s).classList.remove('hidden');
     this.el.querySelector('#mb-skip').classList.add('hidden');
     this.el.querySelector('#mb-banner').classList.add('hidden');
     this.ver = -1;
     this.scenes.focus(r.city);
+    this.presentResult(r);
+  }
+  presentResult(r) {
+    const c = CITY_BY_ID[r.city];
     const lost = r.lost.inf + r.lost.cab + r.lost.cart;
     const lostTxt = lost ? `${r.lost.inf ? `${r.lost.inf} infantes ` : ''}${r.lost.cab ? `${r.lost.cab} jinetes ` : ''}${r.lost.cart ? `${r.lost.cart} carretas ` : ''}se dispersaron y volvieron a sus casas.` : 'Toda la tropa volvió entera.';
     this.g.sound.play(r.win ? 'level' : 'error');
     save(this.s);
-    if (r.win) this.ui.modal(`<h2>${ICON.flagcu} ¡${c.name} es libre!</h2><p>Fuerza ${r.power} contra ${r.guards} guardias: los guardias del Régimen se retiraron y la bandera de la estrella solitaria ondea en la plaza.</p><p>Botín: <b>+${k1(r.loot)} pesos</b> · +${r.xp} XP. ${lostTxt}</p><p>${r.done ? '¡Toda la isla es libre! Fiesta en todas las plazas.' : `Funda una finca de ${GOODS[c.farm[0]].name.toLowerCase()} en ${c.name} para financiar la tropa.`}</p><div class="modal-btns"><button class="btn" data-act="modal-close">¡Viva Cuba libre!</button><button class="btn primary" data-act="mbfarmgo" data-id="${c.id}">Fundar finca en ${c.name}</button></div>`);
-    else this.ui.modal(`<h2>Retirada en ${c.name}</h2><p>Fuerza ${r.power} contra ${r.guards} guardias: esta vez no alcanzó y la columna se retiró a la manigua. ${lostTxt}</p><p>Recluta más jinetes, lleva carretas o prueba otra táctica. +${r.xp} XP por la experiencia.</p><button class="btn primary" data-act="modal-close">Volver al mapa</button>`);
+    if (r.win) {
+      const how = r.field ? `Ganaste el campo de ${c.name}. Los guardias del Régimen se retiraron y la bandera de la estrella solitaria ondea en la plaza.` : `Fuerza ${r.power} contra ${r.guards} guardias: los guardias del Régimen se retiraron y la bandera de la estrella solitaria ondea en la plaza.`;
+      this.ui.modal(`<h2>${ICON.flagcu} ¡${c.name} es libre!</h2><p>${how}</p><p>Botín: <b>+${k1(r.loot)} pesos</b> · +${r.xp} XP. ${lostTxt}</p><p>${r.done ? '¡Toda la isla es libre! Fiesta en todas las plazas.' : `Funda una finca de ${GOODS[c.farm[0]].name.toLowerCase()} en ${c.name} para financiar la tropa.`}</p><div class="modal-btns"><button class="btn" data-act="modal-close">¡Viva Cuba libre!</button><button class="btn primary" data-act="mbfarmgo" data-id="${c.id}">Fundar finca en ${c.name}</button></div>`);
+    } else {
+      const how = r.field ? `No se pudo tomar la plaza de ${c.name} y la columna se retiró a la manigua.` : `Fuerza ${r.power} contra ${r.guards} guardias: esta vez no alcanzó y la columna se retiró a la manigua.`;
+      this.ui.modal(`<h2>Retirada en ${c.name}</h2><p>${how} ${lostTxt}</p><p>Recluta más jinetes, lleva carretas o prueba otra táctica. +${r.xp} XP por la experiencia.</p><button class="btn primary" data-act="modal-close">Volver al mapa</button>`);
+    }
   }
   refreshButton() {
     if (!this.btn) return;

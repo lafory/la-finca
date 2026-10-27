@@ -105,17 +105,23 @@ export function installMambi(Sim) {
     if ((this.s.res.viveres || 0) < this.mbSoldiers()) return `La marcha gasta 1 víver por soldado (${this.mbSoldiers()}). Manda víveres.`;
     return null;
   };
-  P.mbBattle = function (cityId, tactic, roll = Math.random()) {
+  P.mbBattle = function (cityId, tactic, roll = Math.random(), tactical = null) {
     const why = this.mbCanAttack(cityId, tactic);
     if (why) { this.h.toast(why); this.h.sfx('error'); return null; }
     const M = this.mb(), a = M.army, c = CITY_BY_ID[cityId], T = TACTICS[tactic];
     const before = { ...a };
-    const power = this.mbPower(tactic, cityId) * (0.85 + 0.3 * roll);
-    const win = power >= c.guards;
+    const power = this.mbPower(tactic, cityId) * (0.85 + 0.3 * (tactical ? 0.5 : roll));
+    const win = tactical ? !!tactical.win : power >= c.guards;
     this.s.res.viveres -= this.mbSoldiers();
     const safe = Math.max(0.5, 1 - CART_SAFE * a.cart);
-    const frac = win ? Math.min(0.5, 0.18 * (c.guards / power) * T.loss * safe) : Math.min(0.7, 0.4 * T.loss * safe);
-    const lost = { inf: Math.round(a.inf * frac), cab: Math.round(a.cab * frac), cart: win ? 0 : Math.floor(a.cart * frac * 0.5) };
+    const frac = win ? Math.min(0.5, 0.18 * (c.guards / Math.max(1, power)) * T.loss * safe) : Math.min(0.7, 0.4 * T.loss * safe);
+    const lost = tactical?.lost
+      ? {
+        inf: Math.min(a.inf, Math.max(0, Math.round(+tactical.lost.inf || 0))),
+        cab: Math.min(a.cab, Math.max(0, Math.round(+tactical.lost.cab || 0))),
+        cart: Math.min(a.cart, Math.max(0, Math.round(+tactical.lost.cart || 0))),
+      }
+      : { inf: Math.round(a.inf * frac), cab: Math.round(a.cab * frac), cart: win ? 0 : Math.floor(a.cart * frac * 0.5) };
     for (const k of Object.keys(lost)) a[k] = Math.max(0, a[k] - lost[k]);
     M.stats.battles++;
     let loot = 0, xp = 0;
@@ -128,7 +134,7 @@ export function installMambi(Sim) {
     } else { M.stats.lost++; xp = Math.round(c.guards * 1.5); this.addXp(xp); }
     this.h.changed('res');
     this.mbChanged();
-    return { win, city: cityId, tactic, power: Math.round(power), guards: c.guards, lost, before, loot, xp, done: M.freed.length === CITIES.length };
+    return { win, city: cityId, tactic, power: Math.round(power), guards: c.guards, lost, before, loot, xp, done: M.freed.length === CITIES.length, field: !!tactical };
   };
 
   // ---- fincas regionales
