@@ -77,6 +77,25 @@ export function installMambi(Sim) {
     this.mbChanged();
     return v;
   };
+  // Pesos de la finca → víveres. Más caro que mandar la comida de la canasta.
+  P.mbBuyViveres = function (n) {
+    const packs = { 20: 800, 100: 3000 };
+    n = +n;
+    const price = packs[n];
+    if (!price) return false;
+    const cap = 99999;
+    const have = this.s.res.viveres || 0;
+    if (have >= cap) { this.h.toast('Ya no caben más víveres.'); this.h.sfx('error'); return false; }
+    const add = Math.min(n, cap - have);
+    const pay = add === n ? price : Math.max(1, Math.round(price * add / n));
+    if (!this.spend(pay)) return false;
+    this.s.res.viveres = have + add;
+    this.h.sfx('buy');
+    this.h.toast(`+${add} víveres para la tropa.`);
+    this.h.changed('res');
+    this.mbChanged();
+    return true;
+  };
 
   // ---- batallas
   P.mbPower = function (tactic, cityId) {

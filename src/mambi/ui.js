@@ -231,6 +231,7 @@ export class MambiUI {
       case 'mbcity': this.scenes.focus(d.id); return this.openCity(d.id);
       case 'mbcamp': return this.openCamp();
       case 'mbfood': sim.mbSendFood(); ui.refreshSheet(); return;
+      case 'mbbuyviv': sim.mbBuyViveres(+d.n); ui.refreshSheet(); return;
       case 'mbrent': if (Object.keys(sim.mb().farms).length) sim.mbCollect(); else ui.toast('Libera una ciudad y funda allí una finca regional para cobrar renta.'); ui.refreshSheet(); return;
       case 'mbrecruit': sim.mbRecruit(d.id); ui.refreshSheet(); return;
       case 'mbattack': return this.openTactics(d.id);
@@ -269,6 +270,7 @@ export class MambiUI {
       }
       const fv = sim.mbFoodValue();
       out += `<div class="row"><div class="row-ico">${ICON.food}</div><div class="row-main"><b>Mandar víveres desde la finca</b><small>${fv ? `La comida de la canasta da ${fv} víveres.` : 'La canasta no tiene comida ahora.'}</small></div><button class="btn" data-act="mbfood" ${fv ? '' : 'disabled'}>Mandar</button></div>`;
+      out += `<div class="row"><div class="row-ico">${ICON.coin}</div><div class="row-main"><b>Comprar víveres</b><small>Con los pesos de la finca. Más caro que mandar la comida: 40 pesos cada uno, o 30 si llevas 100.</small></div><div class="row-btns">${this.priceBtn(800, 'mbbuyviv', 'data-n="20"', '20 ')}${this.priceBtn(3000, 'mbbuyviv', 'data-n="100"', '100 ')}</div></div>`;
       const M = sim.mb();
       out += `<p class="note">Batallas: ${M.stats.battles} · ganadas ${M.stats.won} · botín ${k1(M.stats.loot)} pesos · renta cobrada ${k1(M.stats.income)}.</p>`;
       return out + this.cheats();

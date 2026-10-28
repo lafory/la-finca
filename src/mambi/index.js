@@ -20,6 +20,6 @@ registerGameModule({
   attach(game) { game.mambi = new MambiUI(game); },
   frame(game) { game.mambi.refreshButton(); },
 });
-for (const a of ['mbopen', 'mbclose', 'mbzoom', 'mbfit', 'mbcity', 'mbcamp', 'mbfood', 'mbrent', 'mbrecruit', 'mbattack', 'mbgo', 'mbfarm', 'mbfarms', 'mbfarmgo', 'mbup', 'mbskip', 'mbcheat', 'mbvisit', 'mbvback', 'rgplant', 'rgbuild', 'rgall', 'rgrent', 'rgland', 'rgland2', 'rgzoom']) {
+for (const a of ['mbopen', 'mbclose', 'mbzoom', 'mbfit', 'mbcity', 'mbcamp', 'mbfood', 'mbbuyviv', 'mbrent', 'mbrecruit', 'mbattack', 'mbgo', 'mbfarm', 'mbfarms', 'mbfarmgo', 'mbup', 'mbskip', 'mbcheat', 'mbvisit', 'mbvback', 'rgplant', 'rgbuild', 'rgall', 'rgrent', 'rgland', 'rgland2', 'rgzoom']) {
   registerAct(a, (ui, d) => ui.g.mambi?.act(a, d));
 }
