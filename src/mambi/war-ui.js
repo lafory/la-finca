@@ -200,34 +200,31 @@ export class WarUI {
   }
 
   liveHtml() {
+    const err = liveState.error ? `<p class="note">${esc(liveState.error)}</p>` : '';
     if (!liveState.user) {
-      let out = `<h3>Cuenta de Google</h3><p class="note">Entras para que otra persona vea tu tropa y te pueda invadir. La finca —pesos, gallinas, central— no se sube. Cachita, Pancho, Nené y Tato siguen siendo para jugar solo.</p>`;
-      out += `<button class="btn primary" data-act="wargoogle">Entrar con Google</button>`;
-      if (liveState.error) out += `<p class="note">${esc(liveState.error)}</p>`;
-      return out;
+      return `<h3>Fincas en vivo</h3><p class="note">Aquí salen las otras personas, justo debajo de este título. Primero toca Entrar con Google. Tú no apareces en tu propia lista. Cachita, Pancho, Nené y Tato están más abajo: son para jugar solo.</p><button class="btn primary" data-act="wargoogle">Entrar con Google</button>${err}`;
     }
     const nombre = liveNombre() || liveState.user.email || 'tu cuenta';
-    let out = `<h3>En vivo</h3><p class="note">Entraste como <b>${esc(nombre)}</b>. Lo que se publica es el ejército de ahora. Si entras en dos teléfonos con la misma cuenta, queda el último que publicó.</p>`;
+    let out = `<h3>Fincas en vivo</h3><p class="note">Entraste como <b>${esc(nombre)}</b>. Los jugadores van aquí, no en Otras fincas.</p>`;
     out += `<button class="btn" data-act="warout">Salir de Google</button>`;
-    if (liveState.error) out += `<p class="note">${esc(liveState.error)}</p>`;
-    out += `<h3>Fincas en vivo</h3>`;
+    if (liveState.error) return out + err;
     if (!liveState.fincas.length) {
-      out += `<p class="note">Todavía no hay otra finca. La otra persona también tiene que tocar Entrar con Google en este juego.</p>`;
-    } else {
-      for (const f of liveState.fincas) {
-        const uid = String(f.uid || '');
-        if (!/^[A-Za-z0-9_-]{6,128}$/.test(uid)) continue;
-        const p = livePower(f);
-        out += `<div class="row"><div class="row-main"><b>${esc(f.nombre || 'Finca')}</b><small>${f.inf | 0} infantes · ${f.cab | 0} jinetes · ${f.cart | 0} carretas · guarnición ${f.garInf | 0}+${f.garCab | 0} · fuerza ${p}</small></div><button class="btn primary" data-act="warinvade" data-id="g:${uid}">Invadir</button></div>`;
-      }
+      out += (liveState.total | 0) > 0
+        ? `<p class="note">Solo está publicada tu ficha. Si el otro teléfono entró con este mismo Google, no sale. Tiene que usar otra cuenta.</p>`
+        : `<p class="note">Todavía no hay otra finca. La otra persona también tiene que tocar Entrar con Google y esperar unos segundos.</p>`;
+      return out;
+    }
+    for (const f of liveState.fincas) {
+      const uid = String(f.uid || '');
+      if (!/^[A-Za-z0-9_-]{6,128}$/.test(uid)) continue;
+      const p = livePower(f);
+      out += `<div class="row"><div class="row-main"><b>${esc(f.nombre || 'Finca')}</b><small>${f.inf | 0} infantes · ${f.cab | 0} jinetes · ${f.cart | 0} carretas · guarnición ${f.garInf | 0}+${f.garCab | 0} · fuerza ${p}</small></div><button class="btn primary" data-act="warinvade" data-id="g:${uid}">Invadir</button></div>`;
     }
     return out;
   }
 
   onLive() {
     if (this.sheet !== 'home' || this.ui.sheet?.title !== 'Invasiones') return;
-    const ae = document.activeElement;
-    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) return;
     this.ui.refreshSheet();
   }
 

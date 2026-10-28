@@ -25,7 +25,7 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
-export const liveState = { user: null, fincas: [], error: '', ready: false };
+export const liveState = { user: null, fincas: [], total: 0, error: '', ready: false };
 
 let game = null;
 let stopFincas = null;
@@ -185,9 +185,10 @@ function listen(user) {
   stopFincas?.();
   stopHits?.();
   stopFincas = onSnapshot(query(collection(db, 'fincas'), limit(30)), (qs) => {
-    liveState.fincas = qs.docs
-      .map((d) => ({ uid: d.id, ...d.data() }))
-      .filter((f) => f.uid !== user.uid);
+    const mine = user.uid;
+    const all = qs.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    liveState.total = all.length;
+    liveState.fincas = all.filter((f) => f.uid !== mine);
     liveState.ready = true;
     liveState.error = '';
     game?.war?.onLive?.();
@@ -224,6 +225,7 @@ export function attachLive(g) {
       stopFincas = null;
       stopHits = null;
       liveState.fincas = [];
+      liveState.total = 0;
       g.war?.onLive?.();
       return;
     }
