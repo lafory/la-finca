@@ -3,7 +3,7 @@ import { ICON } from '../icons.js';
 import { save } from '../state.js';
 import { registerAct, registerGameModule } from '../registry.js';
 import { MambiUI } from './ui.js';
-import { CITY_BY_ID } from './data.js';
+import { CITY_BY_ID, UNITS } from './data.js';
 import { RIVAL_BY, RIVALS, friendPower, rt, suggestDetachment } from './war.js';
 import { attachLive, liveFinca, liveNombre, livePower, liveState, pushFinca, reportLive, signInGoogle, signOutGoogle } from './live.js';
 
@@ -147,11 +147,32 @@ export class WarUI {
     return `<div class="row war-row"><div class="row-main"><b>${label}</b><small>${n} de ${max} en el campamento</small></div><div class="war-step">${pads}</div></div>`;
   }
 
+  buyRow(k, n, label) {
+    const u = UNITS[k];
+    const why = this.sim.mbCanRecruit(k);
+    const pesos = u.price * n;
+    const extra = u.viveres ? `<span class="wd">${ICON.food}${u.viveres * n}</span>` : `<span class="wd">${ICON.azucar || ICON.cane}${u.azucar * n}</span>`;
+    return `<div class="row"><div class="row-main"><b>${label}</b><small>${why || 'Entran al campamento y a esta marcha.'}</small></div><button class="btn ${why ? 'poor' : 'primary'}" data-act="warbuy" data-k="${k}" data-n="${n}" ${why ? 'disabled' : ''}>${ICON.coin}${k1(pesos)}${extra}</button></div>`;
+  }
+
+  buyBlock() {
+    const sim = this.sim;
+    const money = sim.s.money | 0;
+    const viv = (n, price) => `<button class="btn ${money < price ? 'poor' : ''}" data-act="warbuyviv" data-n="${n}" ${money < price ? 'disabled' : ''}>${n} víveres ${ICON.coin}${k1(price)}</button>`;
+    let out = `<h3>Comprar tropa</h3><p class="note">El campamento tiene ${sim.mbSoldiers()}/${sim.mbCap()}. Lo que compras aquí sale en la marcha. Si faltan víveres, cómpralos con pesos.</p>`;
+    out += this.buyRow('inf', 1, '+1 infante');
+    out += this.buyRow('inf', 5, '+5 infantes');
+    out += this.buyRow('cab', 1, '+1 jinete');
+    out += this.buyRow('cart', 1, '+1 carreta');
+    out += `<div class="row"><div class="row-main"><b>Comprar víveres</b><small>Para reclutar y para la marcha. 40 pesos cada uno, o 30 si llevas 100.</small></div><div class="row-btns">${viv(20, 800)}${viv(100, 3000)}</div></div>`;
+    return out;
+  }
+
   costLine(det) {
     const need = (det.inf | 0) + (det.cab | 0);
     const have = this.sim.s.res.viveres || 0;
     const short = need > have;
-    return `<p class="note">La marcha gasta <b>${need}</b> víveres (tienes ${Math.floor(have)}).${det.cart ? ` Llevas ${det.cart} carreta${det.cart > 1 ? 's' : ''}, que trae${det.cart > 1 ? 'n' : ''} cañón.` : ''}${short ? '<span class="mb-why">No alcanzan los víveres. Mándalos desde la finca.</span>' : ''}</p>`;
+    return `<p class="note">La marcha gasta <b>${need}</b> víveres (tienes ${Math.floor(have)}).${det.cart ? ` Llevas ${det.cart} carreta${det.cart > 1 ? 's' : ''}, que trae${det.cart > 1 ? 'n' : ''} cañón.` : ''}${short ? '<span class="mb-why">No alcanzan los víveres. Cómpralos arriba, o mándalos desde la finca.</span>' : ''}</p>`;
   }
 
   openHome() {
@@ -271,6 +292,7 @@ export class WarUI {
         ? 'Es el código de otra finca: el resultado no le llega.'
         : 'No es una persona en vivo, y no es una ciudad de la campaña.';
     let out = `<p class="note">Mandas un destacamento del campamento contra ${esc(place)} (${esc(foe)}, fuerza ${power}). Quien pierde se dispersa y vuelve a su casa. ${extra}</p>`;
+    out += this.buyBlock();
     out += this.stepRow('inf', 'Infantes', 5);
     out += this.stepRow('cab', 'Jinetes', 1);
     out += this.stepRow('cart', 'Carretas', 1);
@@ -425,6 +447,29 @@ export class WarUI {
       this.ui.refreshSheet();
       return;
     }
+    if (a === 'warbuy') {
+      const k = d.k;
+      if (k !== 'inf' && k !== 'cab' && k !== 'cart') return;
+      const n = Math.max(1, Math.min(20, +d.n || 1));
+      let got = 0;
+      for (let i = 0; i < n; i++) {
+        const why = sim.mbCanRecruit(k);
+        if (why) {
+          this.ui.toast(got ? `Compraste ${got}. ${why}` : why);
+          break;
+        }
+        if (!sim.mbRecruit(k)) break;
+        got++;
+      }
+      if (got) this.det[k] = Math.min(sim.mb().army[k] | 0, (this.det[k] | 0) + got);
+      this.ui.refreshSheet();
+      return;
+    }
+    if (a === 'warbuyviv') {
+      sim.mbBuyViveres(+d.n);
+      this.ui.refreshSheet();
+      return;
+    }
     if (a === 'wargo') return this.go(d.id === 'quick' ? 'quick' : 'field');
     if (a === 'wargoogle') {
       signInGoogle().catch(() => {});
@@ -485,6 +530,6 @@ registerGameModule({
   frame(game) { try { game.war?.tick(); } catch { /* el mapa ya avisa */ } },
 });
 
-for (const a of ['waropen', 'warfield', 'warinvade', 'wardet', 'wargo', 'wargoogle', 'warout', 'warcopy', 'warnick', 'waruse', 'warok', 'warcheat']) {
+for (const a of ['waropen', 'warfield', 'warinvade', 'wardet', 'warbuy', 'warbuyviv', 'wargo', 'wargoogle', 'warout', 'warcopy', 'warnick', 'waruse', 'warok', 'warcheat']) {
   registerAct(a, (ui, d) => ui.g.war?.act(a, d));
 }
